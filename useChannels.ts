@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { arrayMove } from '@dnd-kit/core';
+import { arrayMove } from '@dnd-kit/sortable';
 import { Channel } from './index';
 
 const parseM3U = (content: string): Channel[] => {
