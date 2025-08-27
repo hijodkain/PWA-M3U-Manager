@@ -1,0 +1,4 @@
+{
+    "githubIssues.alwaysPromptForNewIssueRepo": true,
+    "githubPullRequests.quickDiff": true
+}
