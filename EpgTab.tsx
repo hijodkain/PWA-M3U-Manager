@@ -4,6 +4,7 @@ import { useEpg } from './useEpg';
 import { useChannels } from './useChannels';
 import CurationChannelItem from './CurationChannelItem';
 import EpgChannelItem from './EpgChannelItem';
+import { AttributeKey } from './index';
 
 interface EpgTabProps {
     epgHook: ReturnType<typeof useEpg>;
@@ -79,13 +80,13 @@ const EpgTab: React.FC<EpgTabProps> = ({ epgHook, channelsHook }) => {
                 <h4 className="font-bold text-center mb-2">Asignar EPG</h4>
                 <ArrowLeftCircle size={32} className="text-blue-400 mb-4" />
                 <button
-                    onClick={() => setAttributesToCopy(new Set(['tvgId']))}
+                    onClick={() => setAttributesToCopy(new Set<AttributeKey>(['tvgId']))}
                     className="w-full text-xs py-2 px-1 rounded-md flex items-center justify-center gap-1 transition-colors bg-blue-600 text-white"
                 >
                     <Copy size={14} /> Asignar ID
                 </button>
                 <button
-                    onClick={() => setAttributesToCopy(new Set(['tvgId', 'tvgLogo']))}
+                    onClick={() => setAttributesToCopy(new Set<AttributeKey>(['tvgId', 'tvgLogo']))}
                     className="w-full text-xs py-2 px-1 rounded-md flex items-center justify-center gap-1 transition-colors bg-blue-600 text-white"
                 >
                     <Copy size={14} /> ID y Logo
