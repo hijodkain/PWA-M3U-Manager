@@ -99,14 +99,13 @@ export const useChannels = () => {
     };
 
     const handleAddNewChannel = () => {
-        const firstGroup = channels.length > 0 ? channels[0].groupTitle : 'Nuevo Grupo';
         const newChannel: Channel = {
             id: `channel-${Date.now()}-${Math.random()}`,
             order: channels.length + 1,
             tvgId: '',
             tvgName: '',
             tvgLogo: '',
-            groupTitle: firstGroup,
+            groupTitle: filterGroup === 'All' ? 'Nuevo Grupo' : filterGroup,
             name: 'Nuevo Canal',
             url: '',
         };

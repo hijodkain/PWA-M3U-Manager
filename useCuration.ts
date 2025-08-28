@@ -12,10 +12,10 @@ const parseM3U = (content: string): Channel[] => {
         if (lines[i].trim().startsWith('#EXTINF:')) {
             const info = lines[i].trim().substring(8);
             const url = lines[++i]?.trim() || '';
-            const tvgId = info.match(/tvg-id="([^"]*)"/)?.[1] || '';
-            const tvgName = info.match(/tvg-name="([^"]*)"/)?.[1] || '';
-            const tvgLogo = info.match(/tvg-logo="([^"]*)"/)?.[1] || '';
-            const groupTitle = info.match(/group-title="([^"]*)"/)?.[1] || '';
+            const tvgId = info.match(/tvg-id="([^"]*)"?/)?.[1] || '';
+            const tvgName = info.match(/tvg-name="([^"]*)"?/)?.[1] || '';
+            const tvgLogo = info.match(/tvg-logo="([^"]*)"?/)?.[1] || '';
+            const groupTitle = info.match(/group-title="([^"]*)"?/)?.[1] || '';
             const name = info.split(',').pop()?.trim() || '';
             if (name && url) {
                 parsedChannels.push({
@@ -48,6 +48,8 @@ export const useCuration = (
     const [destinationChannelId, setDestinationChannelId] = useState<string | null>(null);
     const [mainListFilter, setMainListFilter] = useState('All');
     const [curationListFilter, setCurationListFilter] = useState('All');
+    const [mainListSearch, setMainListSearch] = useState('');
+    const [curationListSearch, setCurationListSearch] = useState('');
 
     const handleCurationFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -112,18 +114,23 @@ export const useCuration = (
         [curationChannels]
     );
 
-    const filteredMainChannels = useMemo(
-        () => (mainListFilter === 'All' ? mainChannels : mainChannels.filter((c) => c.groupTitle === mainListFilter)),
-        [mainChannels, mainListFilter]
-    );
+    const filteredMainChannels = useMemo(() => {
+        let channelsToFilter = mainListFilter === 'All' ? mainChannels : mainChannels.filter((c) => c.groupTitle === mainListFilter);
+        if (mainListSearch) {
+            channelsToFilter = channelsToFilter.filter(c => c.name.toLowerCase().includes(mainListSearch.toLowerCase()));
+        }
+        return channelsToFilter;
+    }, [mainChannels, mainListFilter, mainListSearch]);
 
-    const filteredCurationChannels = useMemo(
-        () =>
-            curationListFilter === 'All'
-                ? curationChannels
-                : curationChannels.filter((c) => c.groupTitle === curationListFilter),
-        [curationChannels, curationListFilter]
-    );
+    const filteredCurationChannels = useMemo(() => {
+        let channelsToFilter = curationListFilter === 'All'
+            ? curationChannels
+            : curationChannels.filter((c) => c.groupTitle === curationListFilter);
+        if (curationListSearch) {
+            channelsToFilter = channelsToFilter.filter(c => c.name.toLowerCase().includes(curationListSearch.toLowerCase()));
+        }
+        return channelsToFilter;
+    }, [curationChannels, curationListFilter, curationListSearch]);
 
     const toggleCurationSelection = (id: string) => {
         setSelectedCurationChannels((prev) => {
@@ -170,5 +177,9 @@ export const useCuration = (
         filteredCurationChannels,
         toggleCurationSelection,
         handleAddSelectedFromCuration,
+        mainListSearch,
+        setMainListSearch,
+        curationListSearch,
+        setCurationListSearch,
     };
 };

@@ -29,6 +29,10 @@ const CurationTab: React.FC<CurationTabProps> = ({ curationHook, channelsHook })
         filteredCurationChannels,
         toggleCurationSelection,
         handleAddSelectedFromCuration,
+        mainListSearch,
+        setMainListSearch,
+        curationListSearch,
+        setCurationListSearch,
     } = curationHook;
 
     const { undo, history } = channelsHook;
@@ -46,6 +50,13 @@ const CurationTab: React.FC<CurationTabProps> = ({ curationHook, channelsHook })
         <div className="grid grid-cols-1 lg:grid-cols-11 gap-4">
             <div className="lg:col-span-5 bg-gray-800 p-4 rounded-lg flex flex-col">
                 <h3 className="font-bold text-lg mb-2">Lista Principal</h3>
+                <input
+                    type="text"
+                    placeholder="Buscar canal..."
+                    value={mainListSearch}
+                    onChange={(e) => setMainListSearch(e.target.value)}
+                    className="bg-gray-700 border border-gray-600 rounded-md px-3 py-1.5 text-white focus:ring-blue-500 focus:border-blue-500 mb-2 w-full"
+                />
                 <select
                     value={mainListFilter}
                     onChange={(e) => setMainListFilter(e.target.value)}
@@ -108,6 +119,13 @@ const CurationTab: React.FC<CurationTabProps> = ({ curationHook, channelsHook })
             </div>
             <div className="lg:col-span-5 bg-gray-800 p-4 rounded-lg flex flex-col">
                 <h3 className="font-bold text-lg mb-2">Lista de Curación</h3>
+                <input
+                    type="text"
+                    placeholder="Buscar canal..."
+                    value={curationListSearch}
+                    onChange={(e) => setCurationListSearch(e.target.value)}
+                    className="bg-gray-700 border border-gray-600 rounded-md px-3 py-1.5 text-white focus:ring-blue-500 focus:border-blue-500 mb-2 w-full"
+                />
                 <select
                     value={curationListFilter}
                     onChange={(e) => setCurationListFilter(e.target.value)}
