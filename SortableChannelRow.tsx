@@ -39,7 +39,8 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
                     <input
                         type="checkbox"
                         checked={selectedChannels.includes(channel.id)}
-                        onChange={(e) => toggleChannelSelection(channel.id, e.nativeEvent.shiftKey)}
+                        onClick={(e: React.MouseEvent<HTMLInputElement>) => toggleChannelSelection(channel.id, e.shiftKey)}
+                        onChange={() => {}}
                         className="form-checkbox h-4 w-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
                     />
                 </div>
