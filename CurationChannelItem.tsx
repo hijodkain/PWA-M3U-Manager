@@ -22,6 +22,10 @@ const CurationChannelItem: React.FC<CurationChannelItemProps> = ({
 }) => {
     const getDomainFromUrl = (url: string) => {
         if (!url) return '---';
+        if (typeof window === 'undefined') {
+            const parts = url.split('/');
+            return parts.length > 2 ? parts[2] : url;
+        }
         try {
             return new URL(url).hostname;
         } catch (_) {
