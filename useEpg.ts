@@ -2,6 +2,9 @@ import { useState, useMemo } from 'react';
 import { Channel, EpgChannel, AttributeKey } from './index';
 
 const parseXMLTV = (content: string): EpgChannel[] => {
+    if (typeof window === 'undefined') {
+        return [];
+    }
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(content, "text/xml");
     const channelElements = xmlDoc.getElementsByTagName('channel');
