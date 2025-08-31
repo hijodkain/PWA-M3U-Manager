@@ -201,7 +201,7 @@ export const useChannels = () => {
     };
 
     const uniqueGroups = useMemo(
-        () => ['All', ...new Set(channels.map((c) => c.groupTitle).filter(Boolean))],
+        () => ['All', ...Array.from(new Set(channels.map((c) => c.groupTitle).filter(Boolean)))],
         [channels]
     );
 
