@@ -105,12 +105,12 @@ export const useCuration = (
     };
 
     const mainListUniqueGroups = useMemo(
-        () => ['All', ...new Set(mainChannels.map((c) => c.groupTitle).filter(Boolean))],
+        () => ['All', ...Array.from(new Set(mainChannels.map((c) => c.groupTitle).filter(Boolean)))],
         [mainChannels]
     );
 
     const curationListUniqueGroups = useMemo(
-        () => ['All', ...new Set(curationChannels.map((c) => c.groupTitle).filter(Boolean))],
+        () => ['All', ...Array.from(new Set(curationChannels.map((c) => c.groupTitle).filter(Boolean)))],
         [curationChannels]
     );
 
