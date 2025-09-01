@@ -36,9 +36,9 @@ export default function PWAM3UManager() {
     return (
         <div className="bg-gray-900 text-white min-h-screen font-sans p-4 sm:p-6 lg:p-8">
             <div className="max-w-full mx-auto">
-                <h1 className="text-3xl font-bold mb-4 text-blue-400">Gestor de Listas M3U</h1>
+                <h1 className="text-3xl font-bold mb-4 text-blue-400 text-center">Gestor de Listas M3U</h1>
                 <div className="mb-6 border-b border-gray-700">
-                    <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+                    <nav className="-mb-px flex space-x-8 justify-center" aria-label="Tabs">
                         {(['editor', 'curation', 'epg', 'save', 'settings'] as Tab[]).map((tab) => {
                             const names = {
                                 editor: 'Editor de Playlist',

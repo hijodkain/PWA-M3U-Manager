@@ -146,9 +146,24 @@ export const useChannels = () => {
     };
 
     const handleUpdateChannel = (channelId: string, field: keyof Channel, newValue: any) => {
-        setChannels((prev) =>
-            prev.map((ch) => (ch.id === channelId ? { ...ch, [field]: newValue } : ch))
-        );
+        const isGroupUpdate =
+            field === 'groupTitle' &&
+            selectedChannels.includes(channelId) &&
+            selectedChannels.length > 1;
+
+        if (isGroupUpdate) {
+            if (window.confirm(`¿Quieres actualizar el grupo de los ${selectedChannels.length} canales seleccionados?`)) {
+                setChannels((prev) =>
+                    prev.map((ch) =>
+                        selectedChannels.includes(ch.id) ? { ...ch, groupTitle: newValue } : ch
+                    )
+                );
+            }
+        } else {
+            setChannels((prev) =>
+                prev.map((ch) => (ch.id === channelId ? { ...ch, [field]: newValue } : ch))
+            );
+        }
     };
 
     const handleOrderChange = (channelId: string, newOrderStr: string) => {

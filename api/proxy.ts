@@ -10,8 +10,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
-        const response = await fetch(url);
-        console.log(`Fetched URL: ${url}, Status: ${response.status}`);
+        let fetchUrl = url;
+        if (url.includes('dropbox.com')) {
+            // Handle www.dropbox.com -> dl.dropboxusercontent.com for older links
+            if (url.includes('www.dropbox.com')) {
+                fetchUrl = url.replace('www.dropbox.com', 'dl.dropboxusercontent.com');
+            }
+
+            // Ensure dl=1 for direct download on any Dropbox link
+            if (fetchUrl.includes('dl=0')) {
+                fetchUrl = fetchUrl.replace('dl=0', 'dl=1');
+            }
+            console.log(`Transformed Dropbox URL to: ${fetchUrl}`);
+        }
+
+        const response = await fetch(fetchUrl);
+        console.log(`Fetched URL: ${fetchUrl}, Status: ${response.status}`);
         if (!response.ok) {
             console.error(`Failed to fetch: ${response.statusText}`);
             // Forward the status code from the external server
