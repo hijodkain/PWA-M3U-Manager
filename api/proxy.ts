@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+const handler = async (req: VercelRequest, res: VercelResponse) => {
     const { url } = req.query;
     console.log(`Proxying URL: ${url}`);
 
@@ -12,15 +12,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
         let fetchUrl = url;
         if (url.includes('dropbox.com')) {
-            // Handle www.dropbox.com -> dl.dropboxusercontent.com for older links
-            if (url.includes('www.dropbox.com')) {
-                fetchUrl = url.replace('www.dropbox.com', 'dl.dropboxusercontent.com');
-            }
-
-            // Ensure dl=1 for direct download on any Dropbox link
-            if (fetchUrl.includes('dl=0')) {
-                fetchUrl = fetchUrl.replace('dl=0', 'dl=1');
-            }
+            // Consistently transform to a direct download link
+            const urlObject = new URL(url.replace('www.dropbox.com', 'dl.dropboxusercontent.com'));
+            urlObject.searchParams.set('dl', '1');
+            fetchUrl = urlObject.toString();
             console.log(`Transformed Dropbox URL to: ${fetchUrl}`);
         }
 
@@ -34,7 +29,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const data = await response.text();
         res.status(200).send(data);
     } catch (error) {
-        console.error(`Error fetching URL: ${error.message}`);
-        res.status(500).send(`Error fetching URL: ${error.message}`);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(`Error fetching URL: ${errorMessage}`);
+        res.status(500).send(`Error fetching URL: ${errorMessage}`);
     }
-}
+};
+
+module.exports = handler;
