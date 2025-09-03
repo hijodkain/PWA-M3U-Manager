@@ -1,21 +1,23 @@
 import React, { useState } from 'react';
 import { FileDown, UploadCloud } from 'lucide-react';
 import { useChannels } from './useChannels';
+import { useSettings } from './useSettings';
 
 interface SaveTabProps {
     channelsHook: ReturnType<typeof useChannels>;
+    settingsHook: ReturnType<typeof useSettings>;
 }
 
-const SaveTab: React.FC<SaveTabProps> = ({ channelsHook }) => {
+const SaveTab: React.FC<SaveTabProps> = ({ channelsHook, settingsHook }) => {
     const { channels, fileName, setFileName, handleDownload, generateM3UContent } = channelsHook;
+    const { dropboxToken } = settingsHook;
 
-    const [dropboxToken, setDropboxToken] = useState('');
     const [isUploading, setIsUploading] = useState(false);
     const [uploadStatus, setUploadStatus] = useState('');
 
     const handleUploadToDropbox = async () => {
         if (!dropboxToken) {
-            setUploadStatus('Por favor, introduce tu token de Dropbox.');
+            setUploadStatus('Por favor, guarda tu token en la pestaña de Configuración.');
             return;
         }
         if (channels.length === 0) {
@@ -91,17 +93,9 @@ const SaveTab: React.FC<SaveTabProps> = ({ channelsHook }) => {
             <div>
                 <h3 className="text-lg font-bold text-white mb-2">Subir a Dropbox</h3>
                 <p className="text-sm text-gray-400 mb-4">
-                    Pega tu token de acceso de Dropbox para subir la lista de canales. El archivo se guardará como <strong>{fileName}</strong> en la raíz de tu Dropbox.
+                    El archivo se guardará como <strong>{fileName}</strong> en la raíz de tu Dropbox.
                 </p>
                 <div className="flex flex-col gap-4 md:w-1/2">
-                    <input
-                        id="dropbox-token-input"
-                        type="password"
-                        placeholder="Tu token de acceso de Dropbox"
-                        value={dropboxToken}
-                        onChange={(e) => setDropboxToken(e.target.value)}
-                        className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-blue-500 focus:border-blue-500"
-                    />
                     <button
                         onClick={handleUploadToDropbox}
                         disabled={isUploading || channels.length === 0 || !dropboxToken}
@@ -110,6 +104,11 @@ const SaveTab: React.FC<SaveTabProps> = ({ channelsHook }) => {
                         <UploadCloud size={18} className="mr-2" />
                         {isUploading ? 'Subiendo...' : 'Subir a Dropbox'}
                     </button>
+                    {!dropboxToken && (
+                        <p className="text-xs text-yellow-400 mt-2">
+                            No se ha encontrado ningún token de Dropbox. Por favor, añádelo en la pestaña de Configuración.
+                        </p>
+                    )}
                 </div>
                 {uploadStatus && (
                     <p className="mt-4 text-sm text-yellow-300">{uploadStatus}</p>

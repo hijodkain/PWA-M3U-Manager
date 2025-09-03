@@ -1,0 +1,70 @@
+import { useState, useEffect, useCallback } from 'react';
+
+export interface SavedUrl {
+    id: string;
+    name: string;
+    url: string;
+}
+
+const DB_TOKEN_KEY = 'dropbox_token';
+const SAVED_URLS_KEY = 'saved_urls';
+
+export const useSettings = () => {
+    const [dropboxToken, setDropboxToken] = useState('');
+    const [savedUrls, setSavedUrls] = useState<SavedUrl[]>([]);
+
+    useEffect(() => {
+        try {
+            const savedToken = localStorage.getItem(DB_TOKEN_KEY);
+            if (savedToken) {
+                setDropboxToken(savedToken);
+            }
+
+            const savedUrlsJson = localStorage.getItem(SAVED_URLS_KEY);
+            if (savedUrlsJson) {
+                setSavedUrls(JSON.parse(savedUrlsJson));
+            }
+        } catch (error) {
+            console.error("Error loading settings from localStorage", error);
+        }
+    }, []);
+
+    const saveDropboxToken = useCallback((token: string) => {
+        try {
+            localStorage.setItem(DB_TOKEN_KEY, token);
+            setDropboxToken(token);
+        } catch (error) {
+            console.error("Error saving Dropbox token to localStorage", error);
+        }
+    }, []);
+
+    const addSavedUrl = useCallback((name: string, url: string) => {
+        if (!name || !url) return;
+        const newUrl: SavedUrl = { id: `url-${Date.now()}`, name, url };
+        const updatedUrls = [...savedUrls, newUrl];
+        try {
+            localStorage.setItem(SAVED_URLS_KEY, JSON.stringify(updatedUrls));
+            setSavedUrls(updatedUrls);
+        } catch (error) {
+            console.error("Error saving URL to localStorage", error);
+        }
+    }, [savedUrls]);
+
+    const deleteSavedUrl = useCallback((id: string) => {
+        const updatedUrls = savedUrls.filter(url => url.id !== id);
+        try {
+            localStorage.setItem(SAVED_URLS_KEY, JSON.stringify(updatedUrls));
+            setSavedUrls(updatedUrls);
+        } catch (error) {
+            console.error("Error deleting URL from localStorage", error);
+        }
+    }, [savedUrls]);
+
+    return {
+        dropboxToken,
+        saveDropboxToken,
+        savedUrls,
+        addSavedUrl,
+        deleteSavedUrl,
+    };
+};

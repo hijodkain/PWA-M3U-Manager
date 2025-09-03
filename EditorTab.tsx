@@ -4,14 +4,16 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { Upload, Download, Plus, Trash2, GripVertical } from 'lucide-react';
 import { useChannels } from './useChannels';
 import { useColumnResizing } from './useColumnResizing';
+import { useSettings } from './useSettings';
 import SortableChannelRow from './SortableChannelRow';
 import ResizableHeader from './ResizableHeader';
 
 interface EditorTabProps {
     channelsHook: ReturnType<typeof useChannels>;
+    settingsHook: ReturnType<typeof useSettings>;
 }
 
-const EditorTab: React.FC<EditorTabProps> = ({ channelsHook }) => {
+const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => {
     const {
         channels,
         url,
@@ -39,6 +41,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook }) => {
         handleSelectAll,
     } = channelsHook;
 
+    const { savedUrls } = settingsHook;
     const { columnWidths, handleResize } = useColumnResizing();
     const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
 
@@ -67,6 +70,27 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook }) => {
                                 <Download size={18} className="mr-2" /> Descargar
                             </button>
                         </div>
+                        {savedUrls.length > 0 && (
+                            <div className="mt-2">
+                                <select
+                                    id="saved-urls-select"
+                                    value=""
+                                    onChange={(e) => {
+                                        if (e.target.value) {
+                                            setUrl(e.target.value);
+                                        }
+                                    }}
+                                    className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                >
+                                    <option value="">o selecciona una lista guardada...</option>
+                                    {savedUrls.map(item => (
+                                        <option key={item.id} value={item.url}>
+                                            {item.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
                     </div>
                     <div className="flex justify-center md:justify-end">
                         <label
