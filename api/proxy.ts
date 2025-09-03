@@ -1,6 +1,8 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-
-const handler = async (req: VercelRequest, res: VercelResponse) => {
+/**
+ * @param {import('@vercel/node').VercelRequest} req
+ * @param {import('@vercel/node').VercelResponse} res
+ */
+const handler = async (req, res) => {
     const { url } = req.query;
     console.log(`Proxying URL: ${url}`);
 
