@@ -13,10 +13,10 @@ const parseM3U = (content: string): Channel[] => {
         if (lines[i].trim().startsWith('#EXTINF:')) {
             const info = lines[i].trim().substring(8);
             const url = lines[++i]?.trim() || '';
-            const tvgId = info.match(/tvg-id="([^"]*)"/)?.[1] || '';
-            const tvgName = info.match(/tvg-name="([^"]*)"/)?.[1] || '';
-            const tvgLogo = info.match(/tvg-logo="([^"]*)"/)?.[1] || '';
-            const groupTitle = info.match(/group-title="([^"]*)"/)?.[1] || '';
+            const tvgId = info.match(/tvg-id="([^"]*)"/)?.![1] || '';
+            const tvgName = info.match(/tvg-name="([^"]*)"/)?.![1] || '';
+            const tvgLogo = info.match(/tvg-logo="([^"]*)"/)?.![1] || '';
+            const groupTitle = info.match(/group-title="([^"]*)"/)?.![1] || '';
             const name = info.split(',').pop()?.trim() || '';
             if (name && url) {
                 parsedChannels.push({
@@ -33,6 +33,22 @@ const parseM3U = (content: string): Channel[] => {
         }
     }
     return parsedChannels;
+};
+
+const extractDropboxFileName = (url: string): string | null => {
+    if (!url || !url.includes('dropbox.com')) {
+        return null;
+    }
+    try {
+        const urlObject = new URL(url);
+        const pathname = urlObject.pathname;
+        const parts = pathname.split('/');
+        const filename = parts[parts.length - 1];
+        return filename && filename.includes('.') ? filename : null;
+    } catch (error) {
+        console.error('Error extracting filename from URL:', error);
+        return null;
+    }
 };
 
 export const useChannels = () => {
@@ -66,6 +82,10 @@ export const useChannels = () => {
             const text = await response.text();
             setChannels(parseM3U(text));
             setSelectedChannels([]);
+            const extractedFname = extractDropboxFileName(url);
+            if (extractedFname) {
+                setFileName(extractedFname);
+            }
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Ocurrió un error desconocido.');
         } finally {
@@ -258,7 +278,7 @@ export const useChannels = () => {
 
     useEffect(() => {
         if (selectAllCheckboxRef.current) {
-            selectAllCheckboxRef.current.indeterminate =
+            selectAllCheckboxRef.current.indeterminate = 
                 selectedChannels.length > 0 && selectedChannels.length < filteredChannels.length;
         }
     }, [selectedChannels, filteredChannels]);
@@ -307,5 +327,6 @@ export const useChannels = () => {
         saveStateToHistory,
         undo,
         history,
+        generateM3UContent,
     };
 };
