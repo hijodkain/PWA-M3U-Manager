@@ -13,10 +13,10 @@ const parseM3U = (content: string): Channel[] => {
         if (lines[i].trim().startsWith('#EXTINF:')) {
             const info = lines[i].trim().substring(8);
             const url = lines[++i]?.trim() || '';
-            const tvgId = info.match(/tvg-id="([^"]*)"/)_?.[1] || '';
-            const tvgName = info.match(/tvg-name="([^"]*)"/)_?.[1] || '';
-            const tvgLogo = info.match(/tvg-logo="([^"]*)"/)_?.[1] || '';
-            const groupTitle = info.match(/group-title="([^"]*)"/)_?.[1] || '';
+            const tvgId = info.match(/tvg-id="([^"]*)"/)?.[1] || '';
+            const tvgName = info.match(/tvg-name="([^"]*)"/)?.[1] || '';
+            const tvgLogo = info.match(/tvg-logo="([^"]*)"/)?.[1] || '';
+            const groupTitle = info.match(/group-title="([^"]*)"/)?.[1] || '';
             const name = info.split(',').pop()?.trim() || '';
             if (name && url) {
                 parsedChannels.push({
@@ -35,7 +35,7 @@ const parseM3U = (content: string): Channel[] => {
     return parsedChannels;
 };
 
-const extractDropboxFileName = (url: string): string | null => {
+function extractDropboxFileName(url: string): string | null {
     if (!url || !url.includes('dropbox.com')) {
         return null;
     }
@@ -49,7 +49,7 @@ const extractDropboxFileName = (url: string): string | null => {
         console.error('Error extracting filename from URL:', error);
         return null;
     }
-};
+}
 
 export const useChannels = () => {
     const [channels, setChannels] = useState<Channel[]>([]);
