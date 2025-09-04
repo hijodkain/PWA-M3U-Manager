@@ -15,5 +15,5 @@ export interface EpgChannel {
     logo: string;
 }
 
-export type Tab = 'editor' | 'curation' | 'epg' | 'save' | 'settings';
+export type Tab = 'editor' | 'curation' | 'epg' | 'save' | 'settings' | 'ayuda';
 export type AttributeKey = 'tvgId' | 'tvgName' | 'tvgLogo' | 'groupTitle' | 'name' | 'url';
