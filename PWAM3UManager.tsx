@@ -9,6 +9,7 @@ import CurationTab from './CurationTab';
 import EpgTab from './EpgTab';
 import SaveTab from './SaveTab';
 import SettingsTab from './SettingsTab';
+import HelpTab from './HelpTab'; // Import HelpTab
 
 export default function PWAM3UManager() {
     const [activeTab, setActiveTab] = useState<Tab>('editor');
@@ -29,6 +30,8 @@ export default function PWAM3UManager() {
                 return <SaveTab channelsHook={channelsHook} settingsHook={settingsHook} />;
             case 'settings':
                 return <SettingsTab settingsHook={settingsHook} />;
+            case 'ayuda': // Add case for help tab
+                return <HelpTab />;
             default:
                 return (
                     <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
@@ -47,13 +50,14 @@ export default function PWAM3UManager() {
                 </div>
                 <div className="mb-6 border-b border-gray-700">
                     <nav className="-mb-px flex space-x-8 justify-center" aria-label="Tabs">
-                        {(['editor', 'curation', 'epg', 'save', 'settings'] as Tab[]).map((tab) => {
+                        {(['editor', 'curation', 'epg', 'save', 'settings', 'ayuda'] as Tab[]).map((tab) => { // Add 'ayuda' to tabs array
                             const names = {
                                 editor: 'Editor de Playlist',
                                 curation: 'Curación',
                                 epg: 'EPG',
                                 save: 'Guardar y Exportar',
                                 settings: 'Configuración',
+                                ayuda: 'Ayuda', // Add name for help tab
                             };
                             return (
                                 <button
