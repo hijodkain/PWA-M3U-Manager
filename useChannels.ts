@@ -52,7 +52,13 @@ function extractDropboxFileName(url: string): string | null {
     }
 }
 
-export const useChannels = () => {
+type Status = 'ok' | 'failed';
+
+interface VerificationResult {
+    [url: string]: Status;
+}
+
+export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateAction<Channel[]>>) => {
     const [channels, setChannels] = useState<Channel[]>([]);
     const [url, setUrl] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -309,6 +315,7 @@ export const useChannels = () => {
 
         const batchSize = 10;
         let verifiedCount = 0;
+        let finalChannels: Channel[] = [];
 
         for (let i = 0; i < channelsToVerify.length; i += batchSize) {
             const batch = channelsToVerify.slice(i, i + batchSize);
@@ -327,24 +334,35 @@ export const useChannels = () => {
                     body: JSON.stringify({ urls }),
                 });
 
-                const results = await response.json();
+                const results: VerificationResult = await response.json();
 
-                setChannels(prev => prev.map(c => {
-                    if (results[c.url]) {
-                        return { ...c, status: results[c.url] };
-                    }
-                    return c;
-                }));
+                setChannels(prev => {
+                    const newChannels = prev.map(c => {
+                        if (results[c.url]) {
+                            return { ...c, status: results[c.url] } as Channel;
+                        }
+                        return c;
+                    });
+                    finalChannels = newChannels;
+                    return newChannels;
+                });
 
             } catch (error) {
                 console.error("Verification batch failed:", error);
-                setChannels(prev => prev.map(c => batch.some(bc => bc.id === c.id) ? { ...c, status: 'failed' } : c));
+                setChannels(prev => {
+                    const newChannels = prev.map(c => batch.some(bc => bc.id === c.id) ? { ...c, status: 'failed' } as Channel : c);
+                    finalChannels = newChannels;
+                    return newChannels;
+                });
             }
             verifiedCount += batch.length;
             setVerificationProgress(Math.round((verifiedCount / channelsToVerify.length) * 100));
         }
 
         setIsVerifying(false);
+
+        const failed = finalChannels.filter(c => c.status === 'failed');
+        setFailedChannels(failed);
     };
 
     const handleDeleteFailed = () => {

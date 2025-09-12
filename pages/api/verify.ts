@@ -1,4 +1,3 @@
-
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 type Status = 'ok' | 'failed';
@@ -7,40 +6,41 @@ interface VerificationResult {
     [url: string]: Status;
 }
 
-// Based on the logic from the python script
 async function checkChannel(url: string): Promise<Status> {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5-second timeout
+    let retries = 3;
+    while (retries > 0) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5-second timeout
 
-    try {
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'User-Agent': 'Mozilla/5.0',
-            },
-            signal: controller.signal,
-            redirect: 'follow',
-        });
+        try {
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'User-Agent': 'Mozilla/5.0',
+                },
+                signal: controller.signal,
+                redirect: 'follow',
+            });
 
-        clearTimeout(timeoutId);
+            clearTimeout(timeoutId);
 
-        // Check for successful status code (2xx or 3xx for redirects)
-        if (response.status < 200 || response.status >= 400) {
-            return 'failed';
+            if (response.status >= 200 && response.status < 400) {
+                const contentType = response.headers.get('content-type')?.toLowerCase() || '';
+                if (!['text/html', 'text/plain', 'application/json'].some(ct => contentType.includes(ct))) {
+                    return 'ok';
+                }
+            }
+        } catch (error) {
+            // ignore error and retry
+        } finally {
+            clearTimeout(timeoutId);
         }
-
-        // Check content type to avoid web pages
-        const contentType = response.headers.get('content-type')?.toLowerCase() || '';
-        if (['text/html', 'text/plain', 'application/json'].some(ct => contentType.includes(ct))) {
-            return 'failed';
+        retries--;
+        if (retries > 0) {
+            await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
         }
-
-        return 'ok';
-    } catch (error) {
-        clearTimeout(timeoutId);
-        // This catches network errors, timeouts, etc.
-        return 'failed';
     }
+    return 'failed';
 }
 
 export default async function handler(

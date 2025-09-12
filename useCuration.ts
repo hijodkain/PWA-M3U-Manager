@@ -167,5 +167,6 @@ export const useCuration = (
         setMainListSearch,
         curationListSearch,
         setCurationListSearch,
+        setCurationChannels,
     };
 };

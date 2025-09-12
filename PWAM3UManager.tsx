@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Tab } from './index';
+import React, { useState, useEffect } from 'react';
+import { Tab, Channel } from './index';
 import { useChannels } from './useChannels';
 import { useCuration } from './useCuration';
 import { useEpg } from './useEpg';
@@ -9,14 +9,23 @@ import CurationTab from './CurationTab';
 import EpgTab from './EpgTab';
 import SaveTab from './SaveTab';
 import SettingsTab from './SettingsTab';
-import HelpTab from './HelpTab'; // Import HelpTab
+import HelpTab from './HelpTab';
 
 export default function PWAM3UManager() {
     const [activeTab, setActiveTab] = useState<Tab>('editor');
-    const channelsHook = useChannels();
+    const [failedChannels, setFailedChannels] = useState<Channel[]>([]);
+    const channelsHook = useChannels(setFailedChannels);
     const settingsHook = useSettings();
     const curationHook = useCuration(channelsHook.channels, channelsHook.setChannels, channelsHook.saveStateToHistory);
     const epgHook = useEpg(channelsHook.channels, channelsHook.setChannels, channelsHook.saveStateToHistory);
+
+    useEffect(() => {
+        if (activeTab === 'curation' && failedChannels.length > 0) {
+            curationHook.setCurationChannels(failedChannels);
+            setFailedChannels([]);
+            alert('Los canales que fallaron la verificación se han movido a la pestaña de Curación.');
+        }
+    }, [activeTab, failedChannels, curationHook, setFailedChannels]);
 
     const renderTabContent = () => {
         switch (activeTab) {
@@ -30,7 +39,7 @@ export default function PWAM3UManager() {
                 return <SaveTab channelsHook={channelsHook} settingsHook={settingsHook} />;
             case 'settings':
                 return <SettingsTab settingsHook={settingsHook} />;
-            case 'ayuda': // Add case for help tab
+            case 'ayuda':
                 return <HelpTab />;
             default:
                 return (
@@ -50,14 +59,14 @@ export default function PWAM3UManager() {
                 </div>
                 <div className="mb-6 border-b border-gray-700">
                     <nav className="-mb-px flex space-x-8 justify-center" aria-label="Tabs">
-                        {(['editor', 'curation', 'epg', 'save', 'settings', 'ayuda'] as Tab[]).map((tab) => { // Add 'ayuda' to tabs array
+                        {(['editor', 'curation', 'epg', 'save', 'settings', 'ayuda'] as Tab[]).map((tab) => {
                             const names = {
                                 editor: 'Editor de Playlist',
                                 curation: 'Curación',
                                 epg: 'EPG',
                                 save: 'Guardar y Exportar',
                                 settings: 'Configuración',
-                                ayuda: 'Ayuda', // Add name for help tab
+                                ayuda: 'Ayuda',
                             };
                             return (
                                 <button
