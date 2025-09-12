@@ -7,6 +7,7 @@ export interface Channel {
   groupTitle: string;
   name: string;
   url: string;
+  status?: 'ok' | 'failed' | 'verifying' | 'pending';
 }
 
 export interface EpgChannel {

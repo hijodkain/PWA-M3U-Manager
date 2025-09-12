@@ -1,7 +1,7 @@
 import React from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { Upload, Download, Plus, Trash2, GripVertical } from 'lucide-react';
+import { Upload, Download, Plus, Trash2, GripVertical, Zap, ShieldCheck, ShieldX, Hourglass, ShieldQuestion } from 'lucide-react';
 import { useChannels } from './useChannels';
 import { useColumnResizing } from './useColumnResizing';
 import { useSettings } from './useSettings';
@@ -30,6 +30,10 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         handleFileUpload,
         handleAddNewChannel,
         handleDeleteSelected,
+        handleVerifyChannels,
+        handleDeleteFailed,
+        isVerifying,
+        verificationProgress,
         handleUpdateChannel,
         handleOrderChange,
         handleDragStart,
@@ -44,6 +48,19 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
     const { savedUrls } = settingsHook;
     const { columnWidths, handleResize } = useColumnResizing();
     const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
+
+    const StatusIndicator: React.FC<{ status: Channel['status'] }> = ({ status }) => {
+        switch (status) {
+            case 'ok':
+                return <ShieldCheck size={16} className="text-green-500 mx-auto" title="Operativo" />;
+            case 'failed':
+                return <ShieldX size={16} className="text-red-500 mx-auto" title="Fallido" />;
+            case 'verifying':
+                return <Hourglass size={16} className="text-yellow-500 mx-auto animate-spin" title="Verificando..." />;
+            default:
+                return <ShieldQuestion size={16} className="text-gray-500 mx-auto" title="Pendiente" />;
+        }
+    };
 
     return (
         <>
@@ -132,6 +149,26 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                         </select>
                     </div>
                     <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 flex-wrap justify-end">
+                        {isVerifying && (
+                            <div className="text-sm text-blue-400">
+                                Verificando {verificationProgress} de {channels.length}...
+                            </div>
+                        )}
+                        <button
+                            onClick={handleVerifyChannels}
+                            disabled={isVerifying}
+                            className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-md flex items-center disabled:bg-gray-600 disabled:cursor-not-allowed"
+                        >
+                            <Zap size={18} className="mr-2" /> Verificar Canales
+                        </button>
+                        <button
+                            onClick={handleDeleteFailed}
+                            disabled={isVerifying || channels.every(c => c.status !== 'failed')}
+                            className="bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-md flex items-center disabled:bg-gray-600 disabled:cursor-not-allowed"
+                        >
+                            <Trash2 size={18} className="mr-2" /> Eliminar Fallidos
+                        </button>
                         <p className="text-sm text-gray-400">
                             {selectedChannels.length} de {filteredChannels.length} canales seleccionados
                         </p>
@@ -169,6 +206,9 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                 <ResizableHeader width={columnWidths.order} onResize={(w) => handleResize('order', w)}>
                                     <div className="text-center">Orden</div>
                                 </ResizableHeader>
+                                <ResizableHeader width={columnWidths.status} onResize={(w) => handleResize('status', w)}>
+                                    <div className="text-center">Estado</div>
+                                </ResizableHeader>
                                 <ResizableHeader width={columnWidths.tvgId} onResize={(w) => handleResize('tvgId', w)}>
                                     tvg-id
                                 </ResizableHeader>
@@ -199,6 +239,9 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                         onUpdate={handleUpdateChannel}
                                         selectedChannels={selectedChannels}
                                         toggleChannelSelection={toggleChannelSelection}
+                                        statusIndicator={
+                                            <td style={{ width: `${columnWidths.status}px` }} className="px-2 py-2 text-center"><StatusIndicator status={channel.status} /></td>
+                                        }
                                         columnWidths={columnWidths}
                                     />
                                 ))}
@@ -215,6 +258,9 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                         </td>
                                         <td style={{ width: `${columnWidths.order}px` }} className="px-2 py-2 text-center">
                                             {activeChannel.order}
+                                        </td>
+                                        <td style={{ width: `${columnWidths.status}px` }} className="px-2 py-2 text-center">
+                                            <StatusIndicator status={activeChannel.status} />
                                         </td>
                                         <td style={{ width: `${columnWidths.tvgId}px` }} className="px-2 py-2 truncate">
                                             {activeChannel.tvgId}

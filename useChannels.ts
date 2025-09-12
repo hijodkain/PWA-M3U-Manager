@@ -13,10 +13,10 @@ const parseM3U = (content: string): Channel[] => {
         if (lines[i].trim().startsWith('#EXTINF:')) {
             const info = lines[i].trim().substring(8);
             const url = lines[++i]?.trim() || '';
-            const tvgId = info.match(/tvg-id="([^"]*)"/)?.[1] || '';
-            const tvgName = info.match(/tvg-name="([^"]*)"/)?.[1] || '';
-            const tvgLogo = info.match(/tvg-logo="([^"]*)"/)?.[1] || '';
-            const groupTitle = info.match(/group-title="([^"]*)"/)?.[1] || '';
+            const tvgId = info.match(/tvg-id="([^"]*)"/)?.["1"] || '';
+            const tvgName = info.match(/tvg-name="([^"]*)"/)?.["1"] || '';
+            const tvgLogo = info.match(/tvg-logo="([^"]*)"/)?.["1"] || '';
+            const groupTitle = info.match(/group-title="([^"]*)"/)?.["1"] || '';
             const name = info.split(',').pop()?.trim() || '';
             if (name && url) {
                 parsedChannels.push({
@@ -28,6 +28,7 @@ const parseM3U = (content: string): Channel[] => {
                     groupTitle,
                     name,
                     url,
+                    status: 'pending',
                 });
             }
         }
@@ -65,6 +66,9 @@ export const useChannels = () => {
     const tableContainerRef = useRef<HTMLDivElement>(null);
     const prevChannelsCount = useRef(channels.length);
     const [history, setHistory] = useState<Channel[][]>([]);
+    const [isVerifying, setIsVerifying] = useState(false);
+    const [verificationProgress, setVerificationProgress] = useState(0);
+
 
     const handleFetchUrl = async () => {
         if (!url) {
@@ -128,6 +132,7 @@ export const useChannels = () => {
             groupTitle: filterGroup === 'All' ? 'Nuevo Grupo' : filterGroup,
             name: 'Nuevo Canal',
             url: '',
+            status: 'pending',
         };
         setChannels((prev) => [...prev, newChannel]);
     };
@@ -293,6 +298,59 @@ export const useChannels = () => {
         setHistory(prev => prev.slice(0, -1));
     };
 
+    const handleVerifyChannels = async () => {
+        const channelIdsToVerify = selectedChannels.length > 0 ? selectedChannels : channels.map(c => c.id);
+
+        setIsVerifying(true);
+        setVerificationProgress(0);
+
+        const channelsToVerify = channels.filter(c => channelIdsToVerify.includes(c.id));
+        setChannels(prev => prev.map(c => channelIdsToVerify.includes(c.id) ? { ...c, status: 'verifying' } : c));
+
+        const batchSize = 10;
+        let verifiedCount = 0;
+
+        for (let i = 0; i < channelsToVerify.length; i += batchSize) {
+            const batch = channelsToVerify.slice(i, i + batchSize);
+            const urls = batch.map(c => c.url).filter(Boolean);
+
+            if (urls.length === 0) {
+                verifiedCount += batch.length;
+                setVerificationProgress(Math.round((verifiedCount / channelsToVerify.length) * 100));
+                continue;
+            }
+
+            try {
+                const response = await fetch('/api/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ urls }),
+                });
+
+                const results = await response.json();
+
+                setChannels(prev => prev.map(c => {
+                    if (results[c.url]) {
+                        return { ...c, status: results[c.url] };
+                    }
+                    return c;
+                }));
+
+            } catch (error) {
+                console.error("Verification batch failed:", error);
+                setChannels(prev => prev.map(c => batch.some(bc => bc.id === c.id) ? { ...c, status: 'failed' } : c));
+            }
+            verifiedCount += batch.length;
+            setVerificationProgress(Math.round((verifiedCount / channelsToVerify.length) * 100));
+        }
+
+        setIsVerifying(false);
+    };
+
+    const handleDeleteFailed = () => {
+        setChannels(prev => prev.filter(c => c.status !== 'failed'));
+    };
+
     return {
         channels,
         setChannels,
@@ -328,5 +386,9 @@ export const useChannels = () => {
         undo,
         history,
         generateM3UContent,
+        handleVerifyChannels,
+        handleDeleteFailed,
+        isVerifying,
+        verificationProgress,
     };
 };

@@ -11,6 +11,7 @@ interface SortableChannelRowProps {
     onUpdate: (id: string, field: keyof Channel, value: string) => void;
     selectedChannels: string[];
     toggleChannelSelection: (id: string, isShiftClick: boolean) => void;
+    statusIndicator: React.ReactNode;
     columnWidths: Record<string, number>;
 }
 
@@ -20,6 +21,7 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
     onUpdate,
     selectedChannels,
     toggleChannelSelection,
+    statusIndicator,
     columnWidths,
 }) => {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: channel.id });
@@ -48,6 +50,7 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
             <td style={{ width: `${columnWidths.order}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-300 text-center">
                 <EditableCell value={channel.order.toString()} onSave={(val) => onOrderChange(channel.id, val)} />
             </td>
+            {statusIndicator}
             <td style={{ width: `${columnWidths.tvgId}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-300">
                 <EditableCell value={channel.tvgId} onSave={(val) => onUpdate(channel.id, 'tvgId', val)} />
             </td>
