@@ -7,6 +7,7 @@ import { useColumnResizing } from './useColumnResizing';
 import { useSettings } from './useSettings';
 import SortableChannelRow from './SortableChannelRow';
 import ResizableHeader from './ResizableHeader';
+import { Channel } from './index';
 
 interface EditorTabProps {
     channelsHook: ReturnType<typeof useChannels>;
@@ -52,13 +53,13 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
     const StatusIndicator: React.FC<{ status: Channel['status'] }> = ({ status }) => {
         switch (status) {
             case 'ok':
-                return <ShieldCheck size={16} className="text-green-500 mx-auto" title="Operativo" />;
+                return <span title="Operativo"><ShieldCheck size={16} className="text-green-500 mx-auto" /></span>;
             case 'failed':
-                return <ShieldX size={16} className="text-red-500 mx-auto" title="Fallido" />;
+                return <span title="Fallido"><ShieldX size={16} className="text-red-500 mx-auto" /></span>;
             case 'verifying':
-                return <Hourglass size={16} className="text-yellow-500 mx-auto animate-spin" title="Verificando..." />;
+                return <span title="Verificando..."><Hourglass size={16} className="text-yellow-500 mx-auto animate-spin" /></span>;
             default:
-                return <ShieldQuestion size={16} className="text-gray-500 mx-auto" title="Pendiente" />;
+                return <span title="Pendiente"><ShieldQuestion size={16} className="text-gray-500 mx-auto" /></span>;
         }
     };
 
@@ -149,42 +150,43 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                         </select>
                     </div>
                     <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2 flex-wrap justify-end">
-                        {isVerifying && (
-                            <div className="text-sm text-blue-400">
-                                Verificando {verificationProgress} de {channels.length}...
-                            </div>
-                        )}
-                        <button
-                            onClick={handleVerifyChannels}
-                            disabled={isVerifying}
-                            className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-md flex items-center disabled:bg-gray-600 disabled:cursor-not-allowed"
-                        >
-                            <Zap size={18} className="mr-2" /> Verificar Canales
-                        </button>
-                        <button
-                            onClick={handleDeleteFailed}
-                            disabled={isVerifying || channels.every(c => c.status !== 'failed')}
-                            className="bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-md flex items-center disabled:bg-gray-600 disabled:cursor-not-allowed"
-                        >
-                            <Trash2 size={18} className="mr-2" /> Eliminar Fallidos
-                        </button>
-                        <p className="text-sm text-gray-400">
-                            {selectedChannels.length} de {filteredChannels.length} canales seleccionados
-                        </p>
-                        <button
-                            onClick={handleAddNewChannel}
-                            className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md flex items-center"
-                        >
-                            <Plus size={18} className="mr-2" /> Crear Canal
-                        </button>
-                        <button
-                            onClick={handleDeleteSelected}
-                            disabled={selectedChannels.length === 0}
-                            className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md flex items-center disabled:bg-gray-600 disabled:cursor-not-allowed"
-                        >
-                            <Trash2 size={18} className="mr-2" /> Eliminar Seleccionados
-                        </button>
+                        <div className="flex items-center gap-2 flex-wrap justify-end">
+                            {isVerifying && (
+                                <div className="text-sm text-blue-400">
+                                    Verificando {verificationProgress} de {channels.length}...
+                                </div>
+                            )}
+                            <button
+                                onClick={handleVerifyChannels}
+                                disabled={isVerifying}
+                                className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-md flex items-center disabled:bg-gray-600 disabled:cursor-not-allowed"
+                            >
+                                <Zap size={18} className="mr-2" /> Verificar Canales
+                            </button>
+                            <button
+                                onClick={handleDeleteFailed}
+                                disabled={isVerifying || channels.every(c => c.status !== 'failed')}
+                                className="bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-md flex items-center disabled:bg-gray-600 disabled:cursor-not-allowed"
+                            >
+                                <Trash2 size={18} className="mr-2" /> Eliminar Fallidos
+                            </button>
+                            <p className="text-sm text-gray-400">
+                                {selectedChannels.length} de {filteredChannels.length} canales seleccionados
+                            </p>
+                            <button
+                                onClick={handleAddNewChannel}
+                                className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md flex items-center"
+                            >
+                                <Plus size={18} className="mr-2" /> Crear Canal
+                            </button>
+                            <button
+                                onClick={handleDeleteSelected}
+                                disabled={selectedChannels.length === 0}
+                                className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md flex items-center disabled:bg-gray-600 disabled:cursor-not-allowed"
+                            >
+                                <Trash2 size={18} className="mr-2" /> Eliminar Seleccionados
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

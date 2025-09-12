@@ -3,6 +3,7 @@ import { useState } from 'react';
 const defaultWidths = {
     select: 80,
     order: 80,
+    status: 100,
     tvgId: 200,
     tvgName: 200,
     tvgLogo: 100,
