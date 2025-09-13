@@ -272,13 +272,6 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
     };
 
     useEffect(() => {
-        if (channels.length > prevChannelsCount.current && tableContainerRef.current) {
-            tableContainerRef.current.scrollTop = tableContainerRef.current.scrollHeight;
-        }
-        prevChannelsCount.current = channels.length;
-    }, [channels]);
-
-    useEffect(() => {
         if (selectAllCheckboxRef.current) {
             selectAllCheckboxRef.current.indeterminate = 
                 selectedChannels.length > 0 && selectedChannels.length < filteredChannels.length;
