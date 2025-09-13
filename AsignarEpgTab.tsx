@@ -37,6 +37,22 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook }) 
     const [mainListSearch, setMainListSearch] = useState('');
     const [epgListSearch, setEpgListSearch] = useState('');
 
+    const filteredMainChannelsForEpg = useMemo(() => {
+        let channelsToFilter = channels;
+        if (mainListSearch) {
+            channelsToFilter = channelsToFilter.filter(c => c.name.toLowerCase().includes(mainListSearch.toLowerCase()));
+        }
+        return channelsToFilter;
+    }, [channels, mainListSearch]);
+
+    const filteredEpgChannels = useMemo(() => {
+        let channelsToFilter = epgChannels;
+        if (epgListSearch) {
+            channelsToFilter = channelsToFilter.filter(c => c.name.toLowerCase().includes(epgListSearch.toLowerCase()));
+        }
+        return channelsToFilter;
+    }, [epgChannels, epgListSearch]);
+
     const mainListParentRef = useRef<HTMLDivElement>(null);
     const epgListParentRef = useRef<HTMLDivElement>(null);
 
@@ -56,22 +72,6 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook }) 
 
     const mainListVirtualItems = mainListRowVirtualizer.getVirtualItems();
     const epgListVirtualItems = epgListRowVirtualizer.getVirtualItems();
-
-    const filteredMainChannelsForEpg = useMemo(() => {
-        let channelsToFilter = channels;
-        if (mainListSearch) {
-            channelsToFilter = channelsToFilter.filter(c => c.name.toLowerCase().includes(mainListSearch.toLowerCase()));
-        }
-        return channelsToFilter;
-    }, [channels, mainListSearch]);
-
-    const filteredEpgChannels = useMemo(() => {
-        let channelsToFilter = epgChannels;
-        if (epgListSearch) {
-            channelsToFilter = channelsToFilter.filter(c => c.name.toLowerCase().includes(epgListSearch.toLowerCase()));
-        }
-        return channelsToFilter;
-    }, [epgChannels, epgListSearch]);
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-11 gap-4">

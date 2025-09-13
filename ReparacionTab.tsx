@@ -46,6 +46,28 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
 
     const { undo, history } = channelsHook;
 
+    const filteredMainChannels = useMemo(() => {
+        let channels = mainChannels;
+        if (mainListFilter !== 'All') {
+            channels = channels.filter(c => c.groupTitle === mainListFilter);
+        }
+        if (mainListSearch) {
+            channels = channels.filter(c => c.name.toLowerCase().includes(mainListSearch.toLowerCase()));
+        }
+        return channels;
+    }, [mainChannels, mainListFilter, mainListSearch]);
+
+    const filteredReparacionChannels = useMemo(() => {
+        let channels = reparacionChannels;
+        if (reparacionListFilter !== 'All') {
+            channels = channels.filter(c => c.groupTitle === reparacionListFilter);
+        }
+        if (reparacionListSearch) {
+            channels = channels.filter(c => c.name.toLowerCase().includes(reparacionListSearch.toLowerCase()));
+        }
+        return channels;
+    }, [reparacionChannels, reparacionListFilter, reparacionListSearch]);
+
     const mainListParentRef = useRef<HTMLDivElement>(null);
     const reparacionListParentRef = useRef<HTMLDivElement>(null);
 
