@@ -36,21 +36,22 @@ const parseM3U = (content: string): Channel[] => {
     return parsedChannels;
 };
 
-export const useCuration = (
+export const useReparacion = (
     mainChannels: Channel[],
     setMainChannels: React.Dispatch<React.SetStateAction<Channel[]>>,
     saveStateToHistory: () => void
 ) => {
-    const [curationChannels, setCurationChannels] = useState<Channel[]>([]);
-    const [selectedCurationChannels, setSelectedCurationChannels] = useState<Set<string>>(new Set());
+    const [reparacionChannels, setReparacionChannels] = useState<Channel[]>([]);
+    const [selectedReparacionChannels, setSelectedReparacionChannels] = useState<Set<string>>(new Set());
     const [attributesToCopy, setAttributesToCopy] = useState<Set<AttributeKey>>(new Set());
     const [destinationChannelId, setDestinationChannelId] = useState<string | null>(null);
     const [verificationStatus, setVerificationStatus] = useState<Record<string, VerificationStatus>>({});
+    const [reparacionUrl, setReparacionUrl] = useState('');
 
     const [mainListFilter, setMainListFilter] = useState('All');
-    const [curationListFilter, setCurationListFilter] = useState('All');
+    const [reparacionListFilter, setReparacionListFilter] = useState('All');
     const [mainListSearch, setMainListSearch] = useState('');
-    const [curationListSearch, setCurationListSearch] = useState('');
+    const [reparacionListSearch, setReparacionListSearch] = useState('');
 
     const verifyChannel = async (channelId: string, url: string) => {
         setVerificationStatus(prev => ({ ...prev, [channelId]: 'verifying' }));
@@ -90,19 +91,30 @@ export const useCuration = (
     }, [mainChannels, verificationStatus]);
 
 
-    const handleCurationFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleReparacionFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
-                setCurationChannels(parseM3U(e.target?.result as string));
+                setReparacionChannels(parseM3U(e.target?.result as string));
             } catch (err) {
                 console.error(err);
             }
         };
         reader.readAsText(file);
         event.target.value = '';
+    };
+
+    const handleReparacionUrlLoad = async () => {
+        if (!reparacionUrl) return;
+        try {
+            const response = await fetch(reparacionUrl);
+            const text = await response.text();
+            setReparacionChannels(parseM3U(text));
+        } catch (error) {
+            console.error('Failed to load from URL', error);
+        }
     };
 
     const toggleAttributeToCopy = (attribute: AttributeKey) => {
@@ -139,9 +151,9 @@ export const useCuration = (
         [mainChannels]
     );
 
-    const curationListUniqueGroups = useMemo(
-        () => ['All', ...Array.from(new Set(curationChannels.map((c) => c.groupTitle).filter(Boolean)))],
-        [curationChannels]
+    const reparacionListUniqueGroups = useMemo(
+        () => ['All', ...Array.from(new Set(reparacionChannels.map((c) => c.groupTitle).filter(Boolean)))],
+        [reparacionChannels]
     );
 
     const filteredMainChannels = useMemo(() => {
@@ -155,19 +167,19 @@ export const useCuration = (
         return channels;
     }, [mainChannels, mainListFilter, mainListSearch]);
 
-    const filteredCurationChannels = useMemo(() => {
-        let channels = curationChannels;
-        if (curationListFilter !== 'All') {
-            channels = channels.filter(c => c.groupTitle === curationListFilter);
+    const filteredReparacionChannels = useMemo(() => {
+        let channels = reparacionChannels;
+        if (reparacionListFilter !== 'All') {
+            channels = channels.filter(c => c.groupTitle === reparacionListFilter);
         }
-        if (curationListSearch) {
-            channels = channels.filter(c => c.name.toLowerCase().includes(curationListSearch.toLowerCase()));
+        if (reparacionListSearch) {
+            channels = channels.filter(c => c.name.toLowerCase().includes(reparacionListSearch.toLowerCase()));
         }
         return channels;
-    }, [curationChannels, curationListFilter, curationListSearch]);
+    }, [reparacionChannels, reparacionListFilter, reparacionListSearch]);
 
-    const toggleCurationSelection = (id: string) => {
-        setSelectedCurationChannels(prev => {
+    const toggleReparacionSelection = (id: string) => {
+        setSelectedReparacionChannels(prev => {
             const newSet = new Set(prev);
             if (newSet.has(id)) {
                 newSet.delete(id);
@@ -178,40 +190,43 @@ export const useCuration = (
         });
     };
 
-    const handleAddSelectedFromCuration = () => {
-        if (selectedCurationChannels.size === 0) return;
+    const handleAddSelectedFromReparacion = () => {
+        if (selectedReparacionChannels.size === 0) return;
         saveStateToHistory();
-        const channelsToAdd = curationChannels.filter(c => selectedCurationChannels.has(c.id));
+        const channelsToAdd = reparacionChannels.filter(c => selectedReparacionChannels.has(c.id));
         setMainChannels(prev => [...prev, ...channelsToAdd].map((c, i) => ({ ...c, order: i + 1 })));
-        setSelectedCurationChannels(new Set());
+        setSelectedReparacionChannels(new Set());
     };
 
     return {
-        selectedCurationChannels,
+        selectedReparacionChannels,
         attributesToCopy,
         destinationChannelId,
         setDestinationChannelId,
         mainListFilter,
         setMainListFilter,
-        curationListFilter,
-        setCurationListFilter,
-        handleCurationFileUpload,
+        reparacionListFilter,
+        setReparacionListFilter,
+        handleReparacionFileUpload,
         toggleAttributeToCopy,
         handleSourceChannelClick,
         mainListUniqueGroups,
-        curationListUniqueGroups,
+        reparacionListUniqueGroups,
         filteredMainChannels,
-        filteredCurationChannels,
-        toggleCurationSelection,
-        handleAddSelectedFromCuration,
+        filteredReparacionChannels,
+        toggleReparacionSelection,
+        handleAddSelectedFromReparacion,
         mainListSearch,
         setMainListSearch,
-        curationListSearch,
-        setCurationListSearch,
-        setCurationChannels,
+        reparacionListSearch,
+        setReparacionListSearch,
+        setReparacionChannels,
         verificationStatus,
         verifyChannel,
         clearFailedChannelsUrls,
         failedChannelsByGroup,
+        reparacionUrl,
+        setReparacionUrl,
+        handleReparacionUrlLoad,
     };
 };
