@@ -11,6 +11,7 @@ interface ReparacionChannelItemProps {
     showCheckbox?: boolean;
     verificationStatus?: 'pending' | 'verifying' | 'ok' | 'failed';
     onVerifyClick?: () => void;
+    style?: React.CSSProperties;
 }
 
 const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
@@ -23,6 +24,7 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
     showCheckbox = false,
     verificationStatus = 'pending',
     onVerifyClick,
+    style,
 }) => {
     const getDomainFromUrl = (url: string) => {
         if (!url) return '---';
@@ -55,6 +57,7 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
 
     return (
         <div
+            style={style}
             onClick={onBodyClick}
             className={`flex items-center gap-3 p-2 rounded-lg border-2 ${
                 isSelected ? 'border-blue-500 bg-blue-900/50' : 'border-transparent'

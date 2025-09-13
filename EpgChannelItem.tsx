@@ -4,10 +4,12 @@ import { EpgChannel } from './index';
 interface EpgChannelItemProps {
     epgChannel: EpgChannel;
     onClick: () => void;
+    style?: React.CSSProperties;
 }
 
-const EpgChannelItem: React.FC<EpgChannelItemProps> = ({ epgChannel, onClick }) => (
+const EpgChannelItem: React.FC<EpgChannelItemProps> = ({ epgChannel, onClick, style }) => (
     <div
+        style={style}
         onClick={onClick}
         className="flex items-center gap-3 p-2 rounded-lg cursor-pointer hover:bg-gray-700 border-2 border-transparent"
     >

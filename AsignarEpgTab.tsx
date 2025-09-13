@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Upload, Download, Copy, Zap, ArrowLeftCircle } from 'lucide-react';
 import { useAsignarEpg } from './useAsignarEpg';
 import { useChannels } from './useChannels';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import ReparacionChannelItem from './ReparacionChannelItem';
 import EpgChannelItem from './EpgChannelItem';
 import { AttributeKey } from './index';
@@ -36,6 +37,26 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook }) 
     const [mainListSearch, setMainListSearch] = useState('');
     const [epgListSearch, setEpgListSearch] = useState('');
 
+    const mainListParentRef = useRef<HTMLDivElement>(null);
+    const epgListParentRef = useRef<HTMLDivElement>(null);
+
+    const mainListRowVirtualizer = useVirtualizer({
+        count: filteredMainChannelsForEpg.length,
+        getScrollElement: () => mainListParentRef.current,
+        estimateSize: () => 68,
+        overscan: 10,
+    });
+
+    const epgListRowVirtualizer = useVirtualizer({
+        count: filteredEpgChannels.length,
+        getScrollElement: () => epgListParentRef.current,
+        estimateSize: () => 68,
+        overscan: 10,
+    });
+
+    const mainListVirtualItems = mainListRowVirtualizer.getVirtualItems();
+    const epgListVirtualItems = epgListRowVirtualizer.getVirtualItems();
+
     const filteredMainChannelsForEpg = useMemo(() => {
         let channelsToFilter = channels;
         if (mainListSearch) {
@@ -63,17 +84,30 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook }) 
                     onChange={(e) => setMainListSearch(e.target.value)}
                     className="bg-gray-700 border border-gray-600 rounded-md px-3 py-1.5 text-white focus:ring-blue-500 focus:border-blue-500 mb-2 w-full"
                 />
-                <div className="overflow-auto max-h-[70vh] space-y-1 pr-2">
-                    {filteredMainChannelsForEpg.map((ch) => (
-                        <ReparacionChannelItem
-                            key={ch.id}
-                            channel={ch}
-                            onBodyClick={() => setDestinationChannelId(ch.id)}
-                            isSelected={destinationChannelId === ch.id}
-                            hasEpg={epgIdSet.has(ch.tvgId)}
-                            showCheckbox={false}
-                        />
-                    ))}
+                <div ref={mainListParentRef} className="overflow-auto max-h-[70vh] pr-2">
+                    <div style={{ height: `${mainListRowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
+                        {mainListVirtualItems.map((virtualItem) => {
+                            const ch = filteredMainChannelsForEpg[virtualItem.index];
+                            if (!ch) return null;
+                            return (
+                                <ReparacionChannelItem
+                                    key={ch.id}
+                                    channel={ch}
+                                    onBodyClick={() => setDestinationChannelId(ch.id)}
+                                    isSelected={destinationChannelId === ch.id}
+                                    hasEpg={epgIdSet.has(ch.tvgId)}
+                                    showCheckbox={false}
+                                    style={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        width: '100%',
+                                        transform: `translateY(${virtualItem.start}px)`,
+                                    }}
+                                />
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
             <div className="lg:col-span-1 flex flex-col items-center justify-start gap-2 bg-gray-800 p-4 rounded-lg">
@@ -160,10 +194,27 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook }) 
                 </div>
                 {isEpgLoading && <p className="text-center text-blue-400 mt-2">Cargando...</p>}
                 {epgError && <p className="text-center text-red-400 bg-red-900/50 p-2 rounded mt-2">{epgError}</p>}
-                <div className="overflow-auto max-h-[40vh] space-y-1 pr-2 mt-4">
-                    {filteredEpgChannels.map((ch) => (
-                        <EpgChannelItem key={ch.id} epgChannel={ch} onClick={() => handleEpgSourceClick(ch)} />
-                    ))}
+                <div ref={epgListParentRef} className="overflow-auto max-h-[40vh] pr-2 mt-4">
+                    <div style={{ height: `${epgListRowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
+                        {epgListVirtualItems.map((virtualItem) => {
+                            const ch = filteredEpgChannels[virtualItem.index];
+                            if (!ch) return null;
+                            return (
+                                <EpgChannelItem
+                                    key={ch.id}
+                                    epgChannel={ch}
+                                    onClick={() => handleEpgSourceClick(ch)}
+                                    style={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        width: '100%',
+                                        transform: `translateY(${virtualItem.start}px)`,
+                                    }}
+                                />
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
         </div>

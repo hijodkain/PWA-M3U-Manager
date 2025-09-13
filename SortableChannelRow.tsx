@@ -6,13 +6,16 @@ import EditableCell from './EditableCell';
 import { Channel } from './index';
 
 interface SortableChannelRowProps {
+    id: string;
     channel: Channel;
     onOrderChange: (id: string, order: string) => void;
-    onUpdate: (id: string, field: keyof Channel, value: string) => void;
+    onUpdate: (id: string, field: keyof Channel, value: any) => void;
     selectedChannels: string[];
     toggleChannelSelection: (id: string, isShiftClick: boolean) => void;
     statusIndicator: React.ReactNode;
     columnWidths: Record<string, number>;
+    style?: React.CSSProperties;
+    isOverlay?: boolean;
 }
 
 const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
@@ -23,21 +26,28 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
     toggleChannelSelection,
     statusIndicator,
     columnWidths,
+    style: virtualizerStyle,
+    isOverlay,
 }) => {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: channel.id });
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: channel.id, disabled: isOverlay });
+
     const style = {
+        ...virtualizerStyle,
         transform: CSS.Transform.toString(transform),
         transition,
-        opacity: isDragging ? 0.5 : 1,
+        opacity: isDragging && !isOverlay ? 0.5 : 1,
     };
 
+    // Cuando es un overlay, no queremos los listeners de drag, solo los atributos.
+    const rowListeners = isOverlay ? {} : listeners;
+
     return (
-        <tr ref={setNodeRef} style={style} className={`transition-colors ${selectedChannels.includes(channel.id) ? 'bg-blue-900/50' : 'bg-gray-800'} hover:bg-gray-700`}>
+        <tr ref={setNodeRef} style={style} className={`transition-colors ${selectedChannels.includes(channel.id) ? 'bg-blue-900/50' : 'bg-gray-800'} ${!isOverlay ? 'hover:bg-gray-700' : ''}`}>
             <td style={{ width: `${columnWidths.select}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-300 text-center">
                 <div className="flex items-center justify-center space-x-2">
-                    <div {...attributes} {...listeners} className="cursor-grab touch-none p-1">
-                        <GripVertical size={16} />
-                    </div>
+                    <div {...attributes} {...rowListeners} className={`${isOverlay ? '' : 'cursor-grab touch-none'} p-1`}>
+                         <GripVertical size={16} />
+                     </div>
                     <input
                         type="checkbox"
                         checked={selectedChannels.includes(channel.id)}

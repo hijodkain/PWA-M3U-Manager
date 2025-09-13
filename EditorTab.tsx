@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Upload, Download, Plus, Trash2, GripVertical, Zap, ShieldCheck, ShieldX, Hourglass, ShieldQuestion } from 'lucide-react';
 import { useChannels } from './useChannels';
@@ -49,6 +50,20 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
     const { savedUrls } = settingsHook;
     const { columnWidths, handleResize } = useColumnResizing();
     const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
+    const parentRef = tableContainerRef; // Reutilizamos la ref existente
+
+    const rowVirtualizer = useVirtualizer({
+        count: filteredChannels.length,
+        getScrollElement: () => parentRef.current,
+        estimateSize: () => 45, // Estimación de la altura de cada fila en píxeles
+        overscan: 10, // Renderiza 10 items extra fuera de la vista para un scroll más suave
+    });
+
+    const virtualItems = rowVirtualizer.getVirtualItems();
+    const totalSize = rowVirtualizer.getTotalSize();
+
+    // Esto es necesario para que el DragOverlay funcione correctamente con la virtualización
+    const activeChannelIndex = activeId ? filteredChannels.findIndex(c => c.id === activeId) : -1;
 
     const StatusIndicator: React.FC<{ status: Channel['status'] }> = ({ status }) => {
         switch (status) {
@@ -231,22 +246,35 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                 </ResizableHeader>
                             </tr>
                         </thead>
-                        <SortableContext items={filteredChannels.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-                            <tbody className="bg-gray-900 divide-y divide-gray-700">
-                                {filteredChannels.map((channel) => (
-                                    <SortableChannelRow
-                                        key={channel.id}
-                                        channel={channel}
-                                        onOrderChange={handleOrderChange}
-                                        onUpdate={handleUpdateChannel}
-                                        selectedChannels={selectedChannels}
-                                        toggleChannelSelection={toggleChannelSelection}
-                                        statusIndicator={
-                                            <td style={{ width: `${columnWidths.status}px` }} className="px-2 py-2 text-center"><StatusIndicator status={channel.status} /></td>
-                                        }
-                                        columnWidths={columnWidths}
-                                    />
-                                ))}
+                        <SortableContext items={filteredChannels.map(c => c.id)} strategy={verticalListSortingStrategy}>
+                            <tbody style={{ height: `${totalSize}px`, width: '100%', position: 'relative' }} className="bg-gray-900 divide-y divide-gray-700">
+                                {virtualItems.map((virtualItem) => {
+                                    const channel = filteredChannels[virtualItem.index];
+                                    if (!channel) return null;
+
+                                    return (
+                                        <SortableChannelRow
+                                            key={channel.id}
+                                            id={channel.id}
+                                            channel={channel}
+                                            onOrderChange={handleOrderChange}
+                                            onUpdate={handleUpdateChannel}
+                                            selectedChannels={selectedChannels}
+                                            toggleChannelSelection={toggleChannelSelection}
+                                            statusIndicator={
+                                                <td style={{ width: `${columnWidths.status}px` }} className="px-2 py-2 text-center"><StatusIndicator status={channel.status} /></td>
+                                            }
+                                            columnWidths={columnWidths}
+                                            style={{
+                                                position: 'absolute',
+                                                top: 0,
+                                                left: 0,
+                                                width: '100%',
+                                                transform: `translateY(${virtualItem.start}px)`,
+                                            }}
+                                        />
+                                    );
+                                })}
                             </tbody>
                         </SortableContext>
                     </table>
@@ -254,41 +282,33 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                         {activeChannel ? (
                             <table className="w-full table-fixed">
                                 <tbody className="bg-gray-700 shadow-2xl">
-                                    <tr>
-                                        <td style={{ width: `${columnWidths.select}px` }} className="px-2 py-2 text-center">
-                                            <GripVertical size={16} />
-                                        </td>
-                                        <td style={{ width: `${columnWidths.order}px` }} className="px-2 py-2 text-center">
-                                            {activeChannel.order}
-                                        </td>
-                                        <td style={{ width: `${columnWidths.status}px` }} className="px-2 py-2 text-center">
-                                            <StatusIndicator status={activeChannel.status} />
-                                        </td>
-                                        <td style={{ width: `${columnWidths.tvgId}px` }} className="px-2 py-2 truncate">
-                                            {activeChannel.tvgId}
-                                        </td>
-                                        <td style={{ width: `${columnWidths.tvgName}px` }} className="px-2 py-2 truncate">
-                                            {activeChannel.tvgName}
-                                        </td>
-                                        <td style={{ width: `${columnWidths.tvgLogo}px` }} className="px-2 py-2 text-center">
-                                            <img src={activeChannel.tvgLogo} alt="logo" className="h-8 w-8 object-contain rounded-sm mx-auto" />
-                                        </td>
-                                        <td style={{ width: `${columnWidths.groupTitle}px` }} className="px-2 py-2 truncate">
-                                            {activeChannel.groupTitle}
-                                        </td>
-                                        <td style={{ width: `${columnWidths.name}px` }} className="px-2 py-2 font-medium text-white truncate">
-                                            {activeChannel.name}
-                                        </td>
-                                        <td style={{ width: `${columnWidths.url}px` }} className="px-2 py-2 text-gray-400 truncate">
-                                            {activeChannel.url}
-                                        </td>
-                                    </tr>
+                                    <SortableChannelRow
+                                        id={activeChannel.id}
+                                        channel={activeChannel}
+                                        isOverlay
+                                        onOrderChange={() => {}}
+                                        onUpdate={() => {}}
+                                        selectedChannels={[]}
+                                        toggleChannelSelection={() => {}}
+                                        statusIndicator={
+                                            <td style={{ width: `${columnWidths.status}px` }} className="px-2 py-2 text-center"><StatusIndicator status={activeChannel.status} /></td>
+                                        }
+                                        columnWidths={columnWidths}
+                                    />
                                 </tbody>
                             </table>
                         ) : null}
                     </DragOverlay>
                 </DndContext>
             </div>
+            {filteredChannels.length === 0 && channels.length > 0 && !isLoading && (
+                <div className="text-center py-16 px-4 bg-gray-800 rounded-lg mt-6">
+                    <h3 className="text-lg font-medium text-white">No hay canales en este grupo</h3>
+                    <p className="mt-1 text-sm text-gray-400">
+                        Selecciona "All" en el filtro de grupos para ver todos los canales.
+                    </p>
+                </div>
+            )}
             {channels.length === 0 && !isLoading && (
                 <div className="text-center py-16 px-4 bg-gray-800 rounded-lg mt-6">
                     <h3 className="text-lg font-medium text-white">Tu lista está vacía</h3>

@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Upload, Copy, CheckSquare, ArrowLeftCircle, RotateCcw, Trash2, Link, Check } from 'lucide-react';
 import { useReparacion } from './useReparacion';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { useChannels } from './useChannels';
 import ReparacionChannelItem from './ReparacionChannelItem';
 import { AttributeKey } from './index';
@@ -44,6 +45,26 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
     } = reparacionHook;
 
     const { undo, history } = channelsHook;
+
+    const mainListParentRef = useRef<HTMLDivElement>(null);
+    const reparacionListParentRef = useRef<HTMLDivElement>(null);
+
+    const mainListRowVirtualizer = useVirtualizer({
+        count: filteredMainChannels.length,
+        getScrollElement: () => mainListParentRef.current,
+        estimateSize: () => 68,
+        overscan: 10,
+    });
+
+    const reparacionListRowVirtualizer = useVirtualizer({
+        count: filteredReparacionChannels.length,
+        getScrollElement: () => reparacionListParentRef.current,
+        estimateSize: () => 68,
+        overscan: 10,
+    });
+
+    const mainListVirtualItems = mainListRowVirtualizer.getVirtualItems();
+    const reparacionListVirtualItems = reparacionListRowVirtualizer.getVirtualItems();
 
     const attributeLabels: { key: AttributeKey; label: string }[] = [
         { key: 'tvgId', label: 'tvg-id' },
@@ -91,18 +112,31 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 >
                     <Trash2 size={14} /> Eliminar URLs de Canales Fallidos
                 </button>
-                <div className="overflow-auto max-h-[60vh] space-y-1 pr-2">
-                    {filteredMainChannels.map((ch) => (
-                        <ReparacionChannelItem
-                            key={ch.id}
-                            channel={ch}
-                            onBodyClick={() => setDestinationChannelId(ch.id)}
-                            isSelected={destinationChannelId === ch.id}
-                            showCheckbox={false}
-                            verificationStatus={verificationStatus[ch.id] || 'pending'}
-                            onVerifyClick={() => verifyChannel(ch.id, ch.url)}
-                        />
-                    ))}
+                <div ref={mainListParentRef} className="overflow-auto max-h-[60vh] pr-2">
+                    <div style={{ height: `${mainListRowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
+                        {mainListVirtualItems.map((virtualItem) => {
+                            const ch = filteredMainChannels[virtualItem.index];
+                            if (!ch) return null;
+                            return (
+                                <ReparacionChannelItem
+                                    key={ch.id}
+                                    channel={ch}
+                                    onBodyClick={() => setDestinationChannelId(ch.id)}
+                                    isSelected={destinationChannelId === ch.id}
+                                    showCheckbox={false}
+                                    verificationStatus={verificationStatus[ch.id] || 'pending'}
+                                    onVerifyClick={() => verifyChannel(ch.id, ch.url)}
+                                    style={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        width: '100%',
+                                        transform: `translateY(${virtualItem.start}px)`,
+                                    }}
+                                />
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
             <div className="lg:col-span-1 flex flex-col items-center justify-start gap-2 bg-gray-800 p-4 rounded-lg">
@@ -187,20 +221,33 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                     onChange={handleReparacionFileUpload}
                     accept=".m3u,.m3u8"
                 />
-                <div className="overflow-auto max-h-[60vh] space-y-1 pr-2">
-                    {filteredReparacionChannels.map((ch) => (
-                        <ReparacionChannelItem
-                            key={ch.id}
-                            channel={ch}
-                            onBodyClick={() => handleSourceChannelClick(ch)}
-                            onSelectClick={() => toggleReparacionSelection(ch.id)}
-                            isSelected={false}
-                            isChecked={selectedReparacionChannels.has(ch.id)}
-                            showCheckbox={true}
-                            verificationStatus={verificationStatus[ch.id] || 'pending'}
-                            onVerifyClick={() => verifyChannel(ch.id, ch.url)}
-                        />
-                    ))}
+                <div ref={reparacionListParentRef} className="overflow-auto max-h-[60vh] pr-2">
+                    <div style={{ height: `${reparacionListRowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
+                        {reparacionListVirtualItems.map((virtualItem) => {
+                            const ch = filteredReparacionChannels[virtualItem.index];
+                            if (!ch) return null;
+                            return (
+                                <ReparacionChannelItem
+                                    key={ch.id}
+                                    channel={ch}
+                                    onBodyClick={() => handleSourceChannelClick(ch)}
+                                    onSelectClick={() => toggleReparacionSelection(ch.id)}
+                                    isSelected={false}
+                                    isChecked={selectedReparacionChannels.has(ch.id)}
+                                    showCheckbox={true}
+                                    verificationStatus={verificationStatus[ch.id] || 'pending'}
+                                    onVerifyClick={() => verifyChannel(ch.id, ch.url)}
+                                    style={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        width: '100%',
+                                        transform: `translateY(${virtualItem.start}px)`,
+                                    }}
+                                />
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
         </div>
