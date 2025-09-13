@@ -2,40 +2,6 @@ import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { arrayMove } from '@dnd-kit/sortable';
 import { Channel } from './index';
 
-const parseM3U = (content: string): Channel[] => {
-    const lines = content.split('\n');
-    if (lines[0].trim() !== '#EXTM3U') {
-        throw new Error('Archivo no válido. Debe empezar con #EXTM3U.');
-    }
-    const parsedChannels: Channel[] = [];
-    let order = 1;
-    for (let i = 1; i < lines.length; i++) {
-        if (lines[i].trim().startsWith('#EXTINF:')) {
-            const info = lines[i].trim().substring(8);
-            const url = lines[++i]?.trim() || '';
-            const tvgId = info.match(/tvg-id="([^"]*)"/)?.["1"] || '';
-            const tvgName = info.match(/tvg-name="([^"]*)"/)?.["1"] || '';
-            const tvgLogo = info.match(/tvg-logo="([^"]*)"/)?.["1"] || '';
-            const groupTitle = info.match(/group-title="([^"]*)"/)?.["1"] || '';
-            const name = info.split(',').pop()?.trim() || '';
-            if (name && url) {
-                parsedChannels.push({
-                    id: `channel-${Date.now()}-${Math.random()}`,
-                    order: order++,
-                    tvgId,
-                    tvgName,
-                    tvgLogo,
-                    groupTitle,
-                    name,
-                    url,
-                    status: 'pending',
-                });
-            }
-        }
-    }
-    return parsedChannels;
-};
-
 function extractDropboxFileName(url: string): string | null {
     if (!url || !url.includes('dropbox.com')) {
         return null;
@@ -75,6 +41,34 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
     const [isVerifying, setIsVerifying] = useState(false);
     const [verificationProgress, setVerificationProgress] = useState(0);
 
+    const processM3UContent = (content: string) => {
+        setIsLoading(true);
+        setError(null);
+
+        const worker = new Worker(new URL('./m3u-parser.worker.ts', import.meta.url), {
+            type: 'module',
+        });
+
+        worker.onmessage = (event) => {
+            const { type, channels, message } = event.data;
+            if (type === 'success') {
+                setChannels(channels);
+                setSelectedChannels([]);
+            } else {
+                setError(message);
+            }
+            setIsLoading(false);
+            worker.terminate();
+        };
+
+        worker.onerror = (error) => {
+            setError(`Worker error: ${error.message}`);
+            setIsLoading(false);
+            worker.terminate();
+        };
+
+        worker.postMessage(content);
+    };
 
     const handleFetchUrl = async () => {
         if (!url) {
@@ -90,16 +84,14 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
                 throw new Error(`Error al descargar la lista: ${response.statusText}`);
             }
             const text = await response.text();
-            setChannels(parseM3U(text));
-            setSelectedChannels([]);
+            processM3UContent(text);
             const extractedFname = extractDropboxFileName(url);
             if (extractedFname) {
                 setFileName(extractedFname);
             }
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Ocurrió un error desconocido.');
-        } finally {
-            setIsLoading(false);
+            setIsLoading(false); // Also set loading to false on fetch error
         }
     };
 
@@ -111,12 +103,11 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
         setFileName(file.name);
         const reader = new FileReader();
         reader.onload = (e) => {
-            try {
-                setChannels(parseM3U(e.target?.result as string));
-                setSelectedChannels([]);
-            } catch (err) {
-                setError(err instanceof Error ? err.message : 'Error al procesar el archivo.');
-            } finally {
+            const content = e.target?.result as string;
+            if (content) {
+                processM3UContent(content);
+            } else {
+                setError('No se pudo leer el contenido del archivo.');
                 setIsLoading(false);
             }
         };
