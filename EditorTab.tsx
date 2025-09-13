@@ -265,6 +265,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                                 <td style={{ width: `${columnWidths.status}px` }} className="px-2 py-2 text-center"><StatusIndicator status={channel.status} /></td>
                                             }
                                             columnWidths={columnWidths}
+                                            measureRef={rowVirtualizer.measureElement}
                                             style={{
                                                 position: 'absolute',
                                                 top: 0,

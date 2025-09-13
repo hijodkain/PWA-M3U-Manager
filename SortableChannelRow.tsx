@@ -1,5 +1,5 @@
-import React from 'react';
-import { useSortable } from '@dnd-kit/sortable';
+import React, { useRef, useEffect } from 'react';
+import { useSortable, defaultAnimateLayoutChanges } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical } from 'lucide-react';
 import EditableCell from './EditableCell';
@@ -15,6 +15,7 @@ interface SortableChannelRowProps {
     statusIndicator: React.ReactNode;
     columnWidths: Record<string, number>;
     style?: React.CSSProperties;
+    measureRef?: (node: HTMLElement | null) => void;
     isOverlay?: boolean;
 }
 
@@ -27,10 +28,25 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
     statusIndicator,
     columnWidths,
     style: virtualizerStyle,
+    measureRef,
     isOverlay,
 }) => {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: channel.id, disabled: isOverlay });
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+        id: channel.id,
+        disabled: isOverlay,
+        animateLayoutChanges: (args) => defaultAnimateLayoutChanges({ ...args, wasDragging: true }),
+    });
 
+    const combinedRef = (node: HTMLElement | null) => {
+        // Ref para dnd-kit
+        setNodeRef(node);
+        // Ref para el virtualizador
+        if (measureRef) {
+            measureRef(node);
+        }
+    };
+
+    // El estilo de transformación de dnd-kit debe prevalecer sobre el de la virtualización
     const style = {
         ...virtualizerStyle,
         transform: CSS.Transform.toString(transform),
@@ -42,7 +58,7 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
     const rowListeners = isOverlay ? {} : listeners;
 
     return (
-        <tr ref={setNodeRef} style={style} className={`transition-colors ${selectedChannels.includes(channel.id) ? 'bg-blue-900/50' : 'bg-gray-800'} ${!isOverlay ? 'hover:bg-gray-700' : ''}`}>
+        <tr ref={combinedRef} style={style} className={`transition-colors ${selectedChannels.includes(channel.id) ? 'bg-blue-900/50' : 'bg-gray-800'} ${!isOverlay ? 'hover:bg-gray-700' : ''}`}>
             <td style={{ width: `${columnWidths.select}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-300 text-center">
                 <div className="flex items-center justify-center space-x-2">
                     <div {...attributes} {...rowListeners} className={`${isOverlay ? '' : 'cursor-grab touch-none'} p-1`}>
