@@ -14,10 +14,10 @@ const parseM3U = (content: string): Channel[] => {
         if (lines[i].trim().startsWith('#EXTINF:')) {
             const info = lines[i].trim().substring(8);
             const url = lines[++i]?.trim() || '';
-            const tvgId = info.match(/tvg-id="([^"]*)"/?.[1] || '';
-            const tvgName = info.match(/tvg-name="([^"]*)"/?.[1] || '';
-            const tvgLogo = info.match(/tvg-logo="([^"]*)"/?.[1] || '';
-            const groupTitle = info.match(/group-title="([^"]*)"/?.[1] || '';
+            const tvgId = info.match(/tvg-id="([^"]*)"?/)?.[1] || '';
+            const tvgName = info.match(/tvg-name="([^"]*)"?/)?.[1] || '';
+            const tvgLogo = info.match(/tvg-logo="([^"]*)"?/)?.[1] || '';
+            const groupTitle = info.match(/group-title="([^"]*)"?/)?.[1] || '';
             const name = info.split(',').pop()?.trim() || '';
             if (name && url) {
                 parsedChannels.push({
