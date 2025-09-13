@@ -33,6 +33,8 @@ const CurationTab: React.FC<CurationTabProps> = ({ curationHook, channelsHook })
         setMainListSearch,
         curationListSearch,
         setCurationListSearch,
+        verificationStatus,
+        verifyChannel,
     } = curationHook;
 
     const { undo, history } = channelsHook;
@@ -160,6 +162,8 @@ const CurationTab: React.FC<CurationTabProps> = ({ curationHook, channelsHook })
                             isSelected={false}
                             isChecked={selectedCurationChannels.has(ch.id)}
                             showCheckbox={true}
+                            verificationStatus={verificationStatus[ch.id] || 'pending'}
+                            onVerifyClick={() => verifyChannel(ch.id, ch.url)}
                         />
                     ))}
                 </div>

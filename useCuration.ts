@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react';
 import { Channel, AttributeKey } from './index';
 
+type VerificationStatus = 'pending' | 'verifying' | 'ok' | 'failed';
+
 const parseM3U = (content: string): Channel[] => {
     const lines = content.split('\n');
     if (lines[0].trim() !== '#EXTM3U') {
@@ -12,10 +14,10 @@ const parseM3U = (content: string): Channel[] => {
         if (lines[i].trim().startsWith('#EXTINF:')) {
             const info = lines[i].trim().substring(8);
             const url = lines[++i]?.trim() || '';
-            const tvgId = info.match(/tvg-id="([^"]*)"?/)?.[1] || '';
-            const tvgName = info.match(/tvg-name="([^"]*)"?/)?.[1] || '';
-            const tvgLogo = info.match(/tvg-logo="([^"]*)"?/)?.[1] || '';
-            const groupTitle = info.match(/group-title="([^"]*)"?/)?.[1] || '';
+            const tvgId = info.match(/tvg-id="([^"]*)"/?.[1] || '';
+            const tvgName = info.match(/tvg-name="([^"]*)"/?.[1] || '';
+            const tvgLogo = info.match(/tvg-logo="([^"]*)"/?.[1] || '';
+            const groupTitle = info.match(/group-title="([^"]*)"/?.[1] || '';
             const name = info.split(',').pop()?.trim() || '';
             if (name && url) {
                 parsedChannels.push({
@@ -43,11 +45,24 @@ export const useCuration = (
     const [selectedCurationChannels, setSelectedCurationChannels] = useState<Set<string>>(new Set());
     const [attributesToCopy, setAttributesToCopy] = useState<Set<AttributeKey>>(new Set());
     const [destinationChannelId, setDestinationChannelId] = useState<string | null>(null);
+    const [verificationStatus, setVerificationStatus] = useState<Record<string, VerificationStatus>>({});
 
     const [mainListFilter, setMainListFilter] = useState('All');
     const [curationListFilter, setCurationListFilter] = useState('All');
     const [mainListSearch, setMainListSearch] = useState('');
     const [curationListSearch, setCurationListSearch] = useState('');
+
+    const verifyChannel = async (channelId: string, url: string) => {
+        setVerificationStatus(prev => ({ ...prev, [channelId]: 'verifying' }));
+        try {
+            const response = await fetch(`/api/verify_channel?url=${encodeURIComponent(url)}`);
+            const data = await response.json();
+            setVerificationStatus(prev => ({ ...prev, [channelId]: data.status || 'failed' }));
+        } catch (error) {
+            console.error('Verification failed', error);
+            setVerificationStatus(prev => ({ ...prev, [channelId]: 'failed' }));
+        }
+    };
 
     const handleCurationFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -168,5 +183,7 @@ export const useCuration = (
         curationListSearch,
         setCurationListSearch,
         setCurationChannels,
+        verificationStatus,
+        verifyChannel,
     };
 };

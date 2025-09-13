@@ -9,6 +9,8 @@ interface CurationChannelItemProps {
     isChecked?: boolean;
     hasEpg?: boolean;
     showCheckbox?: boolean;
+    verificationStatus?: 'pending' | 'verifying' | 'ok' | 'failed';
+    onVerifyClick?: () => void;
 }
 
 const CurationChannelItem: React.FC<CurationChannelItemProps> = ({
@@ -19,6 +21,8 @@ const CurationChannelItem: React.FC<CurationChannelItemProps> = ({
     isChecked,
     hasEpg,
     showCheckbox = false,
+    verificationStatus = 'pending',
+    onVerifyClick,
 }) => {
     const getDomainFromUrl = (url: string) => {
         if (!url) return '---';
@@ -35,6 +39,19 @@ const CurationChannelItem: React.FC<CurationChannelItemProps> = ({
     };
 
     const nameColor = hasEpg === false ? 'text-red-400' : 'text-white';
+
+    const statusIndicator = () => {
+        switch (verificationStatus) {
+            case 'ok':
+                return <span className="text-green-500">OK</span>;
+            case 'failed':
+                return <span className="text-red-500">Failed</span>;
+            case 'verifying':
+                return <span className="text-yellow-500">Verifying...</span>;
+            default:
+                return <span className="text-gray-500">Pending</span>;
+        }
+    };
 
     return (
         <div
@@ -63,6 +80,19 @@ const CurationChannelItem: React.FC<CurationChannelItemProps> = ({
                     <span className="font-semibold text-gray-300">URL:</span> {getDomainFromUrl(channel.url)}
                 </p>
             </div>
+            <div className="flex flex-col items-center justify-center ml-auto">
+                {statusIndicator()}
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (onVerifyClick) onVerifyClick();
+                    }}
+                    disabled={verificationStatus === 'verifying'}
+                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-xs mt-1 disabled:opacity-50"
+                >
+                    Verify
+                </button>
+            </div>
             {showCheckbox && (
                 <input
                     type="checkbox"
@@ -71,7 +101,7 @@ const CurationChannelItem: React.FC<CurationChannelItemProps> = ({
                         e.stopPropagation();
                         if (onSelectClick) onSelectClick();
                     }}
-                    className="form-checkbox h-4 w-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 ml-auto"
+                    className="form-checkbox h-4 w-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 ml-2"
                 />
             )}
         </div>
