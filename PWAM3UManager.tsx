@@ -20,14 +20,6 @@ export default function PWAM3UManager() {
     const reparacionHook = useReparacion(channelsHook.channels, channelsHook.setChannels, channelsHook.saveStateToHistory);
     const epgHook = useAsignarEpg(channelsHook.channels, channelsHook.setChannels, channelsHook.saveStateToHistory);
 
-    useEffect(() => {
-        if (activeTab === 'reparacion' && failedChannels.length > 0) {
-            reparacionHook.setReparacionChannels(failedChannels);
-            setFailedChannels([]);
-            alert('Los canales que fallaron la verificación se han movido a la pestaña de Reparación.');
-        }
-    }, [activeTab, failedChannels, reparacionHook, setFailedChannels]);
-
     const renderTabContent = () => {
         switch (activeTab) {
             case 'editor':
