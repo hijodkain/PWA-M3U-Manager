@@ -65,6 +65,23 @@ export const useReparacion = (
         }
     };
 
+    const verifyAllChannels = () => {
+        mainChannels.forEach(channel => {
+            verifyChannel(channel.id, channel.url);
+        });
+    };
+
+    const handleReparacionUrlLoad = async () => {
+        if (!reparacionUrl) return;
+        try {
+            const response = await fetch(reparacionUrl);
+            const text = await response.text();
+            setReparacionChannels(parseM3U(text));
+        } catch (error) {
+            console.error('Failed to load from URL', error);
+        }
+    };
+
     const clearFailedChannelsUrls = () => {
         saveStateToHistory();
         const newStatus = { ...verificationStatus };
@@ -104,17 +121,6 @@ export const useReparacion = (
         };
         reader.readAsText(file);
         event.target.value = '';
-    };
-
-    const handleReparacionUrlLoad = async () => {
-        if (!reparacionUrl) return;
-        try {
-            const response = await fetch(reparacionUrl);
-            const text = await response.text();
-            setReparacionChannels(parseM3U(text));
-        } catch (error) {
-            console.error('Failed to load from URL', error);
-        }
     };
 
     const toggleAttributeToCopy = (attribute: AttributeKey) => {
@@ -228,5 +234,6 @@ export const useReparacion = (
         reparacionUrl,
         setReparacionUrl,
         handleReparacionUrlLoad,
+        verifyAllChannels,
     };
 };

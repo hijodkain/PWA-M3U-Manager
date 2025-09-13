@@ -1,5 +1,5 @@
 import React from 'react';
-import { Upload, Copy, CheckSquare, ArrowLeftCircle, RotateCcw, Trash2, Link } from 'lucide-react';
+import { Upload, Copy, CheckSquare, ArrowLeftCircle, RotateCcw, Trash2, Link, Check } from 'lucide-react';
 import { useReparacion } from './useReparacion';
 import { useChannels } from './useChannels';
 import ReparacionChannelItem from './ReparacionChannelItem';
@@ -40,6 +40,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         reparacionUrl,
         setReparacionUrl,
         handleReparacionUrlLoad,
+        verifyAllChannels,
     } = reparacionHook;
 
     const { undo, history } = channelsHook;
@@ -78,6 +79,12 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                         );
                     })}
                 </select>
+                <button
+                    onClick={verifyAllChannels}
+                    className="w-full text-xs py-2 px-1 rounded-md flex items-center justify-center gap-1 transition-colors bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 mb-2"
+                >
+                    <Check size={14} /> Verificar Todos los Canales
+                </button>
                 <button
                     onClick={clearFailedChannelsUrls}
                     className="w-full text-xs py-2 px-1 rounded-md flex items-center justify-center gap-1 transition-colors bg-red-600 hover:bg-red-700 disabled:bg-gray-600 mb-2"
