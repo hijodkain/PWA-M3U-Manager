@@ -65,8 +65,11 @@ export const useReparacion = (
         }
     };
 
-    const verifyAllChannels = () => {
-        mainChannels.forEach(channel => {
+    const verifyAllChannelsInGroup = () => {
+        const channelsToVerify = mainChannels.filter(channel => 
+            mainListFilter === 'All' || channel.groupTitle === mainListFilter
+        );
+        channelsToVerify.forEach(channel => {
             verifyChannel(channel.id, channel.url);
         });
     };
@@ -234,6 +237,6 @@ export const useReparacion = (
         reparacionUrl,
         setReparacionUrl,
         handleReparacionUrlLoad,
-        verifyAllChannels,
+        verifyAllChannelsInGroup,
     };
 };

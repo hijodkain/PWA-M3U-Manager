@@ -40,7 +40,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         reparacionUrl,
         setReparacionUrl,
         handleReparacionUrlLoad,
-        verifyAllChannels,
+        verifyAllChannelsInGroup,
     } = reparacionHook;
 
     const { undo, history } = channelsHook;
@@ -80,10 +80,10 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                     })}
                 </select>
                 <button
-                    onClick={verifyAllChannels}
+                    onClick={verifyAllChannelsInGroup}
                     className="w-full text-xs py-2 px-1 rounded-md flex items-center justify-center gap-1 transition-colors bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 mb-2"
                 >
-                    <Check size={14} /> Verificar Todos los Canales
+                    <Check size={14} /> Verificar Canales del Grupo
                 </button>
                 <button
                     onClick={clearFailedChannelsUrls}
