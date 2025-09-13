@@ -20,7 +20,7 @@ const parseXMLTV = (content: string): EpgChannel[] => {
     return parsedEpg;
 };
 
-export const useEpg = (
+export const useAsignarEpg = (
     channels: Channel[],
     setChannels: React.Dispatch<React.SetStateAction<Channel[]>>,
     saveStateToHistory: () => void
@@ -97,7 +97,7 @@ export const useEpg = (
             const generatedEpg = ids.map((id) => ({
                 id,
                 name: id,
-                logo: `${epgLogoFolderUrl.replace(/\/$/, '')}/${id}.png`,
+                logo: `${epgLogoFolderUrl.replace(///$/, '')}/${id}.png`,
             }));
             setEpgChannels(generatedEpg);
         } catch (err) {

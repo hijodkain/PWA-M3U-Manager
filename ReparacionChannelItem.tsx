@@ -1,7 +1,7 @@
 import React from 'react';
 import { Channel } from './index';
 
-interface CurationChannelItemProps {
+interface ReparacionChannelItemProps {
     channel: Channel;
     onBodyClick: () => void;
     onSelectClick?: () => void;
@@ -13,7 +13,7 @@ interface CurationChannelItemProps {
     onVerifyClick?: () => void;
 }
 
-const CurationChannelItem: React.FC<CurationChannelItemProps> = ({
+const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
     channel,
     onBodyClick,
     onSelectClick,
@@ -108,4 +108,4 @@ const CurationChannelItem: React.FC<CurationChannelItemProps> = ({
     );
 };
 
-export default CurationChannelItem;
+export default ReparacionChannelItem;

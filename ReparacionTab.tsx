@@ -1,43 +1,46 @@
 import React from 'react';
-import { Upload, Copy, CheckSquare, ArrowLeftCircle, RotateCcw, Trash2 } from 'lucide-react';
-import { useCuration } from './useCuration';
+import { Upload, Copy, CheckSquare, ArrowLeftCircle, RotateCcw, Trash2, Link } from 'lucide-react';
+import { useReparacion } from './useReparacion';
 import { useChannels } from './useChannels';
-import CurationChannelItem from './CurationChannelItem';
+import ReparacionChannelItem from './ReparacionChannelItem';
 import { AttributeKey } from './index';
 
-interface CurationTabProps {
-    curationHook: ReturnType<typeof useCuration>;
+interface ReparacionTabProps {
+    reparacionHook: ReturnType<typeof useReparacion>;
     channelsHook: ReturnType<typeof useChannels>;
 }
 
-const CurationTab: React.FC<CurationTabProps> = ({ curationHook, channelsHook }) => {
+const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsHook }) => {
     const {
-        selectedCurationChannels,
+        selectedReparacionChannels,
         attributesToCopy,
         destinationChannelId,
         setDestinationChannelId,
         mainListFilter,
         setMainListFilter,
-        curationListFilter,
-        setCurationListFilter,
-        handleCurationFileUpload,
+        reparacionListFilter,
+        setReparacionListFilter,
+        handleReparacionFileUpload,
         toggleAttributeToCopy,
         handleSourceChannelClick,
         mainListUniqueGroups,
-        curationListUniqueGroups,
+        reparacionListUniqueGroups,
         filteredMainChannels,
-        filteredCurationChannels,
-        toggleCurationSelection,
-        handleAddSelectedFromCuration,
+        filteredReparacionChannels,
+        toggleReparacionSelection,
+        handleAddSelectedFromReparacion,
         mainListSearch,
         setMainListSearch,
-        curationListSearch,
-        setCurationListSearch,
+        reparacionListSearch,
+        setReparacionListSearch,
         verificationStatus,
         verifyChannel,
         clearFailedChannelsUrls,
         failedChannelsByGroup,
-    } = curationHook;
+        reparacionUrl,
+        setReparacionUrl,
+        handleReparacionUrlLoad,
+    } = reparacionHook;
 
     const { undo, history } = channelsHook;
 
@@ -83,7 +86,7 @@ const CurationTab: React.FC<CurationTabProps> = ({ curationHook, channelsHook })
                 </button>
                 <div className="overflow-auto max-h-[60vh] space-y-1 pr-2">
                     {filteredMainChannels.map((ch) => (
-                        <CurationChannelItem
+                        <ReparacionChannelItem
                             key={ch.id}
                             channel={ch}
                             onBodyClick={() => setDestinationChannelId(ch.id)}
@@ -115,8 +118,8 @@ const CurationTab: React.FC<CurationTabProps> = ({ curationHook, channelsHook })
                 <div className="w-full">
                     <h4 className="font-bold text-center mb-2">Añadir a Lista</h4>
                     <button
-                        onClick={handleAddSelectedFromCuration}
-                        disabled={selectedCurationChannels.size === 0}
+                        onClick={handleAddSelectedFromReparacion}
+                        disabled={selectedReparacionChannels.size === 0}
                         className="w-full text-xs py-2 px-1 rounded-md flex items-center justify-center gap-1 transition-colors bg-green-600 hover:bg-green-700 disabled:bg-gray-600"
                     >
                         <ArrowLeftCircle size={14} /> Añadir Canal
@@ -133,47 +136,59 @@ const CurationTab: React.FC<CurationTabProps> = ({ curationHook, channelsHook })
                 </div>
             </div>
             <div className="lg:col-span-5 bg-gray-800 p-4 rounded-lg flex flex-col">
-                <h3 className="font-bold text-lg mb-2">Lista de Curación</h3>
+                <h3 className="font-bold text-lg mb-2">Lista de recambios</h3>
+                <div className="flex gap-2 mb-2">
+                    <input
+                        type="text"
+                        placeholder="Cargar desde URL..."
+                        value={reparacionUrl}
+                        onChange={(e) => setReparacionUrl(e.target.value)}
+                        className="bg-gray-700 border border-gray-600 rounded-md px-3 py-1.5 text-white focus:ring-blue-500 focus:border-blue-500 w-full"
+                    />
+                    <button onClick={handleReparacionUrlLoad} className="bg-blue-600 hover:bg-blue-700 text-white px-4 rounded-md">
+                        <Link size={16} />
+                    </button>
+                </div>
                 <input
                     type="text"
                     placeholder="Buscar canal..."
-                    value={curationListSearch}
-                    onChange={(e) => setCurationListSearch(e.target.value)}
+                    value={reparacionListSearch}
+                    onChange={(e) => setReparacionListSearch(e.target.value)}
                     className="bg-gray-700 border border-gray-600 rounded-md px-3 py-1.5 text-white focus:ring-blue-500 focus:border-blue-500 mb-2 w-full"
                 />
                 <select
-                    value={curationListFilter}
-                    onChange={(e) => setCurationListFilter(e.target.value)}
+                    value={reparacionListFilter}
+                    onChange={(e) => setReparacionListFilter(e.target.value)}
                     className="bg-gray-700 border border-gray-600 rounded-md px-3 py-1.5 text-white focus:ring-blue-500 focus:border-blue-500 mb-2"
                 >
-                    {curationListUniqueGroups.map((g) => (
+                    {reparacionListUniqueGroups.map((g) => (
                         <option key={g} value={g}>
                             {g}
                         </option>
                     ))}
                 </select>
                 <label
-                    htmlFor="curation-file-upload"
+                    htmlFor="reparacion-file-upload"
                     className="cursor-pointer text-sm w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md flex items-center justify-center mb-2"
                 >
                     <Upload size={16} className="mr-2" /> Subir Archivo
                 </label>
                 <input
-                    id="curation-file-upload"
+                    id="reparacion-file-upload"
                     type="file"
                     className="hidden"
-                    onChange={handleCurationFileUpload}
+                    onChange={handleReparacionFileUpload}
                     accept=".m3u,.m3u8"
                 />
                 <div className="overflow-auto max-h-[60vh] space-y-1 pr-2">
-                    {filteredCurationChannels.map((ch) => (
-                        <CurationChannelItem
+                    {filteredReparacionChannels.map((ch) => (
+                        <ReparacionChannelItem
                             key={ch.id}
                             channel={ch}
                             onBodyClick={() => handleSourceChannelClick(ch)}
-                            onSelectClick={() => toggleCurationSelection(ch.id)}
+                            onSelectClick={() => toggleReparacionSelection(ch.id)}
                             isSelected={false}
-                            isChecked={selectedCurationChannels.has(ch.id)}
+                            isChecked={selectedReparacionChannels.has(ch.id)}
                             showCheckbox={true}
                             verificationStatus={verificationStatus[ch.id] || 'pending'}
                             onVerifyClick={() => verifyChannel(ch.id, ch.url)}
@@ -185,4 +200,4 @@ const CurationTab: React.FC<CurationTabProps> = ({ curationHook, channelsHook })
     );
 };
 
-export default CurationTab;
+export default ReparacionTab;

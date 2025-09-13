@@ -1,17 +1,17 @@
 import React, { useState, useMemo } from 'react';
 import { Upload, Download, Copy, Zap, ArrowLeftCircle } from 'lucide-react';
-import { useEpg } from './useEpg';
+import { useAsignarEpg } from './useAsignarEpg';
 import { useChannels } from './useChannels';
-import CurationChannelItem from './CurationChannelItem';
+import ReparacionChannelItem from './ReparacionChannelItem';
 import EpgChannelItem from './EpgChannelItem';
 import { AttributeKey } from './index';
 
-interface EpgTabProps {
-    epgHook: ReturnType<typeof useEpg>;
+interface AsignarEpgTabProps {
+    epgHook: ReturnType<typeof useAsignarEpg>;
     channelsHook: ReturnType<typeof useChannels>;
 }
 
-const EpgTab: React.FC<EpgTabProps> = ({ epgHook, channelsHook }) => {
+const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook }) => {
     const {
         epgChannels,
         isEpgLoading,
@@ -65,7 +65,7 @@ const EpgTab: React.FC<EpgTabProps> = ({ epgHook, channelsHook }) => {
                 />
                 <div className="overflow-auto max-h-[70vh] space-y-1 pr-2">
                     {filteredMainChannelsForEpg.map((ch) => (
-                        <CurationChannelItem
+                        <ReparacionChannelItem
                             key={ch.id}
                             channel={ch}
                             onBodyClick={() => setDestinationChannelId(ch.id)}
@@ -170,4 +170,4 @@ const EpgTab: React.FC<EpgTabProps> = ({ epgHook, channelsHook }) => {
     );
 };
 
-export default EpgTab;
+export default AsignarEpgTab;

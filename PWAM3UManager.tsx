@@ -1,40 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import { Tab, Channel } from './index';
 import { useChannels } from './useChannels';
-import { useCuration } from './useCuration';
-import { useEpg } from './useEpg';
+import { useReparacion } from './useReparacion';
+import { useAsignarEpg } from './useAsignarEpg';
 import { useSettings } from './useSettings';
 import EditorTab from './EditorTab';
-import CurationTab from './CurationTab';
-import EpgTab from './EpgTab';
+import ReparacionTab from './ReparacionTab';
+import AsignarEpgTab from './AsignarEpgTab';
 import SaveTab from './SaveTab';
 import SettingsTab from './SettingsTab';
 import HelpTab from './HelpTab';
+import { Edit, Wrench, List, Settings, Save, HelpCircle } from 'lucide-react';
 
 export default function PWAM3UManager() {
     const [activeTab, setActiveTab] = useState<Tab>('editor');
     const [failedChannels, setFailedChannels] = useState<Channel[]>([]);
     const channelsHook = useChannels(setFailedChannels);
     const settingsHook = useSettings();
-    const curationHook = useCuration(channelsHook.channels, channelsHook.setChannels, channelsHook.saveStateToHistory);
-    const epgHook = useEpg(channelsHook.channels, channelsHook.setChannels, channelsHook.saveStateToHistory);
+    const reparacionHook = useReparacion(channelsHook.channels, channelsHook.setChannels, channelsHook.saveStateToHistory);
+    const epgHook = useAsignarEpg(channelsHook.channels, channelsHook.setChannels, channelsHook.saveStateToHistory);
 
     useEffect(() => {
-        if (activeTab === 'curation' && failedChannels.length > 0) {
-            curationHook.setCurationChannels(failedChannels);
+        if (activeTab === 'reparacion' && failedChannels.length > 0) {
+            reparacionHook.setReparacionChannels(failedChannels);
             setFailedChannels([]);
-            alert('Los canales que fallaron la verificación se han movido a la pestaña de Curación.');
+            alert('Los canales que fallaron la verificación se han movido a la pestaña de Reparación.');
         }
-    }, [activeTab, failedChannels, curationHook, setFailedChannels]);
+    }, [activeTab, failedChannels, reparacionHook, setFailedChannels]);
 
     const renderTabContent = () => {
         switch (activeTab) {
             case 'editor':
                 return <EditorTab channelsHook={channelsHook} settingsHook={settingsHook} />;
-            case 'curation':
-                return <CurationTab curationHook={curationHook} channelsHook={channelsHook} />;
-            case 'epg':
-                return <EpgTab epgHook={epgHook} channelsHook={channelsHook} />;
+            case 'reparacion':
+                return <ReparacionTab reparacionHook={reparacionHook} channelsHook={channelsHook} />;
+            case 'asignar-epg':
+                return <AsignarEpgTab epgHook={epgHook} channelsHook={channelsHook} />;
             case 'save':
                 return <SaveTab channelsHook={channelsHook} settingsHook={settingsHook} />;
             case 'settings':
@@ -50,6 +51,15 @@ export default function PWAM3UManager() {
         }
     };
 
+    const tabs: { id: Tab; name: string; icon: React.ElementType }[] = [
+        { id: 'editor', name: 'Editor de Playlist', icon: Edit },
+        { id: 'reparacion', name: 'Reparación', icon: Wrench },
+        { id: 'asignar-epg', name: 'Asignar EPG', icon: List },
+        { id: 'save', name: 'Guardar y Exportar', icon: Save },
+        { id: 'settings', name: 'Configuración', icon: Settings },
+        { id: 'ayuda', name: 'Ayuda', icon: HelpCircle },
+    ];
+
     return (
         <div className="bg-gray-900 text-white min-h-screen font-sans p-4 sm:p-6 lg:p-8">
             <div className="max-w-full mx-auto">
@@ -59,28 +69,19 @@ export default function PWAM3UManager() {
                 </div>
                 <div className="mb-6 border-b border-gray-700">
                     <nav className="-mb-px flex space-x-8 justify-center" aria-label="Tabs">
-                        {(['editor', 'curation', 'epg', 'save', 'settings', 'ayuda'] as Tab[]).map((tab) => {
-                            const names = {
-                                editor: 'Editor de Playlist',
-                                curation: 'Curación',
-                                epg: 'EPG',
-                                save: 'Guardar y Exportar',
-                                settings: 'Configuración',
-                                ayuda: 'Ayuda',
-                            };
-                            return (
-                                <button
-                                    key={tab}
-                                    onClick={() => setActiveTab(tab)}
-                                    className={`${activeTab === tab
-                                            ? 'border-blue-500 text-blue-400'
-                                            : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500'
-                                        } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm focus:outline-none`}
-                                >
-                                    {names[tab]}
-                                </button>
-                            );
-                        })}
+                        {tabs.map((tab) => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`${activeTab === tab.id
+                                        ? 'border-blue-500 text-blue-400'
+                                        : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500'
+                                    } flex items-center whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm focus:outline-none`}
+                            >
+                                <tab.icon className="mr-2 h-5 w-5" />
+                                {tab.name}
+                            </button>
+                        ))}
                     </nav>
                 </div>
                 {renderTabContent()}
