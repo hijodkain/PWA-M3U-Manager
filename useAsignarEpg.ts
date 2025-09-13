@@ -97,7 +97,7 @@ export const useAsignarEpg = (
             const generatedEpg = ids.map((id) => ({
                 id,
                 name: id,
-                logo: `${epgLogoFolderUrl.replace(///$/, '')}/${id}.png`,
+                logo: `${epgLogoFolderUrl.replace(/\$/, '')}/${id}.png`,
             }));
             setEpgChannels(generatedEpg);
         } catch (err) {
