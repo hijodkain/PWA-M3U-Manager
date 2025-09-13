@@ -64,6 +64,32 @@ export const useCuration = (
         }
     };
 
+    const clearFailedChannelsUrls = () => {
+        saveStateToHistory();
+        const newStatus = { ...verificationStatus };
+        setMainChannels(prev =>
+            prev.map(channel => {
+                if (verificationStatus[channel.id] === 'failed') {
+                    newStatus[channel.id] = 'pending';
+                    return { ...channel, url: 'http://--' };
+                }
+                return channel;
+            })
+        );
+        setVerificationStatus(newStatus);
+    };
+
+    const failedChannelsByGroup = useMemo(() => {
+        return mainChannels.reduce((acc, channel) => {
+            if (verificationStatus[channel.id] === 'failed') {
+                const group = channel.groupTitle || 'Sin Grupo';
+                acc[group] = (acc[group] || 0) + 1;
+            }
+            return acc;
+        }, {} as Record<string, number>);
+    }, [mainChannels, verificationStatus]);
+
+
     const handleCurationFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
@@ -185,5 +211,7 @@ export const useCuration = (
         setCurationChannels,
         verificationStatus,
         verifyChannel,
+        clearFailedChannelsUrls,
+        failedChannelsByGroup,
     };
 };

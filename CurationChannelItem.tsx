@@ -38,7 +38,7 @@ const CurationChannelItem: React.FC<CurationChannelItemProps> = ({
         }
     };
 
-    const nameColor = hasEpg === false ? 'text-red-400' : 'text-white';
+    const nameColor = verificationStatus === 'failed' ? 'text-yellow-400' : (hasEpg === false ? 'text-red-400' : 'text-white');
 
     const statusIndicator = () => {
         switch (verificationStatus) {

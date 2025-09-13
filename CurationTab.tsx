@@ -1,5 +1,5 @@
 import React from 'react';
-import { Upload, Copy, CheckSquare, ArrowLeftCircle, RotateCcw } from 'lucide-react';
+import { Upload, Copy, CheckSquare, ArrowLeftCircle, RotateCcw, Trash2 } from 'lucide-react';
 import { useCuration } from './useCuration';
 import { useChannels } from './useChannels';
 import CurationChannelItem from './CurationChannelItem';
@@ -35,6 +35,8 @@ const CurationTab: React.FC<CurationTabProps> = ({ curationHook, channelsHook })
         setCurationListSearch,
         verificationStatus,
         verifyChannel,
+        clearFailedChannelsUrls,
+        failedChannelsByGroup,
     } = curationHook;
 
     const { undo, history } = channelsHook;
@@ -64,12 +66,21 @@ const CurationTab: React.FC<CurationTabProps> = ({ curationHook, channelsHook })
                     onChange={(e) => setMainListFilter(e.target.value)}
                     className="bg-gray-700 border border-gray-600 rounded-md px-3 py-1.5 text-white focus:ring-blue-500 focus:border-blue-500 mb-2"
                 >
-                    {mainListUniqueGroups.map((g) => (
-                        <option key={g} value={g}>
-                            {g}
-                        </option>
-                    ))}
+                    {mainListUniqueGroups.map((g) => {
+                        const failedCount = failedChannelsByGroup[g] || 0;
+                        return (
+                            <option key={g} value={g} className={failedCount > 0 ? 'text-yellow-400' : ''}>
+                                {g} {failedCount > 0 ? `(${failedCount})` : ''}
+                            </option>
+                        );
+                    })}
                 </select>
+                <button
+                    onClick={clearFailedChannelsUrls}
+                    className="w-full text-xs py-2 px-1 rounded-md flex items-center justify-center gap-1 transition-colors bg-red-600 hover:bg-red-700 disabled:bg-gray-600 mb-2"
+                >
+                    <Trash2 size={14} /> Eliminar URLs de Canales Fallidos
+                </button>
                 <div className="overflow-auto max-h-[60vh] space-y-1 pr-2">
                     {filteredMainChannels.map((ch) => (
                         <CurationChannelItem
@@ -78,6 +89,8 @@ const CurationTab: React.FC<CurationTabProps> = ({ curationHook, channelsHook })
                             onBodyClick={() => setDestinationChannelId(ch.id)}
                             isSelected={destinationChannelId === ch.id}
                             showCheckbox={false}
+                            verificationStatus={verificationStatus[ch.id] || 'pending'}
+                            onVerifyClick={() => verifyChannel(ch.id, ch.url)}
                         />
                     ))}
                 </div>
