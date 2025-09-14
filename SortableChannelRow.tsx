@@ -77,17 +77,23 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
                 </div>
             </td>
             <td style={{ width: `${columnWidths.order}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-300 text-center">
-                <EditableCell value={channel.order.toString()} onSave={(val) => onOrderChange(channel.id, val)} />
+                <div style={{ width: `${columnWidths.order}px` }}>
+                    <EditableCell value={channel.order.toString()} onSave={(val) => onOrderChange(channel.id, val)} />
+                </div>
             </td>
             {statusIndicator}
-            <td style={{ width: `${columnWidths.tvgId}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-300 truncate">
-                <EditableCell value={channel.tvgId} onSave={(val) => onUpdate(channel.id, 'tvgId', val)} />
+            <td className="px-2 py-2 whitespace-nowrap text-sm text-gray-300">
+                <div style={{ width: `${columnWidths.tvgId}px` }} className="truncate">
+                    <EditableCell value={channel.tvgId} onSave={(val) => onUpdate(channel.id, 'tvgId', val)} />
+                </div>
             </td>
-            <td style={{ width: `${columnWidths.tvgName}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-300 truncate">
-                <EditableCell value={channel.tvgName} onSave={(val) => onUpdate(channel.id, 'tvgName', val)} />
+            <td className="px-2 py-2 whitespace-nowrap text-sm text-gray-300">
+                <div style={{ width: `${columnWidths.tvgName}px` }} className="truncate">
+                    <EditableCell value={channel.tvgName} onSave={(val) => onUpdate(channel.id, 'tvgName', val)} />
+                </div>
             </td>
             <td style={{ width: `${columnWidths.tvgLogo}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-300 text-center">
-                <div className="flex items-center justify-center">
+                <div style={{ width: `${columnWidths.tvgLogo}px` }} className="flex items-center justify-center">
                     <img
                         src={channel.tvgLogo || 'https://placehold.co/40x40/2d3748/e2e8f0?text=?'}
                         alt="logo"
@@ -98,14 +104,20 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
                     />
                 </div>
             </td>
-            <td style={{ width: `${columnWidths.groupTitle}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-300 truncate">
-                <EditableCell value={channel.groupTitle} onSave={(val) => onUpdate(channel.id, 'groupTitle', val)} />
+            <td className="px-2 py-2 whitespace-nowrap text-sm text-gray-300">
+                <div style={{ width: `${columnWidths.groupTitle}px` }} className="truncate">
+                    <EditableCell value={channel.groupTitle} onSave={(val) => onUpdate(channel.id, 'groupTitle', val)} />
+                </div>
             </td>
-            <td style={{ width: `${columnWidths.name}px` }} className="px-2 py-2 text-sm text-white font-medium truncate">
-                <EditableCell value={channel.name} onSave={(val) => onUpdate(channel.id, 'name', val)} />
+            <td className="px-2 py-2 text-sm text-white font-medium">
+                <div style={{ width: `${columnWidths.name}px` }} className="truncate">
+                    <EditableCell value={channel.name} onSave={(val) => onUpdate(channel.id, 'name', val)} />
+                </div>
             </td>
-            <td style={{ width: `${columnWidths.url}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-400 truncate">
-                <EditableCell value={channel.url} onSave={(val) => onUpdate(channel.id, 'url', val)} />
+            <td className="px-2 py-2 whitespace-nowrap text-sm text-gray-400">
+                <div style={{ width: `${columnWidths.url}px` }} className="truncate">
+                    <EditableCell value={channel.url} onSave={(val) => onUpdate(channel.id, 'url', val)} />
+                </div>
             </td>
         </tr>
     );
