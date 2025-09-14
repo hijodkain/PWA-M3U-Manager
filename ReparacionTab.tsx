@@ -123,7 +123,10 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                 <ReparacionChannelItem
                                     key={ch.id}
                                     channel={ch}
-                                    onBodyClick={() => setDestinationChannelId(ch.id)}
+                                    onBodyClick={() => {
+                                        setDestinationChannelId(ch.id);
+                                        setReparacionListSearch(ch.name);
+                                    }}
                                     isSelected={destinationChannelId === ch.id}
                                     showCheckbox={false}
                                     verificationStatus={verificationStatus[ch.id] || 'pending'}
