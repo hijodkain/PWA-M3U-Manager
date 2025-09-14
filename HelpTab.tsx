@@ -47,7 +47,9 @@ const HelpTab: React.FC = () => {
                     <li>Busca la opción <code>files.content.write</code> y marca la casilla para darle permiso de escritura. Haz clic en "Submit" al final.</li>
                     <li>Vuelve a la pestaña <strong>"Settings"</strong> de tu aplicación de Dropbox.</li>
                     <li>En la sección "Generated access token", haz clic en el botón <strong>"Generate"</strong>.</li>
-                    <li>Copia el código largo que aparece. ¡Ese es tu token!</li>
+                    <li>Justo debajo, verás una opción llamada <strong>"Access token expiration"</strong>. Selecciona <strong>"No expiration"</strong> en el menú desplegable.</li>
+                    <li>Ahora sí, haz clic en el botón <strong>"Generate"</strong>.</li>
+                    <li>Copia el nuevo código largo que aparece. ¡Ese es tu token de larga duración!</li>
                     <li>Vuelve a esta aplicación, ve a la pestaña <strong>"Configuración"</strong> y pega el token en el campo correspondiente para guardarlo.</li>
                 </ol>
             </Section>
