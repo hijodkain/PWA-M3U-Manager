@@ -8,8 +8,10 @@ interface SettingsTabProps {
 
 const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
     const {
-        dropboxToken,
-        saveDropboxToken,
+        dropboxAppKey,
+        dropboxAppSecret,
+        dropboxRefreshToken,
+        saveDropboxSettings,
         savedUrls,
         addSavedUrl,
         deleteSavedUrl,
@@ -18,7 +20,9 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
         deleteSavedEpgUrl,
     } = settingsHook;
 
-    const [currentToken, setCurrentToken] = useState(dropboxToken);
+    const [appKey, setAppKey] = useState(dropboxAppKey);
+    const [appSecret, setAppSecret] = useState(dropboxAppSecret);
+    const [refreshToken, setRefreshToken] = useState(dropboxRefreshToken);
     const [newUrlName, setNewUrlName] = useState('');
     const [newUrl, setNewUrl] = useState('');
     const [newEpgUrlName, setNewEpgUrlName] = useState('');
@@ -26,12 +30,14 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
     const [tokenSaveStatus, setTokenSaveStatus] = useState('');
 
     useEffect(() => {
-        setCurrentToken(dropboxToken);
-    }, [dropboxToken]);
+        setAppKey(dropboxAppKey);
+        setAppSecret(dropboxAppSecret);
+        setRefreshToken(dropboxRefreshToken);
+    }, [dropboxAppKey, dropboxAppSecret, dropboxRefreshToken]);
 
     const handleSaveToken = () => {
-        saveDropboxToken(currentToken);
-        setTokenSaveStatus('Token guardado con éxito!');
+        saveDropboxSettings(appKey, appSecret, refreshToken);
+        setTokenSaveStatus('Configuración de Dropbox guardada con éxito!');
         setTimeout(() => setTokenSaveStatus(''), 3000);
     };
 
@@ -60,15 +66,41 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
                 <h2 className="text-xl font-bold mb-4">Configuración de Dropbox</h2>
                 <div className="flex flex-col gap-4 md:w-1/2">
                     <div>
-                        <label htmlFor="dropbox-token" className="block text-sm font-medium text-gray-300 mb-2">
-                            Token de Acceso de Dropbox
+                        <label htmlFor="dropbox-app-key" className="block text-sm font-medium text-gray-300 mb-2">
+                            Dropbox App Key
                         </label>
                         <input
-                            id="dropbox-token"
+                            id="dropbox-app-key"
                             type="password"
-                            placeholder="Pega tu token aquí"
-                            value={currentToken}
-                            onChange={(e) => setCurrentToken(e.target.value)}
+                            placeholder="Pega tu App Key aquí"
+                            value={appKey}
+                            onChange={(e) => setAppKey(e.target.value)}
+                            className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                    </div>
+                    <div>
+                        <label htmlFor="dropbox-app-secret" className="block text-sm font-medium text-gray-300 mb-2">
+                            Dropbox App Secret
+                        </label>
+                        <input
+                            id="dropbox-app-secret"
+                            type="password"
+                            placeholder="Pega tu App Secret aquí"
+                            value={appSecret}
+                            onChange={(e) => setAppSecret(e.target.value)}
+                            className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                    </div>
+                    <div>
+                        <label htmlFor="dropbox-refresh-token" className="block text-sm font-medium text-gray-300 mb-2">
+                            Dropbox Refresh Token
+                        </label>
+                        <input
+                            id="dropbox-refresh-token"
+                            type="password"
+                            placeholder="Pega tu Refresh Token aquí"
+                            value={refreshToken}
+                            onChange={(e) => setRefreshToken(e.target.value)}
                             className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
                         />
                     </div>
@@ -77,7 +109,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
                         className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md flex items-center justify-center w-full md:w-auto self-start"
                     >
                         <Save size={18} className="mr-2" />
-                        Guardar Token
+                        Guardar Configuración de Dropbox
                     </button>
                     {tokenSaveStatus && <p className="text-sm text-green-400 mt-2">{tokenSaveStatus}</p>}
                 </div>

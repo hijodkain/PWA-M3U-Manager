@@ -6,21 +6,24 @@ export interface SavedUrl {
     url: string;
 }
 
-const DB_TOKEN_KEY = 'dropbox_token';
+const DB_APP_KEY = 'dropbox_app_key';
+const DB_APP_SECRET = 'dropbox_app_secret';
+const DB_REFRESH_TOKEN_KEY = 'dropbox_refresh_token';
 const SAVED_URLS_KEY = 'saved_urls';
 const SAVED_EPG_URLS_KEY = 'saved_epg_urls';
 
 export const useSettings = () => {
-    const [dropboxToken, setDropboxToken] = useState('');
+    const [dropboxAppKey, setDropboxAppKey] = useState('');
+    const [dropboxAppSecret, setDropboxAppSecret] = useState('');
+    const [dropboxRefreshToken, setDropboxRefreshToken] = useState('');
     const [savedUrls, setSavedUrls] = useState<SavedUrl[]>([]);
     const [savedEpgUrls, setSavedEpgUrls] = useState<SavedUrl[]>([]);
 
     useEffect(() => {
         try {
-            const savedToken = localStorage.getItem(DB_TOKEN_KEY);
-            if (savedToken) {
-                setDropboxToken(savedToken);
-            }
+            setDropboxAppKey(localStorage.getItem(DB_APP_KEY) || '');
+            setDropboxAppSecret(localStorage.getItem(DB_APP_SECRET) || '');
+            setDropboxRefreshToken(localStorage.getItem(DB_REFRESH_TOKEN_KEY) || '');
 
             const savedUrlsJson = localStorage.getItem(SAVED_URLS_KEY);
             if (savedUrlsJson) {
@@ -36,12 +39,16 @@ export const useSettings = () => {
         }
     }, []);
 
-    const saveDropboxToken = useCallback((token: string) => {
+    const saveDropboxSettings = useCallback((appKey: string, appSecret: string, refreshToken: string) => {
         try {
-            localStorage.setItem(DB_TOKEN_KEY, token);
-            setDropboxToken(token);
+            localStorage.setItem(DB_APP_KEY, appKey);
+            setDropboxAppKey(appKey);
+            localStorage.setItem(DB_APP_SECRET, appSecret);
+            setDropboxAppSecret(appSecret);
+            localStorage.setItem(DB_REFRESH_TOKEN_KEY, refreshToken);
+            setDropboxRefreshToken(refreshToken);
         } catch (error) {
-            console.error("Error saving Dropbox token to localStorage", error);
+            console.error("Error saving Dropbox settings to localStorage", error);
         }
     }, []);
 
@@ -90,8 +97,10 @@ export const useSettings = () => {
     }, [savedEpgUrls]);
 
     return {
-        dropboxToken,
-        saveDropboxToken,
+        dropboxAppKey,
+        dropboxAppSecret,
+        dropboxRefreshToken,
+        saveDropboxSettings,
         savedUrls,
         addSavedUrl,
         deleteSavedUrl,

@@ -10,14 +10,32 @@ interface SaveTabProps {
 
 const SaveTab: React.FC<SaveTabProps> = ({ channelsHook, settingsHook }) => {
     const { channels, fileName, setFileName, handleDownload, generateM3UContent } = channelsHook;
-    const { dropboxToken } = settingsHook;
+    const { dropboxAppKey, dropboxAppSecret, dropboxRefreshToken } = settingsHook;
 
     const [isUploading, setIsUploading] = useState(false);
     const [uploadStatus, setUploadStatus] = useState('');
 
+    const getDropboxAccessToken = async () => {
+        const response = await fetch('https://api.dropboxapi.com/oauth2/token', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Authorization': 'Basic ' + btoa(`${dropboxAppKey}:${dropboxAppSecret}`),
+            },
+            body: `grant_type=refresh_token&refresh_token=${dropboxRefreshToken}`,
+        });
+
+        if (!response.ok) {
+            throw new Error('No se pudo obtener el token de acceso de Dropbox. Revisa tu configuración.');
+        }
+
+        const data = await response.json();
+        return data.access_token;
+    };
+
     const handleUploadToDropbox = async () => {
-        if (!dropboxToken) {
-            setUploadStatus('Por favor, guarda tu token en la pestaña de Configuración.');
+        if (!dropboxAppKey || !dropboxAppSecret || !dropboxRefreshToken) {
+            setUploadStatus('Por favor, completa la configuración de Dropbox en la pestaña de Configuración.');
             return;
         }
         if (channels.length === 0) {
@@ -26,30 +44,31 @@ const SaveTab: React.FC<SaveTabProps> = ({ channelsHook, settingsHook }) => {
         }
 
         setIsUploading(true);
-        setUploadStatus('Subiendo a Dropbox...');
-
-        const fileContent = generateM3UContent();
-
-        const dropboxApiArg = {
-            path: `/${fileName}`,
-            mode: 'overwrite',
-            autorename: false,
-            mute: true,
-        };
+        setUploadStatus('Obteniendo token de acceso y subiendo a Dropbox...');
 
         try {
-            const response = await fetch('https://content.dropboxapi.com/2/files/upload', {
+            const accessToken = await getDropboxAccessToken();
+            const fileContent = generateM3UContent();
+
+            const dropboxApiArg = {
+                path: `/${fileName}`,
+                mode: 'overwrite',
+                autorename: false,
+                mute: true,
+            };
+
+            const uploadResponse = await fetch('https://content.dropboxapi.com/2/files/upload', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${dropboxToken}`,
+                    'Authorization': `Bearer ${accessToken}`,
                     'Dropbox-API-Arg': JSON.stringify(dropboxApiArg),
                     'Content-Type': 'application/octet-stream',
                 },
                 body: fileContent,
             });
 
-            if (!response.ok) {
-                const errorData = await response.json();
+            if (!uploadResponse.ok) {
+                const errorData = await uploadResponse.json();
                 throw new Error(errorData.error_summary || 'Fallo al subir el archivo.');
             }
 
@@ -61,6 +80,8 @@ const SaveTab: React.FC<SaveTabProps> = ({ channelsHook, settingsHook }) => {
             setIsUploading(false);
         }
     };
+
+    const areDropboxSettingsMissing = !dropboxAppKey || !dropboxAppSecret || !dropboxRefreshToken;
 
     return (
         <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
@@ -93,20 +114,20 @@ const SaveTab: React.FC<SaveTabProps> = ({ channelsHook, settingsHook }) => {
             <div>
                 <h3 className="text-lg font-bold text-white mb-2">Subir a Dropbox</h3>
                 <p className="text-sm text-gray-400 mb-4">
-                    El archivo se guardará como <strong>{fileName}</strong> en la raíz de tu Dropbox.
+                    El archivo se guardará como <strong>{fileName}</strong> en la carpeta de la aplicación de tu Dropbox.
                 </p>
                 <div className="flex flex-col gap-4 md:w-1/2">
                     <button
                         onClick={handleUploadToDropbox}
-                        disabled={isUploading || channels.length === 0 || !dropboxToken}
+                        disabled={isUploading || channels.length === 0 || areDropboxSettingsMissing}
                         className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md flex items-center justify-center disabled:bg-gray-600 disabled:cursor-not-allowed"
                     >
                         <UploadCloud size={18} className="mr-2" />
                         {isUploading ? 'Subiendo...' : 'Subir a Dropbox'}
                     </button>
-                    {!dropboxToken && (
+                    {areDropboxSettingsMissing && (
                         <p className="text-xs text-yellow-400 mt-2">
-                            No se ha encontrado ningún token de Dropbox. Por favor, añádelo en la pestaña de Configuración.
+                            Falta la configuración de Dropbox. Por favor, añádela en la pestaña de Configuración.
                         </p>
                     )}
                 </div>
