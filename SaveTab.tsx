@@ -10,7 +10,7 @@ interface SaveTabProps {
 
 const SaveTab: React.FC<SaveTabProps> = ({ channelsHook, settingsHook }) => {
     const { channels, fileName, setFileName, handleDownload, generateM3UContent } = channelsHook;
-    const { dropboxAppKey, dropboxAppSecret, dropboxRefreshToken } = settingsHook;
+    const { dropboxAppKey, dropboxRefreshToken } = settingsHook;
 
     const [isUploading, setIsUploading] = useState(false);
     const [uploadStatus, setUploadStatus] = useState('');
@@ -20,13 +20,18 @@ const SaveTab: React.FC<SaveTabProps> = ({ channelsHook, settingsHook }) => {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
-                'Authorization': 'Basic ' + btoa(`${dropboxAppKey}:${dropboxAppSecret}`),
             },
-            body: `grant_type=refresh_token&refresh_token=${dropboxRefreshToken}`,
+            body: new URLSearchParams({
+                grant_type: 'refresh_token',
+                refresh_token: dropboxRefreshToken,
+                client_id: dropboxAppKey,
+            }),
         });
 
         if (!response.ok) {
-            throw new Error('No se pudo obtener el token de acceso de Dropbox. Revisa tu configuración.');
+            const errorData = await response.json();
+            console.error('Dropbox token refresh error:', errorData);
+            throw new Error('No se pudo obtener el token de acceso de Dropbox. Vuelve a conectar en la pestaña de Configuración.');
         }
 
         const data = await response.json();
@@ -34,8 +39,8 @@ const SaveTab: React.FC<SaveTabProps> = ({ channelsHook, settingsHook }) => {
     };
 
     const handleUploadToDropbox = async () => {
-        if (!dropboxAppKey || !dropboxAppSecret || !dropboxRefreshToken) {
-            setUploadStatus('Por favor, completa la configuración de Dropbox en la pestaña de Configuración.');
+        if (!dropboxAppKey || !dropboxRefreshToken) {
+            setUploadStatus('Por favor, conecta tu cuenta de Dropbox en la pestaña de Configuración.');
             return;
         }
         if (channels.length === 0) {
@@ -81,7 +86,7 @@ const SaveTab: React.FC<SaveTabProps> = ({ channelsHook, settingsHook }) => {
         }
     };
 
-    const areDropboxSettingsMissing = !dropboxAppKey || !dropboxAppSecret || !dropboxRefreshToken;
+    const areDropboxSettingsMissing = !dropboxAppKey || !dropboxRefreshToken;
 
     return (
         <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
@@ -127,7 +132,7 @@ const SaveTab: React.FC<SaveTabProps> = ({ channelsHook, settingsHook }) => {
                     </button>
                     {areDropboxSettingsMissing && (
                         <p className="text-xs text-yellow-400 mt-2">
-                            Falta la configuración de Dropbox. Por favor, añádela en la pestaña de Configuración.
+                            Falta la configuración de Dropbox. Por favor, conéctate en la pestaña de Configuración.
                         </p>
                     )}
                 </div>

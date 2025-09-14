@@ -32,52 +32,45 @@ const HelpTab: React.FC = () => {
                 </ul>
             </Section>
 
-            <Section title="Cómo Obtener las Credenciales de Dropbox" icon={<Key className="text-yellow-400" />}>
+            <Section title="Cómo Conectar con Dropbox" icon={<Key className="text-yellow-400" />}>
                 <p>
-                    Para subir tu lista a Dropbox, necesitas credenciales de la API. Debido a cambios en la política de Dropbox, ahora el proceso es más seguro pero requiere algunos pasos manuales para obtener credenciales que no caduquen.
+                    Para poder subir tu lista de canales directamente a tu Dropbox, primero necesitas autorizar a esta aplicación. El proceso es seguro y solo le da permiso a la aplicación para escribir en su propia carpeta dedicada dentro de tu Dropbox.
                 </p>
-                <p>Sigue estos pasos con atención:</p>
+                <p>Sigue estos sencillos pasos:</p>
                 <ol>
                     <li><strong>Ve a la Consola de Apps de Dropbox:</strong> <a href="https://www.dropbox.com/developers/apps" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">Dropbox App Console</a>.</li>
                     <li><strong>Crea una nueva aplicación:</strong>
-                        <ul className="list-disc list-inside">
-                            <li>Haz clic en <strong>"Create app"</strong>.</li>
-                            <li>Selecciona <strong>"Scoped access"</strong>.</li>
-                            <li>Elige el tipo de acceso <strong>"App folder"</strong> para mayor seguridad.</li>
-                            <li>Dale un nombre único a tu app (ej. "MiGestorM3U").</li>
+                        <ul className="list-disc list-inside ml-4">
+                            <li>Haz clic en el botón <strong>"Create app"</strong>.</li>
+                            <li>Selecciona la opción <strong>"Scoped access"</strong>.</li>
+                            <li>En el tipo de acceso, elige <strong>"App folder"</strong>. Esto es más seguro.</li>
+                            <li>Dale un nombre único a tu aplicación (por ejemplo: <strong>MiGestorM3U</strong>).</li>
                         </ul>
                     </li>
                     <li><strong>Configura los Permisos:</strong>
-                        <ul className="list-disc list-inside">
-                            <li>En la pestaña <strong>"Permissions"</strong>, busca y marca la casilla <code>files.content.write</code>.</li>
-                            <li>Haz clic en <strong>"Submit"</strong> al final de la página.</li>
+                        <ul className="list-disc list-inside ml-4">
+                            <li>Una vez creada la app, ve a la pestaña <strong>"Permissions"</strong>.</li>
+                            <li>Busca la opción <code>files.content.write</code> y marca la casilla para darle permiso de escritura.</li>
+                            <li>Haz clic en <strong>"Submit"</strong> al final de la página para guardar los cambios.</li>
                         </ul>
                     </li>
-                    <li><strong>Obtén el App Key y el App Secret:</strong>
-                        <ul className="list-disc list-inside">
-                            <li>Vuelve a la pestaña <strong>"Settings"</strong>.</li>
-                            <li>Encontrarás tu <strong>App key</strong> y <strong>App secret</strong>. Copia ambos valores. Los necesitarás en la pestaña de Configuración de esta aplicación.</li>
+                    <li><strong>Obtén tu App Key:</strong>
+                        <ul className="list-disc list-inside ml-4">
+                            <li>Vuelve a la pestaña <strong>"Settings"</strong> de tu aplicación de Dropbox.</li>
+                            <li>En la sección "App key", copia el código que aparece. ¡Esa es tu <strong>App Key</strong>!</li>
                         </ul>
                     </li>
-                    <li><strong>Genera el Refresh Token (Paso crucial):</strong>
-                        <ul className="list-disc list-inside">
-                            <li>Construye la siguiente URL en un editor de texto, reemplazando <code>YOUR_APP_KEY</code> con tu App Key:</li>
-                            <li><pre className="bg-gray-900 p-2 rounded-md text-xs overflow-x-auto"><code>https://www.dropbox.com/oauth2/authorize?client_id=YOUR_APP_KEY&token_access_type=offline&response_type=code</code></pre></li>
-                            <li>Pega esta URL en tu navegador.</li>
-                            <li>Autoriza la aplicación en la página de Dropbox. Serás redirigido a una página en blanco o que da error, ¡no te preocupes! Copia el <strong>código de autorización</strong> de la URL (el valor del parámetro `code`).</li>
-                            <li>Abre una terminal o línea de comandos en tu ordenador y ejecuta el siguiente comando, reemplazando <code>YOUR_AUTH_CODE</code>, <code>YOUR_APP_KEY</code>, y <code>YOUR_APP_SECRET</code> con tus valores:</li>
-                            <li><pre className="bg-gray-900 p-2 rounded-md text-xs overflow-x-auto"><code>curl -X POST https://api.dropboxapi.com/oauth2/token -d grant_type=authorization_code -d code=YOUR_AUTH_CODE -u YOUR_APP_KEY:YOUR_APP_SECRET</code></pre></li>
-                            <li>La respuesta será un JSON. Busca el valor de <strong>`refresh_token`</strong> y cópialo. ¡Este token es de larga duración!</li>
-                        </ul>
-                    </li>
-                    <li><strong>Guarda las Credenciales:</strong>
-                        <ul className="list-disc list-inside">
-                            <li>Vuelve a esta aplicación, ve a la pestaña <strong>"Configuración"</strong>.</li>
-                            <li>Pega el <strong>App Key</strong>, <strong>App Secret</strong> y <strong>Refresh Token</strong> en sus campos correspondientes y guarda.</li>
+                    <li><strong>Conecta la Aplicación:</strong>
+                        <ul className="list-disc list-inside ml-4">
+                            <li>Vuelve a esta aplicación y ve a la pestaña <strong>"Configuración"</strong>.</li>
+                            <li>Pega tu <strong>App Key</strong> en el campo correspondiente.</li>
+                            <li>Haz clic en el botón <strong>"Conectar a Dropbox"</strong>.</li>
+                            <li>Serás redirigido a la página de autorización de Dropbox. Confirma que quieres permitir el acceso a la aplicación.</li>
+                            <li>¡Y listo! La aplicación se conectará y guardará la autorización de forma segura en tu navegador.</li>
                         </ul>
                     </li>
                 </ol>
-                <p className="mt-4 font-bold">¡Listo! Ahora podrás subir tus listas a Dropbox sin que tu sesión caduque.</p>
+                <p className="mt-4 font-bold">Ahora podrás subir tus listas a Dropbox desde la pestaña "Guardar y Exportar" con un solo clic.</p>
             </Section>
         </div>
     );
