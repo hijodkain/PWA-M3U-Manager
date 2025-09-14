@@ -1,40 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Channel, AttributeKey } from './index';
 
 type VerificationStatus = 'pending' | 'verifying' | 'ok' | 'failed';
-
-const parseM3U = (content: string): Channel[] => {
-    const lines = content.split('\n');
-    if (lines[0].trim() !== '#EXTM3U') {
-        throw new Error('Archivo no válido. Debe empezar con #EXTM3U.');
-    }
-    const parsedChannels: Channel[] = [];
-    let order = 1;
-    for (let i = 1; i < lines.length; i++) {
-        if (lines[i].trim().startsWith('#EXTINF:')) {
-            const info = lines[i].trim().substring(8);
-            const url = lines[++i]?.trim() || '';
-            const tvgId = info.match(/tvg-id="([^"]*)"?/)?.[1] || '';
-            const tvgName = info.match(/tvg-name="([^"]*)"?/)?.[1] || '';
-            const tvgLogo = info.match(/tvg-logo="([^"]*)"?/)?.[1] || '';
-            const groupTitle = info.match(/group-title="([^"]*)"?/)?.[1] || '';
-            const name = info.split(',').pop()?.trim() || '';
-            if (name && url) {
-                parsedChannels.push({
-                    id: `channel-${Date.now()}-${Math.random()}`,
-                    order: order++,
-                    tvgId,
-                    tvgName,
-                    tvgLogo,
-                    groupTitle,
-                    name,
-                    url,
-                });
-            }
-        }
-    }
-    return parsedChannels;
-};
 
 export const useReparacion = (
     mainChannels: Channel[],
@@ -47,6 +14,8 @@ export const useReparacion = (
     const [destinationChannelId, setDestinationChannelId] = useState<string | null>(null);
     const [verificationStatus, setVerificationStatus] = useState<Record<string, VerificationStatus>>({});
     const [reparacionUrl, setReparacionUrl] = useState('');
+    const [isCurationLoading, setIsCurationLoading] = useState(false);
+    const [curationError, setCurationError] = useState<string | null>(null);
 
     const [mainListFilter, setMainListFilter] = useState('All');
     const [reparacionListFilter, setReparacionListFilter] = useState('All');
@@ -74,14 +43,50 @@ export const useReparacion = (
         });
     };
 
+    const processCurationM3U = useCallback((content: string) => {
+        setIsCurationLoading(true);
+        setCurationError(null);
+
+        const worker = new Worker(new URL('./m3u-parser.worker.ts', import.meta.url), {
+            type: 'module',
+        });
+
+        worker.onmessage = (event) => {
+            const { type, channels, message } = event.data;
+            if (type === 'success') {
+                setReparacionChannels(channels);
+            } else {
+                setCurationError(message);
+            }
+            setIsCurationLoading(false);
+            worker.terminate();
+        };
+
+        worker.onerror = (error) => {
+            setCurationError(`Worker error: ${error.message}`);
+            setIsCurationLoading(false);
+            worker.terminate();
+        };
+
+        worker.postMessage(content);
+    }, []);
+
     const handleReparacionUrlLoad = async () => {
         if (!reparacionUrl) return;
+        setIsCurationLoading(true);
+        setCurationError(null);
         try {
-            const response = await fetch(reparacionUrl);
+            const proxyUrl = `/api/proxy?url=${encodeURIComponent(reparacionUrl)}`;
+            const response = await fetch(proxyUrl);
+            if (!response.ok) {
+                throw new Error(`Error al descargar la lista: ${response.statusText}`);
+            }
             const text = await response.text();
-            setReparacionChannels(parseM3U(text));
+            processCurationM3U(text);
         } catch (error) {
             console.error('Failed to load from URL', error);
+            setCurationError(error instanceof Error ? error.message : 'Ocurrió un error desconocido.');
+            setIsCurationLoading(false);
         }
     };
 
@@ -114,12 +119,16 @@ export const useReparacion = (
     const handleReparacionFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
+        setIsCurationLoading(true);
+        setCurationError(null);
         const reader = new FileReader();
         reader.onload = (e) => {
-            try {
-                setReparacionChannels(parseM3U(e.target?.result as string));
-            } catch (err) {
-                console.error(err);
+            const content = e.target?.result as string;
+            if (content) {
+                processCurationM3U(content);
+            } else {
+                setCurationError('No se pudo leer el contenido del archivo.');
+                setIsCurationLoading(false);
             }
         };
         reader.readAsText(file);
@@ -237,6 +246,8 @@ export const useReparacion = (
         reparacionUrl,
         setReparacionUrl,
         handleReparacionUrlLoad,
+        isCurationLoading,
+        curationError,
         verifyAllChannelsInGroup,
     };
 };

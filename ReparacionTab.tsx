@@ -41,6 +41,8 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         reparacionUrl,
         setReparacionUrl,
         handleReparacionUrlLoad,
+        isCurationLoading,
+        curationError,
         verifyAllChannelsInGroup,
     } = reparacionHook;
 
@@ -190,6 +192,8 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                         <Link size={16} />
                     </button>
                 </div>
+                {isCurationLoading && <p className="text-center text-blue-400 mt-2">Cargando lista de recambios...</p>}
+                {curationError && <p className="text-center text-red-400 bg-red-900/50 p-2 rounded mt-2">{curationError}</p>}
                 <input
                     type="text"
                     placeholder="Buscar canal..."
