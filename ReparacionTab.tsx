@@ -4,14 +4,16 @@ import { useReparacion } from './useReparacion';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useChannels } from './useChannels';
 import ReparacionChannelItem from './ReparacionChannelItem';
+import { useSettings } from './useSettings';
 import { AttributeKey } from './index';
 
 interface ReparacionTabProps {
     reparacionHook: ReturnType<typeof useReparacion>;
     channelsHook: ReturnType<typeof useChannels>;
+    settingsHook: ReturnType<typeof useSettings>;
 }
 
-const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsHook }) => {
+const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsHook, settingsHook }) => {
     const {
         selectedReparacionChannels,
         attributesToCopy,
