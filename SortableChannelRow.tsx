@@ -80,10 +80,10 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
                 <EditableCell value={channel.order.toString()} onSave={(val) => onOrderChange(channel.id, val)} />
             </td>
             {statusIndicator}
-            <td style={{ width: `${columnWidths.tvgId}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-300">
+            <td style={{ width: `${columnWidths.tvgId}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-300 truncate">
                 <EditableCell value={channel.tvgId} onSave={(val) => onUpdate(channel.id, 'tvgId', val)} />
             </td>
-            <td style={{ width: `${columnWidths.tvgName}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-300">
+            <td style={{ width: `${columnWidths.tvgName}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-300 truncate">
                 <EditableCell value={channel.tvgName} onSave={(val) => onUpdate(channel.id, 'tvgName', val)} />
             </td>
             <td style={{ width: `${columnWidths.tvgLogo}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-300 text-center">
@@ -91,20 +91,20 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
                     <img
                         src={channel.tvgLogo || 'https://placehold.co/40x40/2d3748/e2e8f0?text=?'}
                         alt="logo"
-                        className="h-8 w-8 object-contain rounded-sm"
+                        className="h-10 w-auto object-contain rounded-sm"
                         onError={(e) => {
                             e.currentTarget.src = 'https://placehold.co/40x40/2d3748/e2e8f0?text=Error';
                         }}
                     />
                 </div>
             </td>
-            <td style={{ width: `${columnWidths.groupTitle}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-300">
+            <td style={{ width: `${columnWidths.groupTitle}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-300 truncate">
                 <EditableCell value={channel.groupTitle} onSave={(val) => onUpdate(channel.id, 'groupTitle', val)} />
             </td>
-            <td style={{ width: `${columnWidths.name}px` }} className="px-2 py-2 text-sm text-white font-medium">
+            <td style={{ width: `${columnWidths.name}px` }} className="px-2 py-2 text-sm text-white font-medium truncate">
                 <EditableCell value={channel.name} onSave={(val) => onUpdate(channel.id, 'name', val)} />
             </td>
-            <td style={{ width: `${columnWidths.url}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-400">
+            <td style={{ width: `${columnWidths.url}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-400 truncate">
                 <EditableCell value={channel.url} onSave={(val) => onUpdate(channel.id, 'url', val)} />
             </td>
         </tr>

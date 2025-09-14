@@ -4,10 +4,8 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Upload, Download, Plus, Trash2, GripVertical, Zap, ShieldCheck, ShieldX, Hourglass, ShieldQuestion } from 'lucide-react';
 import { useChannels } from './useChannels';
-import { useColumnResizing } from './useColumnResizing';
 import { useSettings } from './useSettings';
 import SortableChannelRow from './SortableChannelRow';
-import ResizableHeader from './ResizableHeader';
 import { Channel } from './index';
 
 interface EditorTabProps {
@@ -48,7 +46,17 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
     } = channelsHook;
 
     const { savedUrls } = settingsHook;
-    const { columnWidths, handleResize } = useColumnResizing();
+    const columnWidths = {
+        select: 80,
+        order: 80,
+        status: 80,
+        tvgId: 150,
+        tvgName: 200,
+        tvgLogo: 120, // Ancho aumentado para los logos
+        groupTitle: 180,
+        name: 250,
+        url: 300,
+    };
     const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
     const parentRef = tableContainerRef; // Reutilizamos la ref existente
 
@@ -220,30 +228,30 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                         className="form-checkbox h-4 w-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
                                     />
                                 </th>
-                                <ResizableHeader width={columnWidths.order} onResize={(w) => handleResize('order', w)}>
-                                    <div className="text-center">Orden</div>
-                                </ResizableHeader>
-                                <ResizableHeader width={columnWidths.status} onResize={(w) => handleResize('status', w)}>
-                                    <div className="text-center">Estado</div>
-                                </ResizableHeader>
-                                <ResizableHeader width={columnWidths.tvgId} onResize={(w) => handleResize('tvgId', w)}>
+                                <th scope="col" style={{ width: `${columnWidths.order}px` }} className="px-2 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
+                                    Orden
+                                </th>
+                                <th scope="col" style={{ width: `${columnWidths.status}px` }} className="px-2 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
+                                    Estado
+                                </th>
+                                <th scope="col" style={{ width: `${columnWidths.tvgId}px` }} className="px-2 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                                     tvg-id
-                                </ResizableHeader>
-                                <ResizableHeader width={columnWidths.tvgName} onResize={(w) => handleResize('tvgName', w)}>
+                                </th>
+                                <th scope="col" style={{ width: `${columnWidths.tvgName}px` }} className="px-2 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                                     tvg-name
-                                </ResizableHeader>
-                                <ResizableHeader width={columnWidths.tvgLogo} onResize={(w) => handleResize('tvgLogo', w)}>
-                                    <div className="text-center">Logo</div>
-                                </ResizableHeader>
-                                <ResizableHeader width={columnWidths.groupTitle} onResize={(w) => handleResize('groupTitle', w)}>
+                                </th>
+                                <th scope="col" style={{ width: `${columnWidths.tvgLogo}px` }} className="px-2 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
+                                    Logo
+                                </th>
+                                <th scope="col" style={{ width: `${columnWidths.groupTitle}px` }} className="px-2 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                                     Grupo
-                                </ResizableHeader>
-                                <ResizableHeader width={columnWidths.name} onResize={(w) => handleResize('name', w)}>
+                                </th>
+                                <th scope="col" style={{ width: `${columnWidths.name}px` }} className="px-2 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                                     Nombre del Canal
-                                </ResizableHeader>
-                                <ResizableHeader width={columnWidths.url} onResize={(w) => handleResize('url', w)}>
+                                </th>
+                                <th scope="col" style={{ width: `${columnWidths.url}px` }} className="px-2 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                                     URL del Stream
-                                </ResizableHeader>
+                                </th>
                             </tr>
                         </thead>
                         <SortableContext items={filteredChannels.map(c => c.id)} strategy={verticalListSortingStrategy}>
