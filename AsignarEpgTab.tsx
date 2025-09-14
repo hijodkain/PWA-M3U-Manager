@@ -1,12 +1,12 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { Upload, Download, Copy, Zap, ArrowLeftCircle } from 'lucide-react';
+import { Upload, Download, Copy, Zap, ArrowLeftCircle, ChevronsUpDown } from 'lucide-react';
 import { useAsignarEpg } from './useAsignarEpg';
 import { useChannels } from './useChannels';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import ReparacionChannelItem from './ReparacionChannelItem';
 import { useSettings } from './useSettings';
 import EpgChannelItem from './EpgChannelItem';
-import { AttributeKey } from './index';
+import { AttributeKey, Channel } from './index';
 
 interface AsignarEpgTabProps {
     epgHook: ReturnType<typeof useAsignarEpg>;
@@ -39,14 +39,24 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
     const { savedEpgUrls } = settingsHook;
     const [mainListSearch, setMainListSearch] = useState('');
     const [epgListSearch, setEpgListSearch] = useState('');
+    const [selectedGroup, setSelectedGroup] = useState('all');
+    const [isGeneratorVisible, setIsGeneratorVisible] = useState(false);
+
+    const channelGroups = useMemo(() => {
+        const groups = new Set(channels.map(c => c.groupTitle).filter(Boolean));
+        return ['all', ...Array.from(groups)];
+    }, [channels]);
 
     const filteredMainChannelsForEpg = useMemo(() => {
         let channelsToFilter = channels;
+        if (selectedGroup !== 'all') {
+            channelsToFilter = channelsToFilter.filter(c => c.groupTitle === selectedGroup);
+        }
         if (mainListSearch) {
             channelsToFilter = channelsToFilter.filter(c => c.name.toLowerCase().includes(mainListSearch.toLowerCase()));
         }
         return channelsToFilter;
-    }, [channels, mainListSearch]);
+    }, [channels, mainListSearch, selectedGroup]);
 
     const filteredEpgChannels = useMemo(() => {
         let channelsToFilter = epgChannels;
@@ -76,17 +86,33 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
     const mainListVirtualItems = mainListRowVirtualizer.getVirtualItems();
     const epgListVirtualItems = epgListRowVirtualizer.getVirtualItems();
 
+    const handleMainChannelClick = (channel: Channel) => {
+        setDestinationChannelId(channel.id);
+        setEpgListSearch(channel.name);
+    };
+
     return (
         <div className="grid grid-cols-1 lg:grid-cols-11 gap-4">
             <div className="lg:col-span-5 bg-gray-800 p-4 rounded-lg flex flex-col">
                 <h3 className="font-bold text-lg mb-2">Lista Principal</h3>
-                <input
-                    type="text"
-                    placeholder="Buscar canal..."
-                    value={mainListSearch}
-                    onChange={(e) => setMainListSearch(e.target.value)}
-                    className="bg-gray-700 border border-gray-600 rounded-md px-3 py-1.5 text-white focus:ring-blue-500 focus:border-blue-500 mb-2 w-full"
-                />
+                <div className="flex gap-2 mb-2">
+                    <input
+                        type="text"
+                        placeholder="Buscar canal..."
+                        value={mainListSearch}
+                        onChange={(e) => setMainListSearch(e.target.value)}
+                        className="bg-gray-700 border border-gray-600 rounded-md px-3 py-1.5 text-white focus:ring-blue-500 focus:border-blue-500 w-full"
+                    />
+                    <select
+                        value={selectedGroup}
+                        onChange={(e) => setSelectedGroup(e.target.value)}
+                        className="bg-gray-700 border border-gray-600 rounded-md px-3 py-1.5 text-white focus:ring-blue-500 focus:border-blue-500"
+                    >
+                        {channelGroups.map(group => (
+                            <option key={group} value={group}>{group === 'all' ? 'Todos los Grupos' : group}</option>
+                        ))}
+                    </select>
+                </div>
                 <div ref={mainListParentRef} className="overflow-auto max-h-[70vh] pr-2">
                     <div style={{ height: `${mainListRowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
                         {mainListVirtualItems.map((virtualItem) => {
@@ -96,7 +122,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                 <ReparacionChannelItem
                                     key={ch.id}
                                     channel={ch}
-                                    onBodyClick={() => setDestinationChannelId(ch.id)}
+                                    onBodyClick={() => handleMainChannelClick(ch)}
                                     isSelected={destinationChannelId === ch.id}
                                     hasEpg={epgIdSet.has(ch.tvgId)}
                                     showCheckbox={false}
@@ -133,19 +159,13 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                 <h3 className="font-bold text-lg mb-2">Fuente EPG</h3>
                 <input
                     type="text"
-                    placeholder="Buscar canal..."
+                    placeholder="Buscar en la fuente EPG..."
                     value={epgListSearch}
                     onChange={(e) => setEpgListSearch(e.target.value)}
                     className="bg-gray-700 border border-gray-600 rounded-md px-3 py-1.5 text-white focus:ring-blue-500 focus:border-blue-500 mb-2 w-full"
                 />
                 <div className="space-y-4">
-                    <div>
-                        <label
-                            htmlFor="epg-file-upload"
-                            className="cursor-pointer text-sm w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md flex items-center justify-center"
-                        >
-                            <Upload size={16} className="mr-2" /> Subir Archivo XMLTV
-                        </label>
+                    <div className="flex items-center gap-2">
                         <input
                             id="epg-file-upload"
                             type="file"
@@ -153,14 +173,18 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                             onChange={handleEpgFileUpload}
                             accept=".xml,.xml.gz"
                         />
-                    </div>
-                    <div className="border-t border-gray-700 pt-4">
-                        <div className="flex">
+                        <label
+                            htmlFor="epg-file-upload"
+                            className="cursor-pointer text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md flex items-center justify-center"
+                        >
+                            <Upload size={16} className="mr-2" /> Subir XMLTV
+                        </label>
+                        <div className="flex-grow flex">
                             <input
                                 type="text"
                                 value={epgUrl}
                                 onChange={(e) => setEpgUrl(e.target.value)}
-                                placeholder="URL del archivo .xml"
+                                placeholder="o pega la URL del archivo .xml"
                                 className="flex-grow bg-gray-700 border border-gray-600 rounded-l-md px-3 py-2 text-white text-sm focus:ring-blue-500 focus:border-blue-500"
                             />
                             <button
@@ -170,48 +194,52 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                 <Download size={16} />
                             </button>
                         </div>
-                        {savedEpgUrls.length > 0 && (
-                            <div className="mt-2">
-                                <select
-                                    id="saved-epg-urls-select"
-                                    value=""
-                                    onChange={(e) => {
-                                        if (e.target.value) {
-                                            setEpgUrl(e.target.value);
-                                        }
-                                    }}
-                                    className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    </div>
+                    {savedEpgUrls.length > 0 && (
+                        <select
+                            id="saved-epg-urls-select"
+                            value=""
+                            onChange={(e) => { if (e.target.value) setEpgUrl(e.target.value); }}
+                            className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        >
+                            <option value="">o selecciona una fuente guardada...</option>
+                            {savedEpgUrls.map(item => (
+                                <option key={item.id} value={item.url}>{item.name}</option>
+                            ))}
+                        </select>
+                    )}
+                    <div className="border-t border-gray-700 pt-4">
+                        <button 
+                            onClick={() => setIsGeneratorVisible(!isGeneratorVisible)}
+                            className="w-full text-sm text-left text-gray-300 hover:text-white flex items-center"
+                        >
+                            <ChevronsUpDown size={16} className="mr-2" />
+                            Generar EPG desde URLs
+                        </button>
+                        {isGeneratorVisible && (
+                            <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2 items-end">
+                                <input
+                                    type="text"
+                                    value={epgIdListUrl}
+                                    onChange={(e) => setEpgIdListUrl(e.target.value)}
+                                    placeholder="URL de lista de IDs (.txt)"
+                                    className="md:col-span-1 w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white text-sm focus:ring-blue-500 focus:border-blue-500"
+                                />
+                                <input
+                                    type="text"
+                                    value={epgLogoFolderUrl}
+                                    onChange={(e) => setEpgLogoFolderUrl(e.target.value)}
+                                    placeholder="URL de carpeta de logos"
+                                    className="md:col-span-1 w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white text-sm focus:ring-blue-500 focus:border-blue-500"
+                                />
+                                <button
+                                    onClick={handleGenerateEpgFromUrls}
+                                    className="md:col-span-1 w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-md flex items-center justify-center text-sm"
                                 >
-                                    <option value="">o selecciona una fuente guardada...</option>
-                                    {savedEpgUrls.map(item => (
-                                        <option key={item.id} value={item.url}>{item.name}</option>
-                                    ))}
-                                </select>
+                                    <Zap size={16} className="mr-2" /> Generar
+                                </button>
                             </div>
                         )}
-                    </div>
-                    <div className="border-t border-gray-700 pt-4 space-y-2">
-                        <p className="text-xs text-gray-400 text-center">O generar desde URLs:</p>
-                        <input
-                            type="text"
-                            value={epgIdListUrl}
-                            onChange={(e) => setEpgIdListUrl(e.target.value)}
-                            placeholder="URL de lista de IDs (.txt)"
-                            className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white text-sm focus:ring-blue-500 focus:border-blue-500"
-                        />
-                        <input
-                            type="text"
-                            value={epgLogoFolderUrl}
-                            onChange={(e) => setEpgLogoFolderUrl(e.target.value)}
-                            placeholder="URL de carpeta de logos"
-                            className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white text-sm focus:ring-blue-500 focus:border-blue-500"
-                        />
-                        <button
-                            onClick={handleGenerateEpgFromUrls}
-                            className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-md flex items-center justify-center text-sm"
-                        >
-                            <Zap size={16} className="mr-2" /> Generar EPG
-                        </button>
                     </div>
                 </div>
                 {isEpgLoading && <p className="text-center text-blue-400 mt-2">Cargando...</p>}
