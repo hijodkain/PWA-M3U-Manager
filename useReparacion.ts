@@ -25,7 +25,9 @@ export const useReparacion = (
     const verifyChannel = async (channelId: string, url: string) => {
         setVerificationStatus(prev => ({ ...prev, [channelId]: 'verifying' }));
         try {
-            const response = await fetch(`/api/verify_channel?url=${encodeURIComponent(url)}`);
+            // Añadimos un parámetro para que el backend simule ser un navegador
+            const proxyUrl = `/api/verify_channel?url=${encodeURIComponent(url)}&spoof=true`;
+            const response = await fetch(proxyUrl);
             const data = await response.json();
             setVerificationStatus(prev => ({ ...prev, [channelId]: data.status || 'failed' }));
         } catch (error) {
