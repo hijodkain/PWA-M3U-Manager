@@ -4,15 +4,17 @@ import { useAsignarEpg } from './useAsignarEpg';
 import { useChannels } from './useChannels';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import ReparacionChannelItem from './ReparacionChannelItem';
+import { useSettings } from './useSettings';
 import EpgChannelItem from './EpgChannelItem';
 import { AttributeKey } from './index';
 
 interface AsignarEpgTabProps {
     epgHook: ReturnType<typeof useAsignarEpg>;
     channelsHook: ReturnType<typeof useChannels>;
+    settingsHook: ReturnType<typeof useSettings>;
 }
 
-const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook }) => {
+const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, settingsHook }) => {
     const {
         epgChannels,
         isEpgLoading,
@@ -34,6 +36,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook }) 
     } = epgHook;
 
     const { channels } = channelsHook;
+    const { savedEpgUrls } = settingsHook;
     const [mainListSearch, setMainListSearch] = useState('');
     const [epgListSearch, setEpgListSearch] = useState('');
 
@@ -167,6 +170,25 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook }) 
                                 <Download size={16} />
                             </button>
                         </div>
+                        {savedEpgUrls.length > 0 && (
+                            <div className="mt-2">
+                                <select
+                                    id="saved-epg-urls-select"
+                                    value=""
+                                    onChange={(e) => {
+                                        if (e.target.value) {
+                                            setEpgUrl(e.target.value);
+                                        }
+                                    }}
+                                    className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                >
+                                    <option value="">o selecciona una fuente guardada...</option>
+                                    {savedEpgUrls.map(item => (
+                                        <option key={item.id} value={item.url}>{item.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
                     </div>
                     <div className="border-t border-gray-700 pt-4 space-y-2">
                         <p className="text-xs text-gray-400 text-center">O generar desde URLs:</p>

@@ -8,10 +8,12 @@ export interface SavedUrl {
 
 const DB_TOKEN_KEY = 'dropbox_token';
 const SAVED_URLS_KEY = 'saved_urls';
+const SAVED_EPG_URLS_KEY = 'saved_epg_urls';
 
 export const useSettings = () => {
     const [dropboxToken, setDropboxToken] = useState('');
     const [savedUrls, setSavedUrls] = useState<SavedUrl[]>([]);
+    const [savedEpgUrls, setSavedEpgUrls] = useState<SavedUrl[]>([]);
 
     useEffect(() => {
         try {
@@ -23,6 +25,11 @@ export const useSettings = () => {
             const savedUrlsJson = localStorage.getItem(SAVED_URLS_KEY);
             if (savedUrlsJson) {
                 setSavedUrls(JSON.parse(savedUrlsJson));
+            }
+
+            const savedEpgUrlsJson = localStorage.getItem(SAVED_EPG_URLS_KEY);
+            if (savedEpgUrlsJson) {
+                setSavedEpgUrls(JSON.parse(savedEpgUrlsJson));
             }
         } catch (error) {
             console.error("Error loading settings from localStorage", error);
@@ -60,11 +67,36 @@ export const useSettings = () => {
         }
     }, [savedUrls]);
 
+    const addSavedEpgUrl = useCallback((name: string, url: string) => {
+        if (!name || !url) return;
+        const newEpgUrl: SavedUrl = { id: `epg-url-${Date.now()}`, name, url };
+        const updatedEpgUrls = [...savedEpgUrls, newEpgUrl];
+        try {
+            localStorage.setItem(SAVED_EPG_URLS_KEY, JSON.stringify(updatedEpgUrls));
+            setSavedEpgUrls(updatedEpgUrls);
+        } catch (error) {
+            console.error("Error saving EPG URL to localStorage", error);
+        }
+    }, [savedEpgUrls]);
+
+    const deleteSavedEpgUrl = useCallback((id: string) => {
+        const updatedEpgUrls = savedEpgUrls.filter(url => url.id !== id);
+        try {
+            localStorage.setItem(SAVED_EPG_URLS_KEY, JSON.stringify(updatedEpgUrls));
+            setSavedEpgUrls(updatedEpgUrls);
+        } catch (error) {
+            console.error("Error deleting EPG URL from localStorage", error);
+        }
+    }, [savedEpgUrls]);
+
     return {
         dropboxToken,
         saveDropboxToken,
         savedUrls,
         addSavedUrl,
         deleteSavedUrl,
+        savedEpgUrls,
+        addSavedEpgUrl,
+        deleteSavedEpgUrl,
     };
 };

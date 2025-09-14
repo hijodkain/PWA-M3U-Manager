@@ -25,9 +25,9 @@ export default function PWAM3UManager() {
             case 'editor':
                 return <EditorTab channelsHook={channelsHook} settingsHook={settingsHook} />;
             case 'reparacion':
-                return <ReparacionTab reparacionHook={reparacionHook} channelsHook={channelsHook} />;
+                return <ReparacionTab reparacionHook={reparacionHook} channelsHook={channelsHook} settingsHook={settingsHook} />;
             case 'asignar-epg':
-                return <AsignarEpgTab epgHook={epgHook} channelsHook={channelsHook} />;
+                return <AsignarEpgTab epgHook={epgHook} channelsHook={channelsHook} settingsHook={settingsHook} />;
             case 'save':
                 return <SaveTab channelsHook={channelsHook} settingsHook={settingsHook} />;
             case 'settings':

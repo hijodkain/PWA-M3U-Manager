@@ -13,11 +13,16 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
         savedUrls,
         addSavedUrl,
         deleteSavedUrl,
+        savedEpgUrls,
+        addSavedEpgUrl,
+        deleteSavedEpgUrl,
     } = settingsHook;
 
     const [currentToken, setCurrentToken] = useState(dropboxToken);
     const [newUrlName, setNewUrlName] = useState('');
     const [newUrl, setNewUrl] = useState('');
+    const [newEpgUrlName, setNewEpgUrlName] = useState('');
+    const [newEpgUrl, setNewEpgUrl] = useState('');
     const [tokenSaveStatus, setTokenSaveStatus] = useState('');
 
     useEffect(() => {
@@ -36,6 +41,15 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
             addSavedUrl(newUrlName, newUrl);
             setNewUrlName('');
             setNewUrl('');
+        }
+    };
+
+    const handleAddEpgUrl = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (newEpgUrlName && newEpgUrl) {
+            addSavedEpgUrl(newEpgUrlName, newEpgUrl);
+            setNewEpgUrlName('');
+            setNewEpgUrl('');
         }
     };
 
@@ -118,6 +132,59 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
                         ))
                     ) : (
                         <p className="text-gray-400">No tienes ninguna URL guardada.</p>
+                    )}
+                </div>
+            </div>
+
+            <hr className="my-8 border-gray-600" />
+
+            <div>
+                <h2 className="text-xl font-bold mb-4">Fuentes EPG Guardadas</h2>
+                
+                <form onSubmit={handleAddEpgUrl} className="bg-gray-700 p-4 rounded-lg mb-6 space-y-4 md:space-y-0 md:flex md:items-end md:gap-4">
+                    <div className="flex-grow">
+                        <label htmlFor="epg-name" className="block text-sm font-medium text-gray-300 mb-1">Nombre</label>
+                        <input
+                            id="epg-name"
+                            type="text"
+                            placeholder="Ej: EPG Principal"
+                            value={newEpgUrlName}
+                            onChange={(e) => setNewEpgUrlName(e.target.value)}
+                            className="w-full bg-gray-600 border border-gray-500 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                    </div>
+                    <div className="flex-grow-[2]">
+                        <label htmlFor="epg-url" className="block text-sm font-medium text-gray-300 mb-1">URL del XMLTV</label>
+                        <input
+                            id="epg-url"
+                            type="url"
+                            placeholder="https://..."
+                            value={newEpgUrl}
+                            onChange={(e) => setNewEpgUrl(e.target.value)}
+                            className="w-full bg-gray-600 border border-gray-500 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                    </div>
+                    <button type="submit" className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md flex items-center justify-center w-full md:w-auto">
+                        <PlusCircle size={18} className="mr-2" />
+                        Añadir
+                    </button>
+                </form>
+
+                <div className="space-y-3">
+                    {savedEpgUrls.length > 0 ? (
+                        savedEpgUrls.map(item => (
+                            <div key={item.id} className="bg-gray-700 p-3 rounded-md flex items-center justify-between gap-4">
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-semibold truncate">{item.name}</p>
+                                    <p className="text-xs text-gray-400 truncate">{item.url}</p>
+                                </div>
+                                <button onClick={() => deleteSavedEpgUrl(item.id)} className="text-red-400 hover:text-red-600 p-2">
+                                    <Trash2 size={20} />
+                                </button>
+                            </div>
+                        ))
+                    ) : (
+                        <p className="text-gray-400">No tienes ninguna fuente EPG guardada.</p>
                     )}
                 </div>
             </div>
