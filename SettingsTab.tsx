@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Trash2, PlusCircle, ExternalLink, XCircle } from 'lucide-react';
+import { ExternalLink, XCircle, PlusCircle, Trash2 } from 'lucide-react';
 import { useSettings } from './useSettings';
 
 interface SettingsTabProps {
     settingsHook: ReturnType<typeof useSettings>;
 }
 
-// Helper function to generate a random string for PKCE
-const generateCodeVerifier = () => {
-    const randomBytes = new Uint8Array(32);
+// Helper function to generate a random string for PKCE and state
+const generateRandomString = (length: number) => {
+    const randomBytes = new Uint8Array(length);
     window.crypto.getRandomValues(randomBytes);
     return btoa(String.fromCharCode.apply(null, Array.from(randomBytes)))
         .replace(/\+/g, '-')
@@ -59,15 +59,28 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
         }
 
         try {
-            const verifier = generateCodeVerifier();
+            const verifier = generateRandomString(32);
             const challenge = await generateCodeChallenge(verifier);
-            
-            // Save the verifier and appKey in localStorage to use after redirect
+            const state = generateRandomString(16);
+
+            // Save the verifier, appKey, and state in localStorage to use after redirect
             localStorage.setItem('dropbox_pkce_verifier', verifier);
             localStorage.setItem('dropbox_app_key_temp', appKey);
+            localStorage.setItem('dropbox_oauth_state', state);
 
             const redirectUri = window.location.origin + window.location.pathname;
-            const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${appKey}&response_type=code&token_access_type=offline&code_challenge=${challenge}&code_challenge_method=S256&redirect_uri=${encodeURIComponent(redirectUri)}`;
+            const authUrlParams = new URLSearchParams({
+                client_id: appKey,
+                response_type: 'code',
+                token_access_type: 'offline',
+                code_challenge: challenge,
+                code_challenge_method: 'S256',
+                redirect_uri: redirectUri,
+                state: state,
+                scope: 'files.content.write',
+            });
+
+            const authUrl = `https://www.dropbox.com/oauth2/authorize?${authUrlParams.toString()}`;
             
             window.location.href = authUrl;
         } catch (error) {
@@ -103,10 +116,20 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
         const authCode = urlParams.get('code');
+        const receivedState = urlParams.get('state');
 
-        if (authCode) {
+        if (authCode && receivedState) {
             const verifier = localStorage.getItem('dropbox_pkce_verifier');
             const tempAppKey = localStorage.getItem('dropbox_app_key_temp');
+            const savedState = localStorage.getItem('dropbox_oauth_state');
+
+            if (receivedState !== savedState) {
+                setAuthStatus('Error: El estado de la autorización no coincide. Inténtalo de nuevo.');
+                console.error("OAuth state mismatch");
+                // Clean up URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+                return;
+            }
 
             if (verifier && tempAppKey) {
                 setAuthStatus('Obteniendo token de refresco...');
@@ -123,20 +146,26 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
                     })
                 })
                 .then(response => {
-                    if (!response.ok) throw new Error('Fallo al obtener el token de refresco.');
+                    if (!response.ok) {
+                        response.json().then(err => console.error('Token exchange error:', err));
+                        throw new Error('Fallo al obtener el token de refresco.');
+                    }
                     return response.json();
                 })
                 .then(data => {
                     saveDropboxSettings(tempAppKey, data.refresh_token);
                     setAuthStatus('¡Conectado a Dropbox con éxito!');
-                    // Clean up localStorage and URL
-                    localStorage.removeItem('dropbox_pkce_verifier');
-                    localStorage.removeItem('dropbox_app_key_temp');
-                    window.history.replaceState({}, document.title, window.location.pathname);
                 })
                 .catch(error => {
                     console.error("Error fetching refresh token", error);
                     setAuthStatus(`Error: ${error.message}`);
+                })
+                .finally(() => {
+                    // Clean up localStorage and URL
+                    localStorage.removeItem('dropbox_pkce_verifier');
+                    localStorage.removeItem('dropbox_app_key_temp');
+                    localStorage.removeItem('dropbox_oauth_state');
+                    window.history.replaceState({}, document.title, window.location.pathname);
                 });
             }
         }
