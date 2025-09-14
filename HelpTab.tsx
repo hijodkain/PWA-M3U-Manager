@@ -54,10 +54,16 @@ const HelpTab: React.FC = () => {
                             <li>Haz clic en <strong>"Submit"</strong> al final de la página para guardar los cambios.</li>
                         </ul>
                     </li>
+                    <li><strong>Añade la URI de Redirección (¡Paso Importante!):</strong>
+                        <ul className="list-disc list-inside ml-4">
+                            <li>Vuelve a la pestaña <strong>"Settings"</strong>.</li>
+                            <li>Busca el campo <strong>"Redirect URIs"</strong> y haz clic en <strong>"Add"</strong>.</li>
+                            <li>Añade la URL exacta donde se ejecuta la aplicación. Si la usas en tu ordenador local, probablemente sea <code>http://localhost:3000</code>.</li>
+                        </ul>
+                    </li>
                     <li><strong>Obtén tu App Key:</strong>
                         <ul className="list-disc list-inside ml-4">
-                            <li>Vuelve a la pestaña <strong>"Settings"</strong> de tu aplicación de Dropbox.</li>
-                            <li>En la sección "App key", copia el código que aparece. ¡Esa es tu <strong>App Key</strong>!</li>
+                            <li>En la misma pestaña <strong>"Settings"</strong>, copia el valor del campo <strong>"App key"</strong>.</li>
                         </ul>
                     </li>
                     <li><strong>Conecta la Aplicación:</strong>
@@ -65,7 +71,7 @@ const HelpTab: React.FC = () => {
                             <li>Vuelve a esta aplicación y ve a la pestaña <strong>"Configuración"</strong>.</li>
                             <li>Pega tu <strong>App Key</strong> en el campo correspondiente.</li>
                             <li>Haz clic en el botón <strong>"Conectar a Dropbox"</strong>.</li>
-                            <li>Serás redirigido a la página de autorización de Dropbox. Confirma que quieres permitir el acceso a la aplicación.</li>
+                            <li>Serás redirigido a la página de autorización de Dropbox. Acepta para permitir el acceso.</li>
                             <li>¡Y listo! La aplicación se conectará y guardará la autorización de forma segura en tu navegador.</li>
                         </ul>
                     </li>
