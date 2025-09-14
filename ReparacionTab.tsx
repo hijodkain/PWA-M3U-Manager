@@ -77,6 +77,15 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         { key: 'url', label: 'URL' },
     ];
 
+    const cleanChannelNameForSearch = (name: string): string => {
+        // Elimina sufijos de calidad comunes (HD, 4K, etc.), opcionalmente entre paréntesis o corchetes, al final del nombre.
+        const regex = new RegExp(
+            '\\s*[\\(\\[|]*\\s*(4K|UHD|FHD|HD|SD|HEVC|H265|H264|x265|x264|1080p|720p|DUAL|MULTI)\\s*[\\)\\]|]*$',
+            'i'
+        );
+        return name.replace(regex, '').trim();
+    };
+
     return (
         <div className="grid grid-cols-1 lg:grid-cols-11 gap-4">
             <div className="lg:col-span-5 bg-gray-800 p-4 rounded-lg flex flex-col">
@@ -124,8 +133,8 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     key={ch.id}
                                     channel={ch}
                                     onBodyClick={() => {
-                                        setDestinationChannelId(ch.id);
-                                        setReparacionListSearch(ch.name);
+                                        setDestinationChannelId(ch.id)
+                                        setReparacionListSearch(cleanChannelNameForSearch(ch.name));
                                     }}
                                     isSelected={destinationChannelId === ch.id}
                                     showCheckbox={false}

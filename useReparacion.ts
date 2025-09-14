@@ -162,6 +162,11 @@ export const useReparacion = (
                 return channel;
             })
         );
+
+        // Inicia la verificación automáticamente si se ha actualizado la URL.
+        if (attributesToCopy.has('url')) {
+            verifyChannel(destinationChannelId, sourceChannel.url);
+        }
     };
 
     const mainListUniqueGroups = useMemo(
