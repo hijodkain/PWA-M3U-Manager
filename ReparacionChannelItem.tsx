@@ -4,7 +4,7 @@ import { Channel } from './index';
 interface ReparacionChannelItemProps {
     channel: Channel;
     onBodyClick: () => void;
-    onSelectClick?: () => void;
+    onSelectClick?: (event: React.MouseEvent<HTMLInputElement>) => void;
     isSelected: boolean;
     isChecked?: boolean;
     hasEpg?: boolean;
@@ -100,10 +100,11 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
                 <input
                     type="checkbox"
                     checked={isChecked}
-                    onChange={(e) => {
+                    onClick={(e) => {
                         e.stopPropagation();
-                        if (onSelectClick) onSelectClick();
+                        if (onSelectClick) onSelectClick(e as any);
                     }}
+                    readOnly // Prevent default onChange behavior, we handle it with onClick
                     className="form-checkbox h-4 w-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 ml-2"
                 />
             )}
