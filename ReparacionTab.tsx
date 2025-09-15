@@ -31,6 +31,8 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         filteredMainChannels,
         filteredReparacionChannels,
         toggleReparacionSelection,
+        toggleSelectAllReparacionGroup,
+        verifySelectedReparacionChannels,
         handleAddSelectedFromReparacion,
         mainListSearch,
         setMainListSearch,
@@ -80,13 +82,17 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
     ];
 
     const cleanChannelNameForSearch = (name: string): string => {
-        // Elimina sufijos de calidad comunes (HD, 4K, etc.), opcionalmente entre paréntesis o corchetes, al final del nombre.
         const regex = new RegExp(
-            '\\s*[\\(\\[|]*\\s*(4K|UHD|FHD|HD|SD|HEVC|H265|H264|x265|x264|1080p|720p|DUAL|MULTI)\\s*[\\)\\]|]*$',
+            '\\s*[\\(\[|]*\\s*(4K|UHD|FHD|HD|SD|HEVC|H265|H264|x265|x264|1080p|720p|DUAL|MULTI)\\s*[\\)\]|]*
+
+export default ReparacionTab;
+,
             'i'
         );
         return name.replace(regex, '').trim();
     };
+
+    const isAllInGroupSelected = filteredReparacionChannels.length > 0 && filteredReparacionChannels.every(c => selectedReparacionChannels.has(c.id));
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-11 gap-4">
@@ -163,9 +169,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                         <button
                             key={key}
                             onClick={() => toggleAttributeToCopy(key)}
-                            className={`w-full text-xs py-2 px-1 mb-2 rounded-md flex items-center justify-center gap-1 transition-colors ${
-                                attributesToCopy.has(key) ? 'bg-blue-600 text-white' : 'bg-gray-700 hover:bg-gray-600'
-                            }`}
+                            className={`w-full text-xs py-2 px-1 mb-2 rounded-md flex items-center justify-center gap-1 transition-colors ${attributesToCopy.has(key) ? 'bg-blue-600 text-white' : 'bg-gray-700 hover:bg-gray-600'}`}
                         >
                             {attributesToCopy.has(key) ? <CheckSquare size={14} /> : <Copy size={14} />} {label}
                         </button>
@@ -226,6 +230,23 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                         </option>
                     ))}
                 </select>
+                <div className="flex items-center gap-2 mb-2">
+                    <input
+                        type="checkbox"
+                        id="select-all-group"
+                        checked={isAllInGroupSelected}
+                        onChange={toggleSelectAllReparacionGroup}
+                        className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <label htmlFor="select-all-group" className="text-sm text-gray-300">Seleccionar todo el grupo</label>
+                </div>
+                <button
+                    onClick={verifySelectedReparacionChannels}
+                    disabled={selectedReparacionChannels.size === 0}
+                    className="w-full text-xs py-2 px-1 rounded-md flex items-center justify-center gap-1 transition-colors bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 mb-2"
+                >
+                    <Check size={14} /> Verificar Seleccionados
+                </button>
                 <label
                     htmlFor="reparacion-file-upload"
                     className="cursor-pointer text-sm w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md flex items-center justify-center mb-2"
@@ -249,7 +270,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     key={ch.id}
                                     channel={ch}
                                     onBodyClick={() => handleSourceChannelClick(ch)}
-                                    onSelectClick={() => toggleReparacionSelection(ch.id)}
+                                    onSelectClick={(e) => toggleReparacionSelection(ch.id, virtualItem.index, e.shiftKey, e.metaKey, e.ctrlKey)}
                                     isSelected={false}
                                     isChecked={selectedReparacionChannels.has(ch.id)}
                                     showCheckbox={true}
@@ -271,5 +292,6 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         </div>
     );
 };
+
 
 export default ReparacionTab;

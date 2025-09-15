@@ -16,6 +16,7 @@ export const useReparacion = (
     const [reparacionUrl, setReparacionUrl] = useState('');
     const [isCurationLoading, setIsCurationLoading] = useState(false);
     const [curationError, setCurationError] = useState<string | null>(null);
+    const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
 
     const [mainListFilter, setMainListFilter] = useState('All');
     const [reparacionListFilter, setReparacionListFilter] = useState('All');
@@ -25,7 +26,6 @@ export const useReparacion = (
     const verifyChannel = async (channelId: string, url: string) => {
         setVerificationStatus(prev => ({ ...prev, [channelId]: 'verifying' }));
         try {
-            // Añadimos un parámetro para que el backend simule ser un navegador
             const proxyUrl = `/api/verify_channel?url=${encodeURIComponent(url)}&spoof=true`;
             const response = await fetch(proxyUrl);
             const data = await response.json();
@@ -42,6 +42,15 @@ export const useReparacion = (
         );
         channelsToVerify.forEach(channel => {
             verifyChannel(channel.id, channel.url);
+        });
+    };
+
+    const verifySelectedReparacionChannels = () => {
+        selectedReparacionChannels.forEach(channelId => {
+            const channel = reparacionChannels.find(c => c.id === channelId);
+            if (channel) {
+                verifyChannel(channel.id, channel.url);
+            }
         });
     };
 
@@ -165,7 +174,6 @@ export const useReparacion = (
             })
         );
 
-        // Inicia la verificación automáticamente si se ha actualizado la URL.
         if (attributesToCopy.has('url')) {
             verifyChannel(destinationChannelId, sourceChannel.url);
         }
@@ -203,16 +211,55 @@ export const useReparacion = (
         return channels;
     }, [reparacionChannels, reparacionListFilter, reparacionListSearch]);
 
-    const toggleReparacionSelection = (id: string) => {
-        setSelectedReparacionChannels(prev => {
-            const newSet = new Set(prev);
-            if (newSet.has(id)) {
-                newSet.delete(id);
-            } else {
-                newSet.add(id);
+    const toggleReparacionSelection = useCallback((id: string, index: number, shiftKey: boolean, metaKey: boolean, ctrlKey: boolean) => {
+        const newSelected = new Set(selectedReparacionChannels);
+
+        if (shiftKey && lastSelectedIndex !== null) {
+            const start = Math.min(lastSelectedIndex, index);
+            const end = Math.max(lastSelectedIndex, index);
+            for (let i = start; i <= end; i++) {
+                newSelected.add(filteredReparacionChannels[i].id);
             }
-            return newSet;
-        });
+        } else if (metaKey || ctrlKey) {
+            if (newSelected.has(id)) {
+                newSelected.delete(id);
+            } else {
+                newSelected.add(id);
+            }
+        } else {
+            if (newSelected.has(id) && newSelected.size === 1) {
+                newSelected.clear();
+            } else {
+                newSelected.clear();
+                newSelected.add(id);
+            }
+        }
+
+        setSelectedReparacionChannels(newSelected);
+        setLastSelectedIndex(index);
+    }, [selectedReparacionChannels, lastSelectedIndex, filteredReparacionChannels]);
+
+    const toggleSelectAllReparacionGroup = () => {
+        const allIdsInGroup = new Set(filteredReparacionChannels.map(c => c.id));
+        const currentSelection = new Set(selectedReparacionChannels);
+        let allSelected = true;
+        for (const id of allIdsInGroup) {
+            if (!currentSelection.has(id)) {
+                allSelected = false;
+                break;
+            }
+        }
+
+        if (allSelected) {
+            for (const id of allIdsInGroup) {
+                currentSelection.delete(id);
+            }
+        } else {
+            for (const id of allIdsInGroup) {
+                currentSelection.add(id);
+            }
+        }
+        setSelectedReparacionChannels(currentSelection);
     };
 
     const handleAddSelectedFromReparacion = () => {
@@ -240,6 +287,8 @@ export const useReparacion = (
         filteredMainChannels,
         filteredReparacionChannels,
         toggleReparacionSelection,
+        toggleSelectAllReparacionGroup,
+        verifySelectedReparacionChannels,
         handleAddSelectedFromReparacion,
         mainListSearch,
         setMainListSearch,
