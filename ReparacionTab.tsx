@@ -83,10 +83,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
 
     const cleanChannelNameForSearch = (name: string): string => {
         const regex = new RegExp(
-            '\\s*[\\(\[|]*\\s*(4K|UHD|FHD|HD|SD|HEVC|H265|H264|x265|x264|1080p|720p|DUAL|MULTI)\\s*[\\)\]|]*
-
-export default ReparacionTab;
-,
+            '\\s*[\\(\[|]*\\s*(4K|UHD|FHD|HD|SD|HEVC|H265|H264|x265|x264|1080p|720p|DUAL|MULTI)\\s*[\\)\]|]*$',
             'i'
         );
         return name.replace(regex, '').trim();
@@ -292,6 +289,5 @@ export default ReparacionTab;
         </div>
     );
 };
-
 
 export default ReparacionTab;
