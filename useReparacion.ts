@@ -240,26 +240,17 @@ export const useReparacion = (
     }, [selectedReparacionChannels, lastSelectedIndex, filteredReparacionChannels]);
 
     const toggleSelectAllReparacionGroup = () => {
-        const allIdsInGroup = new Set(filteredReparacionChannels.map(c => c.id));
+        const allIdsInGroup = filteredReparacionChannels.map(c => c.id);
         const currentSelection = new Set(selectedReparacionChannels);
-        let allSelected = true;
-        for (const id of allIdsInGroup) {
-            if (!currentSelection.has(id)) {
-                allSelected = false;
-                break;
-            }
-        }
 
-        if (allSelected) {
-            for (const id of allIdsInGroup) {
-                currentSelection.delete(id);
-            }
+        const allVisibleSelected = allIdsInGroup.length > 0 && allIdsInGroup.every(id => currentSelection.has(id));
+
+        if (allVisibleSelected) {
+            allIdsInGroup.forEach(id => currentSelection.delete(id));
         } else {
-            for (const id of allIdsInGroup) {
-                currentSelection.add(id);
-            }
+            allIdsInGroup.forEach(id => currentSelection.add(id));
         }
-        setSelectedReparacionChannels(currentSelection);
+        setSelectedReparacionChannels(new Set(currentSelection));
     };
 
     const handleAddSelectedFromReparacion = () => {
