@@ -19,15 +19,29 @@ const parseM3U = (content: string): Channel[] => {
     const parsedChannels: Channel[] = [];
     let order = 1;
     for (let i = 1; i < lines.length; i++) {
-        if (lines[i].trim().startsWith('#EXTINF:')) {
-            const info = lines[i].trim().substring(8);
-            const url = lines[++i]?.trim() || '';
+        const line = lines[i].trim();
+        if (line.startsWith('#EXTINF:')) {
+            const info = line.substring(8);
+
+            let url = '';
+            for (let j = i + 1; j < lines.length; j++) {
+                const nextLine = lines[j].trim();
+                if (nextLine && !nextLine.startsWith('#')) {
+                    url = nextLine;
+                    i = j; // Skip the lines we've already processed
+                    break;
+                }
+            }
+
+            if (!url) continue; // Skip if no URL was found for this EXTINF
+
             const tvgId = info.match(/tvg-id="([^"]*)"/)?.["1"] || '';
             const tvgName = info.match(/tvg-name="([^"]*)"/)?.["1"] || '';
             const tvgLogo = info.match(/tvg-logo="([^"]*)"/)?.["1"] || '';
             const groupTitle = info.match(/group-title="([^"]*)"/)?.["1"] || '';
             const name = info.split(',').pop()?.trim() || '';
-            if (name && url) {
+            
+            if (name) {
                 parsedChannels.push({
                     id: `channel-${Date.now()}-${Math.random()}`,
                     order: order++,
