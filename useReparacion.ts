@@ -30,7 +30,16 @@ export const useReparacion = (
             const proxyUrl = `/api/verify_channel?url=${encodeURIComponent(url)}&spoof=true`;
             const response = await fetch(proxyUrl);
             const data = await response.json();
-            setVerificationStatus(prev => ({ ...prev, [channelId]: data.status || 'failed' }));
+            if (data.status === 'ok' && data.resolution) {
+                let quality = 'SD';
+                if (data.resolution.height >= 2160) quality = '4K';
+                else if (data.resolution.height >= 1440) quality = '2K';
+                else if (data.resolution.height >= 1080) quality = 'FHD';
+                else if (data.resolution.height >= 720) quality = 'HD';
+                setVerificationStatus(prev => ({ ...prev, [channelId]: quality }));
+            } else {
+                setVerificationStatus(prev => ({ ...prev, [channelId]: 'failed' }));
+            }
         } catch (error) {
             console.error('Verification failed', error);
             setVerificationStatus(prev => ({ ...prev, [channelId]: 'failed' }));
@@ -50,10 +59,14 @@ export const useReparacion = (
         }
     };
 
-    const verifyAllChannelsInGroup = () => {
-        const channelsToVerify = mainChannels.filter(channel => 
-            mainListFilter === 'All' || channel.groupTitle === mainListFilter
-        );
+    const verifyAllChannelsInGroup = (isReparacionList: boolean = false) => {
+        const channelsToVerify = isReparacionList ? 
+            reparacionChannels.filter(channel => 
+                reparacionListFilter === 'All' || channel.groupTitle === reparacionListFilter
+            ) :
+            mainChannels.filter(channel => 
+                mainListFilter === 'All' || channel.groupTitle === mainListFilter
+            );
         channelsToVerify.forEach(channel => {
             verifyChannel(channel.id, channel.url);
         });

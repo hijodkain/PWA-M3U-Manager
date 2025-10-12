@@ -108,7 +108,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-11 gap-4">
-            <div className="lg:col-span-5 bg-gray-800 p-4 rounded-lg flex flex-col">
+            <div className="lg:col-span-5 bg-gray-800 p-4 rounded-lg flex flex-col h-[calc(100vh-2rem)]">
                 <h3 className="font-bold text-lg mb-2">Lista Principal</h3>
                 <input
                     type="text"
@@ -138,10 +138,10 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                     <Zap size={14} /> Escanear Calidad Real del Grupo
                 </button>
                 <button
-                    onClick={verifyAllChannelsInGroup}
+                    onClick={() => verifyAllChannelsInGroup(false)}
                     className="w-full text-xs py-2 px-1 rounded-md flex items-center justify-center gap-1 transition-colors bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 mb-2"
                 >
-                    <Check size={14} /> Verificar Canales del Grupo
+                    <Check size={14} /> Verificar Calidad del Grupo
                 </button>
                 <button
                     onClick={clearFailedChannelsUrls}
@@ -220,7 +220,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                     </button>
                 </div>
             </div>
-            <div className="lg:col-span-5 bg-gray-800 p-4 rounded-lg flex flex-col">
+            <div className="lg:col-span-5 bg-gray-800 p-4 rounded-lg flex flex-col h-[calc(100vh-2rem)]">
                 <h3 className="font-bold text-lg mb-2">Lista de recambios</h3>
                 <div className="flex gap-2 mb-2">
                     <input
@@ -254,6 +254,12 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                         </option>
                     ))}
                 </select>
+                <button
+                    onClick={() => verifyAllChannelsInGroup(true)}
+                    className="w-full text-xs py-2 px-1 rounded-md flex items-center justify-center gap-1 transition-colors bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 mb-2"
+                >
+                    <Check size={14} /> Verificar Calidad del Grupo
+                </button>
                 <div className="flex items-center gap-2 mb-2">
                     <input
                         type="checkbox"

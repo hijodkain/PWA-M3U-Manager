@@ -44,14 +44,18 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
 
     const statusIndicator = () => {
         switch (verificationStatus) {
-            case 'ok':
-                return <span className="text-green-500">OK</span>;
-            case 'failed':
-                return <span className="text-red-500">Failed</span>;
             case 'verifying':
-                return <span className="text-yellow-500">Verifying...</span>;
+                return <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent"></div>;
+            case 'failed':
+                return <div className="text-red-400 font-bold text-xs">ERROR</div>;
+            case '4K':
+            case '2K':
+            case 'FHD':
+            case 'HD':
+            case 'SD':
+                return <div className="text-green-400 font-bold text-xs">{verificationStatus}</div>;
             default:
-                return <span className="text-gray-500">Pending</span>;
+                return <div className="text-gray-400 font-bold text-xs">---</div>;
         }
     };
 
