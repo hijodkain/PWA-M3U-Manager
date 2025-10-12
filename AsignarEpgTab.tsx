@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
+import { useObviarPrefijosSufijos } from './useObviarPrefijosSufijos';
 import { Upload, Download, Copy, Zap, ArrowLeftCircle, ChevronsUpDown } from 'lucide-react';
 import { useAsignarEpg } from './useAsignarEpg';
 import { useChannels } from './useChannels';
@@ -15,6 +16,7 @@ interface AsignarEpgTabProps {
 }
 
 const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, settingsHook }) => {
+    const { selectedPrefixes, selectedSuffixes } = useObviarPrefijosSufijos();
     const {
         epgChannels,
         isEpgLoading,
@@ -88,7 +90,21 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
 
     const handleMainChannelClick = (channel: Channel) => {
         setDestinationChannelId(channel.id);
-        setEpgListSearch(channel.name);
+        // Limpiar nombre usando prefijos/sufijos seleccionados
+        let cleaned = channel.name;
+        selectedPrefixes.forEach(pref => {
+            if (cleaned.startsWith(pref)) {
+                cleaned = cleaned.slice(pref.length).trim();
+            }
+        });
+        selectedSuffixes.forEach(suf => {
+            if (cleaned.endsWith(suf)) {
+                cleaned = cleaned.slice(0, -suf.length).trim();
+            }
+        });
+        const calidadRegex = /\s*[\(\[|]*\s*(4K|UHD|FHD|HD|SD|HEVC|H265|H264|x265|x264|1080p|720p|DUAL|MULTI)\s*[\)\]|]*$/i;
+        cleaned = cleaned.replace(calidadRegex, '').trim();
+        setEpgListSearch(cleaned);
     };
 
     return (

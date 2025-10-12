@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { useObviarPrefijosSufijos } from './useObviarPrefijosSufijos';
 import { Upload, Copy, CheckSquare, ArrowLeftCircle, RotateCcw, Trash2, Link, Check } from 'lucide-react';
 import { useReparacion } from './useReparacion';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -14,6 +15,7 @@ interface ReparacionTabProps {
 }
 
 const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsHook, settingsHook }) => {
+    const { selectedPrefixes, selectedSuffixes } = useObviarPrefijosSufijos();
     const {
         selectedReparacionChannels,
         attributesToCopy,
@@ -48,6 +50,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         isCurationLoading,
         curationError,
         verifyAllChannelsInGroup,
+        scanQualityOfGroup,
     } = reparacionHook;
 
     const { undo, history } = channelsHook;
@@ -82,11 +85,22 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
     ];
 
     const cleanChannelNameForSearch = (name: string): string => {
-        const regex = new RegExp(
-            '\\s*[\\(\[|]*\\s*(4K|UHD|FHD|HD|SD|HEVC|H265|H264|x265|x264|1080p|720p|DUAL|MULTI)\\s*[\\)\]|]*$',
-            'i'
-        );
-        return name.replace(regex, '').trim();
+        let cleaned = name;
+        // Eliminar prefijos seleccionados
+        selectedPrefixes.forEach(pref => {
+            if (cleaned.startsWith(pref)) {
+                cleaned = cleaned.slice(pref.length).trim();
+            }
+        });
+        // Eliminar sufijos seleccionados
+        selectedSuffixes.forEach(suf => {
+            if (cleaned.endsWith(suf)) {
+                cleaned = cleaned.slice(0, -suf.length).trim();
+            }
+        });
+        // Además, eliminar sufijos de calidad comunes
+        const calidadRegex = /\s*[\(\[|]*\s*(4K|UHD|FHD|HD|SD|HEVC|H265|H264|x265|x264|1080p|720p|DUAL|MULTI)\s*[\)\]|]*$/i;
+        return cleaned.replace(calidadRegex, '').trim();
     };
 
     const isAllInGroupSelected = filteredReparacionChannels.length > 0 && filteredReparacionChannels.every(c => selectedReparacionChannels.has(c.id));
@@ -116,6 +130,12 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                         );
                     })}
                 </select>
+                <button
+                    onClick={scanQualityOfGroup}
+                    className="w-full text-xs py-2 px-1 rounded-md flex items-center justify-center gap-1 transition-colors bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 mb-2"
+                >
+                    <Zap size={14} /> Escanear Calidad Real del Grupo
+                </button>
                 <button
                     onClick={verifyAllChannelsInGroup}
                     className="w-full text-xs py-2 px-1 rounded-md flex items-center justify-center gap-1 transition-colors bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 mb-2"
@@ -159,6 +179,12 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 </div>
             </div>
             <div className="lg:col-span-1 flex flex-col items-center justify-start gap-2 bg-gray-800 p-4 rounded-lg">
+                <button
+                    onClick={scanQualityOfGroup}
+                    className="w-full text-xs py-2 px-1 rounded-md flex items-center justify-center gap-1 transition-colors bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 mb-2"
+                >
+                    <Zap size={14} /> Escanear Calidad Real del Grupo
+                </button>
                 <div className="flex-grow">
                     <h4 className="font-bold text-center mb-2">Transferir Datos</h4>
                     <ArrowLeftCircle size={32} className="text-blue-400 mb-4 mx-auto" />

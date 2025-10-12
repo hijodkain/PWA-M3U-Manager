@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useObviarPrefijosSufijos } from './useObviarPrefijosSufijos';
 import { ExternalLink, XCircle, PlusCircle, Trash2 } from 'lucide-react';
 import { useSettings } from './useSettings';
 
@@ -28,6 +29,24 @@ const generateCodeChallenge = async (verifier: string) => {
 };
 
 const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
+    // Prefijos y sufijos a obviar
+    const {
+        prefixes,
+        suffixes,
+        selectedPrefixes,
+        selectedSuffixes,
+        setSelectedPrefixes,
+        setSelectedSuffixes,
+        addPrefix,
+        removePrefix,
+        addSuffix,
+        removeSuffix,
+        setPrefixes,
+        setSuffixes,
+    } = useObviarPrefijosSufijos();
+    // Estados para prefijos y sufijos nuevos
+    const [newPrefix, setNewPrefix] = useState('');
+    const [newSuffix, setNewSuffix] = useState('');
     const {
         dropboxAppKey,
         dropboxRefreshToken,
@@ -108,6 +127,46 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
         if (newEpgUrlName && newEpgUrl) {
             addSavedEpgUrl(newEpgUrlName, newEpgUrl);
             setNewEpgUrlName('');
+                    <div className="mt-8">
+                        <h2 className="text-lg font-bold mb-2">Prefijos y Sufijos a obviar en búsqueda</h2>
+                        <div className="mb-4">
+                            <h3 className="font-semibold">Prefijos</h3>
+                            <form onSubmit={e => { e.preventDefault(); if (newPrefix) { addPrefix(newPrefix); setNewPrefix(''); } }} className="flex gap-2 mb-2">
+                                <input type="text" value={newPrefix} onChange={e => setNewPrefix(e.target.value)} placeholder="Añadir prefijo" className="border px-2 py-1 rounded" />
+                                <button type="submit" className="bg-blue-500 text-white px-2 py-1 rounded">Añadir</button>
+                            </form>
+                            <div className="flex flex-wrap gap-2">
+                                {prefixes.map(p => (
+                                    <div key={p} className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
+                                        <input type="checkbox" checked={selectedPrefixes.includes(p)} onChange={e => {
+                                            setSelectedPrefixes(e.target.checked ? [...selectedPrefixes, p] : selectedPrefixes.filter(x => x !== p));
+                                        }} />
+                                        <span>{p}</span>
+                                        <button onClick={() => removePrefix(p)} className="text-red-500"><Trash2 size={16} /></button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="mb-4">
+                            <h3 className="font-semibold">Sufijos</h3>
+                            <form onSubmit={e => { e.preventDefault(); if (newSuffix) { addSuffix(newSuffix); setNewSuffix(''); } }} className="flex gap-2 mb-2">
+                                <input type="text" value={newSuffix} onChange={e => setNewSuffix(e.target.value)} placeholder="Añadir sufijo" className="border px-2 py-1 rounded" />
+                                <button type="submit" className="bg-blue-500 text-white px-2 py-1 rounded">Añadir</button>
+                            </form>
+                            <div className="flex flex-wrap gap-2">
+                                {suffixes.map(s => (
+                                    <div key={s} className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
+                                        <input type="checkbox" checked={selectedSuffixes.includes(s)} onChange={e => {
+                                            setSelectedSuffixes(e.target.checked ? [...selectedSuffixes, s] : selectedSuffixes.filter(x => x !== s));
+                                        }} />
+                                        <span>{s}</span>
+                                        <button onClick={() => removeSuffix(s)} className="text-red-500"><Trash2 size={16} /></button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        <p className="text-sm text-gray-500">Los prefijos y sufijos seleccionados se eliminarán del nombre del canal antes de buscar EPG o reparar.</p>
+                    </div>
             setNewEpgUrl('');
         }
     };
