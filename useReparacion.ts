@@ -1,22 +1,10 @@
 import { useState, useMemo, useCallback } from 'react';
+import React from 'react';
 import { Channel, AttributeKey } from './index';
 
 type VerificationStatus = 'pending' | 'verifying' | 'ok' | 'failed';
 
 export const useReparacion = (
-    // Escaneo de calidad real de canales (stub)
-    const scanQualityOfGroup = async () => {
-        const channelsToScan = mainChannels.filter(channel => 
-            mainListFilter === 'All' || channel.groupTitle === mainListFilter
-        );
-        // Aquí se integrará la lógica real de escaneo de calidad
-        // Por ahora, solo marca como 'verifying' y simula resultado
-        for (const channel of channelsToScan) {
-            setVerificationStatus(prev => ({ ...prev, [channel.id]: 'verifying' }));
-            await new Promise(res => setTimeout(res, 500));
-            setVerificationStatus(prev => ({ ...prev, [channel.id]: 'ok' }));
-        }
-    };
     mainChannels: Channel[],
     setMainChannels: React.Dispatch<React.SetStateAction<Channel[]>>,
     saveStateToHistory: () => void
@@ -24,6 +12,19 @@ export const useReparacion = (
     const [reparacionChannels, setReparacionChannels] = useState<Channel[]>([]);
     const [selectedReparacionChannels, setSelectedReparacionChannels] = useState<Set<string>>(new Set());
     const [attributesToCopy, setAttributesToCopy] = useState<Set<AttributeKey>>(new Set());
+    const [verificationStatus, setVerificationStatus] = useState<Record<string, VerificationStatus>>({});
+    const [reparacionUrl, setReparacionUrl] = useState('');
+    const [isCurationLoading, setIsCurationLoading] = useState(false);
+    const [curationError, setCurationError] = useState<string | null>(null);
+    const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
+    const [mainListFilter, setMainListFilter] = useState('All');
+    const [reparacionListFilter, setReparacionListFilter] = useState('All');
+    const [mainListSearch, setMainListSearch] = useState('');
+    const [reparacionListSearch, setReparacionListSearch] = useState('');
+    const [destinationChannelId, setDestinationChannelId] = useState<string | null>(null);
+
+    // Función para verificar canal individual
+    const verifyChannel = async (channelId: string, url: string) => {
         setVerificationStatus(prev => ({ ...prev, [channelId]: 'verifying' }));
         try {
             const proxyUrl = `/api/verify_channel?url=${encodeURIComponent(url)}&spoof=true`;
@@ -33,6 +34,8 @@ export const useReparacion = (
         } catch (error) {
             console.error('Verification failed', error);
             setVerificationStatus(prev => ({ ...prev, [channelId]: 'failed' }));
+        }
+    };
     // Escaneo de calidad real de canales (stub)
     const scanQualityOfGroup = async () => {
         const channelsToScan = mainChannels.filter(channel => 
@@ -44,8 +47,6 @@ export const useReparacion = (
             setVerificationStatus(prev => ({ ...prev, [channel.id]: 'verifying' }));
             await new Promise(res => setTimeout(res, 500));
             setVerificationStatus(prev => ({ ...prev, [channel.id]: 'ok' }));
-        }
-    };
         }
     };
 
@@ -85,7 +86,6 @@ export const useReparacion = (
             setIsCurationLoading(false);
             worker.terminate();
         };
-        scanQualityOfGroup,
 
         worker.onerror = (error) => {
             setCurationError(`Worker error: ${error.message}`);
