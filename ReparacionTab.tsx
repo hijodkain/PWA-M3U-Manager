@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { useObviarPrefijosSufijos } from './useObviarPrefijosSufijos';
 import { Upload, Copy, CheckSquare, ArrowLeftCircle, RotateCcw, Trash2, Link, Check } from 'lucide-react';
+import { Zap } from 'lucide-react';
 import { useReparacion } from './useReparacion';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useChannels } from './useChannels';
