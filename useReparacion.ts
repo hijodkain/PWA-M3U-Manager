@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import React from 'react';
 import { Channel, AttributeKey } from './index';
 
-type VerificationStatus = 'pending' | 'verifying' | 'ok' | 'failed';
+type VerificationStatus = 'pending' | 'verifying' | 'failed' | '4K' | '2K' | 'FHD' | 'HD' | 'SD';
 
 export const useReparacion = (
     mainChannels: Channel[],

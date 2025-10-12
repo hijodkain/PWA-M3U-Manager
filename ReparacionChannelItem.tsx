@@ -9,7 +9,7 @@ interface ReparacionChannelItemProps {
     isChecked?: boolean;
     hasEpg?: boolean;
     showCheckbox?: boolean;
-    verificationStatus?: 'pending' | 'verifying' | 'ok' | 'failed';
+    verificationStatus?: 'pending' | 'verifying' | 'failed' | '4K' | '2K' | 'FHD' | 'HD' | 'SD';
     onVerifyClick?: () => void;
     style?: React.CSSProperties;
 }
