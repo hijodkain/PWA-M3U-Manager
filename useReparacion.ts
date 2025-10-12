@@ -53,9 +53,9 @@ export const useReparacion = (
         // Aquí se integrará la lógica real de escaneo de calidad
         // Por ahora, solo marca como 'verifying' y simula resultado
         for (const channel of channelsToScan) {
-            setVerificationStatus(prev => ({ ...prev, [channel.id]: 'verifying' }));
+            setVerificationStatus(prev => ({ ...prev, [channel.id]: 'verifying' as VerificationStatus }));
             await new Promise(res => setTimeout(res, 500));
-            setVerificationStatus(prev => ({ ...prev, [channel.id]: 'ok' }));
+            setVerificationStatus(prev => ({ ...prev, [channel.id]: 'SD' as VerificationStatus }));
         }
     };
 
