@@ -31,7 +31,7 @@ export const useReparacion = (
             const response = await fetch(proxyUrl);
             const data = await response.json();
             if (data.status === 'ok' && data.resolution) {
-                let quality = 'SD';
+                let quality: VerificationStatus = 'SD';
                 if (data.resolution.height >= 2160) quality = '4K';
                 else if (data.resolution.height >= 1440) quality = '2K';
                 else if (data.resolution.height >= 1080) quality = 'FHD';
