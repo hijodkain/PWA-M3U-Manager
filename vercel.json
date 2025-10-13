@@ -11,13 +11,7 @@
   ],
   "functions": {
     "api/*.py": {
-      "runtime": "python@3.9",
-      "excludeFiles": "{.env,venv/**,__pycache__/**}"
-    }
-  },
-  "build": {
-    "env": {
-      "PYTHONPATH": "/vercel/path0"
+      "runtime": "@vercel/python@3.1.0"
     }
   }
 }
