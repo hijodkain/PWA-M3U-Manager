@@ -132,7 +132,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                     })}
                 </select>
                 <button
-                    onClick={scanQualityOfGroup}
+                    onClick={() => scanQualityOfGroup()}
                     className="w-full text-xs py-2 px-1 rounded-md flex items-center justify-center gap-1 transition-colors bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 mb-2"
                 >
                     <Zap size={14} /> Escanear Calidad Real del Grupo
