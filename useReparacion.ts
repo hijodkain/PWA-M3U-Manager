@@ -55,7 +55,7 @@ export const useReparacion = (
             ? reparacionChannels.filter(channel => reparacionListFilter === 'All' || channel.groupTitle === reparacionListFilter)
             : mainChannels.filter(channel => mainListFilter === 'All' || channel.groupTitle === mainListFilter);
         for (const channel of channelsToScan) {
-            setVerificationStatus(prev => ({ ...prev, [channel.id]: 'verifying' as VerificationStatus }));
+            setVerificationStatus(prev => ({ ...prev, [channel.id]: { status: 'verifying' } }));
             await verifyChannel(channel.id, channel.url);
         }
     };
