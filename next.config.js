@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  transpilePackages: ['@ant-design/icons-svg'],
   webpack: (config, { isServer }) => {
     // Web Worker support
     config.module.rules.push({
@@ -16,6 +17,12 @@ const nextConfig = {
     if (!isServer) {
       config.output.globalObject = 'self';
     }
+
+    // Add support for ant-design icons
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@ant-design/icons/lib/dist$': '@ant-design/icons/lib/index.js',
+    };
 
     return config;
   },
