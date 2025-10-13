@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  transpilePackages: ['@ant-design/icons-svg'],
+  transpilePackages: ['@ant-design/icons-svg', '@ant-design/icons'],
   webpack: (config, { isServer }) => {
     // Web Worker support
     config.module.rules.push({
