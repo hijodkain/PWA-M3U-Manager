@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FileDown, UploadCloud } from 'lucide-react';
-import { useChannels } from './useChannels';
-import { useSettings } from './useSettings';
+import { useChannels } from '../hooks/useChannels';
+import { useSettings } from '../hooks/useSettings';
 
 interface SaveTabProps {
     channelsHook: ReturnType<typeof useChannels>;

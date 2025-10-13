@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Tab, Channel } from './index';
-import { useChannels } from './useChannels';
-import { useReparacion } from './useReparacion';
-import { useAsignarEpg } from './useAsignarEpg';
-import { useSettings } from './useSettings';
+import { Tab, Channel } from '../types';
+import { useChannels } from '../hooks/useChannels';
+import { useReparacion } from '../hooks/useReparacion';
+import { useAsignarEpg } from '../hooks/useAsignarEpg';
+import { useSettings } from '../hooks/useSettings';
 import EditorTab from './EditorTab';
 import ReparacionTab from './ReparacionTab';
 import AsignarEpgTab from './AsignarEpgTab';

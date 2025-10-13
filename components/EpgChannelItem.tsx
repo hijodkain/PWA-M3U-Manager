@@ -1,5 +1,5 @@
 import React from 'react';
-import { EpgChannel } from './index';
+import { EpgChannel } from '../types';
 
 interface EpgChannelItemProps {
     epgChannel: EpgChannel;

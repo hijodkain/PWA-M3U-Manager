@@ -1,11 +1,11 @@
 import React, { useRef } from 'react';
 import { Upload, Copy, CheckSquare, ArrowLeftCircle, RotateCcw, Trash2, Link, Check } from 'lucide-react';
-import { useReparacion } from './useReparacion';
+import { useReparacion } from '../hooks/useReparacion';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { useChannels } from './useChannels';
+import { useChannels } from '../hooks/useChannels';
 import ReparacionChannelItem from './ReparacionChannelItem';
-import { useSettings } from './useSettings';
-import { AttributeKey } from './index';
+import { useSettings } from '../hooks/useSettings';
+import { AttributeKey } from '../types';
 
 interface ReparacionTabProps {
     reparacionHook: ReturnType<typeof useReparacion>;

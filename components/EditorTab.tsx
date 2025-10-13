@@ -3,10 +3,10 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Upload, Download, Plus, Trash2, GripVertical, Zap, ShieldCheck, ShieldX, Hourglass, ShieldQuestion } from 'lucide-react';
-import { useChannels } from './useChannels';
-import { useSettings } from './useSettings';
+import { useChannels } from '../hooks/useChannels';
+import { useSettings } from '../hooks/useSettings';
 import SortableChannelRow from './SortableChannelRow';
-import { Channel } from './index';
+import { Channel } from '../types';
 
 interface EditorTabProps {
     channelsHook: ReturnType<typeof useChannels>;

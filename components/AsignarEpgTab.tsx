@@ -1,12 +1,12 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { Upload, Download, Copy, Zap, ArrowLeftCircle, ChevronsUpDown } from 'lucide-react';
-import { useAsignarEpg } from './useAsignarEpg';
-import { useChannels } from './useChannels';
+import { useAsignarEpg } from '../hooks/useAsignarEpg';
+import { useChannels } from '../hooks/useChannels';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import ReparacionChannelItem from './ReparacionChannelItem';
-import { useSettings } from './useSettings';
+import { useSettings } from '../hooks/useSettings';
 import EpgChannelItem from './EpgChannelItem';
-import { AttributeKey, Channel } from './index';
+import { AttributeKey, Channel } from '../types';
 
 interface AsignarEpgTabProps {
     epgHook: ReturnType<typeof useAsignarEpg>;

@@ -1,7 +1,12 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Channel, AttributeKey } from './index';
+import { Channel, AttributeKey } from '../types';
 
 type VerificationStatus = 'pending' | 'verifying' | 'ok' | 'failed';
+
+export interface ChannelVerification {
+    status: VerificationStatus | string;
+    elapsed?: number;
+}
 
 export const useReparacion = (
     mainChannels: Channel[],

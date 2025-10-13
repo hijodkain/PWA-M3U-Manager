@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ChannelVerification } from './useReparacion';
+import type { ChannelVerification } from './useReparacion';
 
 export interface YouTubeChannel {
     id: string;
