@@ -22,7 +22,7 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
     isChecked,
     hasEpg,
     showCheckbox = false,
-    verificationStatus = 'pending',
+    verificationStatus = { status: 'pending' },
     onVerifyClick,
     style,
 }) => {
@@ -40,10 +40,11 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
         }
     };
 
-    const nameColor = verificationStatus === 'failed' ? 'text-yellow-400' : (hasEpg === false ? 'text-red-400' : 'text-white');
+    const nameColor = verificationStatus.status === 'failed' ? 'text-yellow-400' : (hasEpg === false ? 'text-red-400' : 'text-white');
+    const elapsedMs = verificationStatus && typeof verificationStatus === 'object' ? verificationStatus.elapsed : undefined;
 
     const statusIndicator = () => {
-        switch (verificationStatus) {
+        switch (verificationStatus.status) {
             case 'verifying':
                 return <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent"></div>;
             case 'failed':
@@ -53,7 +54,16 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
             case 'FHD':
             case 'HD':
             case 'SD':
-                return <div className="text-green-400 font-bold text-xs">{verificationStatus}</div>;
+                return (
+                    <div className="flex flex-col items-center">
+                        <span className="text-green-400 font-bold text-xs">{verificationStatus.status}</span>
+                        {typeof elapsedMs === 'number' && (
+                            <span className={elapsedMs > 3000 ? 'text-red-400 font-bold text-xs' : 'text-gray-400 text-xs'}>
+                                {elapsedMs} ms
+                            </span>
+                        )}
+                    </div>
+                );
             default:
                 return <div className="text-gray-400 font-bold text-xs">---</div>;
         }
@@ -94,7 +104,7 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
                         e.stopPropagation();
                         if (onVerifyClick) onVerifyClick();
                     }}
-                    disabled={verificationStatus === 'verifying'}
+                    disabled={verificationStatus.status === 'verifying'}
                     className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-xs mt-1 disabled:opacity-50"
                 >
                     Verify

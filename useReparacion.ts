@@ -3,6 +3,10 @@ import React from 'react';
 import { Channel, AttributeKey } from './index';
 
 type VerificationStatus = 'pending' | 'verifying' | 'failed' | '4K' | '2K' | 'FHD' | 'HD' | 'SD';
+type ChannelVerification = {
+    status: VerificationStatus;
+    elapsed?: number;
+};
 
 export const useReparacion = (
     mainChannels: Channel[],
@@ -12,7 +16,7 @@ export const useReparacion = (
     const [reparacionChannels, setReparacionChannels] = useState<Channel[]>([]);
     const [selectedReparacionChannels, setSelectedReparacionChannels] = useState<Set<string>>(new Set());
     const [attributesToCopy, setAttributesToCopy] = useState<Set<AttributeKey>>(new Set());
-    const [verificationStatus, setVerificationStatus] = useState<Record<string, VerificationStatus>>({});
+    const [verificationStatus, setVerificationStatus] = useState<Record<string, ChannelVerification>>({});
     const [reparacionUrl, setReparacionUrl] = useState('');
     const [isCurationLoading, setIsCurationLoading] = useState(false);
     const [curationError, setCurationError] = useState<string | null>(null);
@@ -25,7 +29,7 @@ export const useReparacion = (
 
     // Función para verificar canal individual
     const verifyChannel = async (channelId: string, url: string) => {
-        setVerificationStatus(prev => ({ ...prev, [channelId]: 'verifying' }));
+        setVerificationStatus(prev => ({ ...prev, [channelId]: { status: 'verifying' } }));
         try {
             const proxyUrl = `/api/verify_channel?url=${encodeURIComponent(url)}&spoof=true`;
             const response = await fetch(proxyUrl);
@@ -36,26 +40,23 @@ export const useReparacion = (
                 else if (data.resolution.height >= 1440) quality = '2K';
                 else if (data.resolution.height >= 1080) quality = 'FHD';
                 else if (data.resolution.height >= 720) quality = 'HD';
-                setVerificationStatus(prev => ({ ...prev, [channelId]: quality }));
+                setVerificationStatus(prev => ({ ...prev, [channelId]: { status: quality, elapsed: data.elapsed } }));
             } else {
-                setVerificationStatus(prev => ({ ...prev, [channelId]: 'failed' }));
+                setVerificationStatus(prev => ({ ...prev, [channelId]: { status: 'failed', elapsed: data.elapsed } }));
             }
         } catch (error) {
             console.error('Verification failed', error);
-            setVerificationStatus(prev => ({ ...prev, [channelId]: 'failed' }));
+            setVerificationStatus(prev => ({ ...prev, [channelId]: { status: 'failed' } }));
         }
     };
-    // Escaneo de calidad real de canales (stub)
-    const scanQualityOfGroup = async () => {
-        const channelsToScan = mainChannels.filter(channel => 
-            mainListFilter === 'All' || channel.groupTitle === mainListFilter
-        );
-        // Aquí se integrará la lógica real de escaneo de calidad
-        // Por ahora, solo marca como 'verifying' y simula resultado
+    // Escaneo de calidad real de canales para lista principal o recambios
+    const scanQualityOfGroup = async (isReparacionList: boolean = false) => {
+        const channelsToScan = isReparacionList
+            ? reparacionChannels.filter(channel => reparacionListFilter === 'All' || channel.groupTitle === reparacionListFilter)
+            : mainChannels.filter(channel => mainListFilter === 'All' || channel.groupTitle === mainListFilter);
         for (const channel of channelsToScan) {
             setVerificationStatus(prev => ({ ...prev, [channel.id]: 'verifying' as VerificationStatus }));
-            await new Promise(res => setTimeout(res, 500));
-            setVerificationStatus(prev => ({ ...prev, [channel.id]: 'SD' as VerificationStatus }));
+            await verifyChannel(channel.id, channel.url);
         }
     };
 

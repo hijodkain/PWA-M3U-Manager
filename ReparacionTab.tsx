@@ -155,25 +155,20 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                             const ch = filteredMainChannels[virtualItem.index];
                             if (!ch) return null;
                             return (
-                                <ReparacionChannelItem
-                                    key={ch.id}
-                                    channel={ch}
-                                    onBodyClick={() => {
-                                        setDestinationChannelId(ch.id)
-                                        setReparacionListSearch(cleanChannelNameForSearch(ch.name));
-                                    }}
-                                    isSelected={destinationChannelId === ch.id}
-                                    showCheckbox={false}
-                                    verificationStatus={verificationStatus[ch.id] || 'pending'}
-                                    onVerifyClick={() => verifyChannel(ch.id, ch.url)}
-                                    style={{
-                                        position: 'absolute',
-                                        top: 0,
-                                        left: 0,
-                                        width: '100%',
-                                        transform: `translateY(${virtualItem.start}px)`,
-                                    }}
-                                />
+                                <div data-index={virtualItem.index} style={{position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${virtualItem.start}px)`}}>
+                                    <ReparacionChannelItem
+                                        key={ch.id}
+                                        channel={ch}
+                                        onBodyClick={() => {
+                                            setDestinationChannelId(ch.id)
+                                            setReparacionListSearch(cleanChannelNameForSearch(ch.name));
+                                        }}
+                                        isSelected={destinationChannelId === ch.id}
+                                        showCheckbox={false}
+                                        verificationStatus={verificationStatus[ch.id] || 'pending'}
+                                        onVerifyClick={() => verifyChannel(ch.id, ch.url)}
+                                    />
+                                </div>
                             );
                         })}
                     </div>
@@ -181,7 +176,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
             </div>
             <div className="lg:col-span-1 flex flex-col items-center justify-start gap-2 bg-gray-800 p-4 rounded-lg">
                 <button
-                    onClick={scanQualityOfGroup}
+                    onClick={() => scanQualityOfGroup(true)}
                     className="w-full text-xs py-2 px-1 rounded-md flex items-center justify-center gap-1 transition-colors bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 mb-2"
                 >
                     <Zap size={14} /> Escanear Calidad Real del Grupo
@@ -296,24 +291,19 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                             const ch = filteredReparacionChannels[virtualItem.index];
                             if (!ch) return null;
                             return (
-                                <ReparacionChannelItem
-                                    key={ch.id}
-                                    channel={ch}
-                                    onBodyClick={() => handleSourceChannelClick(ch)}
-                                    onSelectClick={(e) => toggleReparacionSelection(ch.id, virtualItem.index, e.shiftKey, e.metaKey, e.ctrlKey)}
-                                    isSelected={false}
-                                    isChecked={selectedReparacionChannels.has(ch.id)}
-                                    showCheckbox={true}
-                                    verificationStatus={verificationStatus[ch.id] || 'pending'}
-                                    onVerifyClick={() => verifyChannel(ch.id, ch.url)}
-                                    style={{
-                                        position: 'absolute',
-                                        top: 0,
-                                        left: 0,
-                                        width: '100%',
-                                        transform: `translateY(${virtualItem.start}px)`,
-                                    }}
-                                />
+                                <div data-index={virtualItem.index} style={{position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${virtualItem.start}px)`}}>
+                                    <ReparacionChannelItem
+                                        key={ch.id}
+                                        channel={ch}
+                                        onBodyClick={() => handleSourceChannelClick(ch)}
+                                        onSelectClick={(e) => toggleReparacionSelection(ch.id, virtualItem.index, e.shiftKey, e.metaKey, e.ctrlKey)}
+                                        isSelected={false}
+                                        isChecked={selectedReparacionChannels.has(ch.id)}
+                                        showCheckbox={true}
+                                        verificationStatus={verificationStatus[ch.id] || 'pending'}
+                                        onVerifyClick={() => verifyChannel(ch.id, ch.url)}
+                                    />
+                                </div>
                             );
                         })}
                     </div>
