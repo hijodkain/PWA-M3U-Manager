@@ -3,7 +3,7 @@ import { useSortable, defaultAnimateLayoutChanges } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical } from 'lucide-react';
 import EditableCell from './EditableCell';
-import { Channel } from '../types';
+import { Channel } from '@/types/index';
 
 interface SortableChannelRowProps {
     id: string;

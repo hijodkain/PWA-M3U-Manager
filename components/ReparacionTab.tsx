@@ -5,7 +5,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { useChannels } from '../hooks/useChannels';
 import ReparacionChannelItem from './ReparacionChannelItem';
 import { useSettings } from '../hooks/useSettings';
-import { AttributeKey } from '../types';
+import { AttributeKey } from '@/types/index';
 
 interface ReparacionTabProps {
     reparacionHook: ReturnType<typeof useReparacion>;

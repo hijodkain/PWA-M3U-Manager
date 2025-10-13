@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Channel, AttributeKey } from '../types';
+import { Channel, AttributeKey } from '@/types/index';
 
 type VerificationStatus = 'pending' | 'verifying' | 'ok' | 'failed';
 

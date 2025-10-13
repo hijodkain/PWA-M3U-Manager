@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { arrayMove } from '@dnd-kit/sortable';
-import { Channel } from '../types';
+import { Channel } from '@/types/index';
 
 function extractDropboxFileName(url: string): string | null {
     if (!url || !url.includes('dropbox.com')) {

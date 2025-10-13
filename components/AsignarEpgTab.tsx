@@ -6,7 +6,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import ReparacionChannelItem from './ReparacionChannelItem';
 import { useSettings } from '../hooks/useSettings';
 import EpgChannelItem from './EpgChannelItem';
-import { AttributeKey, Channel } from '../types';
+import { AttributeKey, Channel } from '@/types/index';
 
 interface AsignarEpgTabProps {
     epgHook: ReturnType<typeof useAsignarEpg>;

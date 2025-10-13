@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Channel, EpgChannel, AttributeKey } from '../types';
+import { Channel, EpgChannel, AttributeKey } from '@/types/index';
 
 const parseXMLTV = (content: string): EpgChannel[] => {
     if (typeof window === 'undefined') {

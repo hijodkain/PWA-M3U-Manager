@@ -1,5 +1,5 @@
 import React from 'react';
-import { Channel } from '../types';
+import { Channel } from '@/types/index';
 
 interface ReparacionChannelItemProps {
     channel: Channel;

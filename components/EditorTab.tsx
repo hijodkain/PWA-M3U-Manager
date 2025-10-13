@@ -6,7 +6,7 @@ import { Upload, Download, Plus, Trash2, GripVertical, Zap, ShieldCheck, ShieldX
 import { useChannels } from '../hooks/useChannels';
 import { useSettings } from '../hooks/useSettings';
 import SortableChannelRow from './SortableChannelRow';
-import { Channel } from '../types';
+import { Channel } from '@/types/index';
 
 interface EditorTabProps {
     channelsHook: ReturnType<typeof useChannels>;

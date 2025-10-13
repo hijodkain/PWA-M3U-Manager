@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Tab, Channel } from '../types';
+import { Tab, Channel } from '@/types/index';
 import { useChannels } from '../hooks/useChannels';
 import { useReparacion } from '../hooks/useReparacion';
 import { useAsignarEpg } from '../hooks/useAsignarEpg';
