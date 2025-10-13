@@ -85,11 +85,11 @@ export const useReparacion = (
     // Función de prueba para la verificación en modo debug
     const mockVerifyChannel = async (channelId: string) => {
         try {
-            setVerificationStatus(prev => ({ ...prev, [channelId]: 'verifying' as VerificationStatus }));
+            setVerificationStatus(prev => ({ ...prev, [channelId]: { status: 'verifying' } }));
             await new Promise(res => setTimeout(res, 500));
-            setVerificationStatus(prev => ({ ...prev, [channelId]: 'SD' as VerificationStatus }));
+            setVerificationStatus(prev => ({ ...prev, [channelId]: { status: 'SD' } }));
         } catch (error) {
-            setVerificationStatus(prev => ({ ...prev, [channelId]: 'failed' as VerificationStatus }));
+            setVerificationStatus(prev => ({ ...prev, [channelId]: { status: 'failed' } }));
         }
     };
 
