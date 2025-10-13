@@ -10,8 +10,8 @@
     }
   ],
   "functions": {
-    "api/youtube_live_monitor.py": {
-      "runtime": "python3.9"
+    "api/*.py": {
+      "runtime": "@vercel/python@3.1.0"
     }
   }
 }

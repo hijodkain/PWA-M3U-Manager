@@ -3,33 +3,59 @@ from urllib.parse import urlparse
 import json
 import yt_dlp
 import time
+from typing import Dict, Any
 
-class handler(BaseHTTPRequestHandler):
-    def do_OPTIONS(self):
-        self._send_cors_headers()
-        self.send_response(200)
-        self.end_headers()
+def handle_cors() -> Dict[str, str]:
+    return {
+        'Access-Control-Allow-Credentials': 'true',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET,OPTIONS,PATCH,DELETE,POST,PUT',
+        'Access-Control-Allow-Headers': 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version',
+    }
 
-    def do_POST(self):
-        self._send_cors_headers()
-        content_length = int(self.headers['Content-Length'])
-        post_data = self.rfile.read(content_length)
-        data = json.loads(post_data)
-        channel_url = data.get('channelUrl')
+def handler(request):
+    # Handle CORS preflight request
+    if request['method'] == 'OPTIONS':
+        return {
+            'statusCode': 204,
+            'headers': handle_cors(),
+            'body': ''
+        }
+
+    if request['method'] != 'POST':
+        return {
+            'statusCode': 405,
+            'headers': handle_cors(),
+            'body': json.dumps({'error': 'Method not allowed'})
+        }
+
+    try:
+        # Parse request body
+        body = json.loads(request['body'])
+        channel_url = body.get('channelUrl')
 
         if not channel_url:
-            self._send_error("Channel URL is required")
-            return
+            return {
+                'statusCode': 400,
+                'headers': handle_cors(),
+                'body': json.dumps({'error': 'Channel URL is required'})
+            }
 
         # Validar URL
         try:
             parsed_url = urlparse(channel_url)
             if not parsed_url.netloc or 'youtube.com' not in parsed_url.netloc:
-                self._send_error("Invalid YouTube URL")
-                return
+                return {
+                    'statusCode': 400,
+                    'headers': handle_cors(),
+                    'body': json.dumps({'error': 'Invalid YouTube URL'})
+                }
         except:
-            self._send_error("Invalid URL format")
-            return
+            return {
+                'statusCode': 400,
+                'headers': handle_cors(),
+                'body': json.dumps({'error': 'Invalid URL format'})
+            }
 
         start_time = time.time()
         try:
@@ -76,28 +102,34 @@ class handler(BaseHTTPRequestHandler):
                         'elapsed_ms': elapsed_ms
                     }
                 }
-                self._send_response(response_data)
+                
+                return {
+                    'statusCode': 200,
+                    'headers': {
+                        **handle_cors(),
+                        'Content-Type': 'application/json'
+                    },
+                    'body': json.dumps(response_data)
+                }
 
         except Exception as e:
-            self._send_error(str(e))
-
-    def _send_cors_headers(self):
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
-
-    def _send_response(self, data):
-        self.send_response(200)
-        self.send_header('Content-type', 'application/json')
-        self._send_cors_headers()
-        self.end_headers()
-        self.wfile.write(json.dumps(data).encode())
-
-    def _send_error(self, message):
-        self.send_response(400)
-        self.send_header('Content-type', 'application/json')
-        self._send_cors_headers()
-        self.end_headers()
+            return {
+                'statusCode': 500,
+                'headers': handle_cors(),
+                'body': json.dumps({
+                    'success': False,
+                    'error': str(e)
+                })
+            }
+    except Exception as e:
+        return {
+            'statusCode': 500,
+            'headers': handle_cors(),
+            'body': json.dumps({
+                'success': False,
+                'error': str(e)
+            })
+        }
         self.wfile.write(json.dumps({
             'success': False,
             'error': message
