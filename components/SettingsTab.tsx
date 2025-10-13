@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ExternalLink, XCircle, PlusCircle, Trash2 } from 'lucide-react';
-import { Tabs } from 'antd';
-import type { TabsProps } from 'antd';
+import { Tabs, TabsProps } from 'antd';
 import { useSettings } from '../hooks/useSettings';
 import { useYouTubeLiveMonitor } from '../hooks/useYouTubeLiveMonitor';
 import YouTubeLiveSettings from './YouTubeLiveSettings';
