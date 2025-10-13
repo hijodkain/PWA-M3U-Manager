@@ -11,7 +11,7 @@
   ],
   "functions": {
     "api/*.py": {
-      "runtime": "python3.9",
+      "runtime": "python@3.9",
       "excludeFiles": "{.env,venv/**,__pycache__/**}"
     }
   },
