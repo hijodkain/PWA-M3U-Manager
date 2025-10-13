@@ -1,6 +1,9 @@
 import React from 'react';
 import { Channel } from './index';
 
+type VerificationStatus = 'pending' | 'verifying' | 'failed' | '4K' | '2K' | 'FHD' | 'HD' | 'SD';
+type ChannelVerification = { status: VerificationStatus; elapsed?: number };
+
 interface ReparacionChannelItemProps {
     channel: Channel;
     onBodyClick: () => void;
@@ -9,7 +12,7 @@ interface ReparacionChannelItemProps {
     isChecked?: boolean;
     hasEpg?: boolean;
     showCheckbox?: boolean;
-    verificationStatus?: 'pending' | 'verifying' | 'failed' | '4K' | '2K' | 'FHD' | 'HD' | 'SD';
+    verificationStatus?: ChannelVerification;
     onVerifyClick?: () => void;
     style?: React.CSSProperties;
 }
@@ -22,26 +25,21 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
     isChecked,
     hasEpg,
     showCheckbox = false,
-    verificationStatus = { status: 'pending' },
+    verificationStatus = { status: 'pending' } as ChannelVerification,
     onVerifyClick,
     style,
 }) => {
     const getDomainFromUrl = (url: string) => {
         if (!url) return '---';
-        if (typeof window === 'undefined') {
-            const parts = url.split('/');
-            return parts.length > 2 ? parts[2] : url;
-        }
         try {
             return new URL(url).hostname;
         } catch (_) {
-            const parts = url.split('/');
-            return parts.length > 2 ? parts[2] : url;
+            return url;
         }
     };
 
     const nameColor = verificationStatus.status === 'failed' ? 'text-yellow-400' : (hasEpg === false ? 'text-red-400' : 'text-white');
-    const elapsedMs = verificationStatus && typeof verificationStatus === 'object' ? verificationStatus.elapsed : undefined;
+    const elapsedMs = (verificationStatus as ChannelVerification).elapsed;
 
     const statusIndicator = () => {
         switch (verificationStatus.status) {

@@ -165,7 +165,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                         }}
                                         isSelected={destinationChannelId === ch.id}
                                         showCheckbox={false}
-                                        verificationStatus={verificationStatus[ch.id] || 'pending'}
+                                        verificationStatus={verificationStatus[ch.id] || { status: 'pending' }}
                                         onVerifyClick={() => verifyChannel(ch.id, ch.url)}
                                     />
                                 </div>
@@ -300,7 +300,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                         isSelected={false}
                                         isChecked={selectedReparacionChannels.has(ch.id)}
                                         showCheckbox={true}
-                                        verificationStatus={verificationStatus[ch.id] || 'pending'}
+                                        verificationStatus={verificationStatus[ch.id] || { status: 'pending' }}
                                         onVerifyClick={() => verifyChannel(ch.id, ch.url)}
                                     />
                                 </div>
