@@ -157,7 +157,7 @@ export const useReparacion = (
 
     const failedChannelsByGroup = useMemo(() => {
         return mainChannels.reduce((acc, channel) => {
-            if (verificationStatus[channel.id] === 'failed') {
+            if (verificationStatus[channel.id]?.status === 'failed') {
                 const group = channel.groupTitle || 'Sin Grupo';
                 acc[group] = (acc[group] || 0) + 1;
             }
