@@ -1,7 +1,16 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  transpilePackages: ['@ant-design/icons-svg', '@ant-design/icons'],
+  transpilePackages: [
+    '@ant-design/icons-svg',
+    '@ant-design/icons',
+    'rc-util',
+    'rc-pagination',
+    'rc-picker',
+    'rc-table',
+    'rc-tree',
+    'antd'
+  ],
   webpack: (config, { isServer }) => {
     // Web Worker support
     config.module.rules.push({
@@ -18,10 +27,16 @@ const nextConfig = {
       config.output.globalObject = 'self';
     }
 
-    // Add support for ant-design icons
+    // Add support for ant-design icons and rc-util
     config.resolve.alias = {
       ...config.resolve.alias,
       '@ant-design/icons/lib/dist$': '@ant-design/icons/lib/index.js',
+      'rc-util/es/Dom/canUseDom': 'rc-util/lib/Dom/canUseDom',
+    };
+
+    // ESM modules fix
+    config.resolve.extensionAlias = {
+      '.js': ['.js', '.ts', '.tsx'],
     };
 
     return config;
