@@ -43,7 +43,6 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         activeChannel,
         toggleChannelSelection,
         handleSelectAll,
-            handleDownload,
     } = channelsHook;
 
     const { savedUrls } = settingsHook;
@@ -89,17 +88,6 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
 
     return (
         <>
-            {/* Botón de exportación/descarga de la lista M3U */}
-            {channels.length > 0 && (
-                <div className="flex justify-end mb-4">
-                    <button
-                        onClick={handleDownload}
-                        className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-md flex items-center"
-                    >
-                        <Download size={18} className="mr-2" /> Exportar/Descargar M3U
-                    </button>
-                </div>
-            )}
             <div className="bg-gray-800 p-4 rounded-lg mb-6 shadow-lg">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
                     <div>
