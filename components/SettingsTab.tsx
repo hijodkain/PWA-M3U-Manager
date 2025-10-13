@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { ExternalLink, XCircle, PlusCircle, Trash2 } from 'lucide-react';
-import { Tabs } from 'antd';
 import { useSettings } from '../hooks/useSettings';
 import { useYouTubeLiveMonitor } from '../hooks/useYouTubeLiveMonitor';
 import YouTubeLiveSettings from './YouTubeLiveSettings';
@@ -52,6 +51,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
     const [newEpgUrlName, setNewEpgUrlName] = useState('');
     const [newEpgUrl, setNewEpgUrl] = useState('');
     const [authStatus, setAuthStatus] = useState('');
+    const [activeTab, setActiveTab] = useState('general');
 
     useEffect(() => {
         setAppKey(dropboxAppKey);
@@ -178,11 +178,36 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
 
     return (
         <div className="h-full">
-            <Tabs defaultActiveKey="general" items={[
-                {
-                    key: 'general',
-                    label: 'General',
-                    children: (
+            <div className="border-b border-gray-700 mb-4">
+                <nav className="flex space-x-4">
+                    <button
+                        onClick={() => setActiveTab('general')}
+                        className={`px-4 py-2 font-medium ${activeTab === 'general' ? 'border-b-2 border-blue-500 text-blue-500' : 'text-gray-400 hover:text-gray-300'}`}
+                    >
+                        General
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('urls')}
+                        className={`px-4 py-2 font-medium ${activeTab === 'urls' ? 'border-b-2 border-blue-500 text-blue-500' : 'text-gray-400 hover:text-gray-300'}`}
+                    >
+                        URLs
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('epg')}
+                        className={`px-4 py-2 font-medium ${activeTab === 'epg' ? 'border-b-2 border-blue-500 text-blue-500' : 'text-gray-400 hover:text-gray-300'}`}
+                    >
+                        EPG URLs
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('youtube')}
+                        className={`px-4 py-2 font-medium ${activeTab === 'youtube' ? 'border-b-2 border-blue-500 text-blue-500' : 'text-gray-400 hover:text-gray-300'}`}
+                    >
+                        YouTube Live
+                    </button>
+                </nav>
+            </div>
+
+            {activeTab === 'general' && (
                         <div className="bg-gray-800 p-6 rounded-lg shadow-lg text-white space-y-8">
                             <div>
                                 <h2 className="text-xl font-bold mb-4">Configuración de Dropbox</h2>
@@ -227,9 +252,11 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
                                     {authStatus && <p className="text-sm text-yellow-400 mt-2">{authStatus}</p>}
                                 </div>
                             </div>
+                        </div>
+            )}
 
-                            <hr className="my-8 border-gray-600" />
-
+            {activeTab === 'urls' && (
+                        <div className="bg-gray-800 p-6 rounded-lg shadow-lg text-white space-y-8">
                             <div>
                                 <h2 className="text-xl font-bold mb-4">Playlists Guardadas</h2>
                                 
@@ -280,9 +307,11 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
                                     )}
                                 </div>
                             </div>
+                        </div>
+            )}
 
-                            <hr className="my-8 border-gray-600" />
-
+            {activeTab === 'epg' && (
+                        <div className="bg-gray-800 p-6 rounded-lg shadow-lg text-white space-y-8">
                             <div>
                                 <h2 className="text-xl font-bold mb-4">Fuentes EPG Guardadas</h2>
                                 
@@ -334,12 +363,9 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
                                 </div>
                             </div>
                         </div>
-                    ),
-                },
-                {
-                    key: 'youtube',
-                    label: 'YouTube Live',
-                    children: (
+            )}
+
+            {activeTab === 'youtube' && (
                         <div className="p-4">
                             <YouTubeLiveSettings
                                 channels={youTubeLiveMonitor.channels}
@@ -351,9 +377,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
                                 onCheckChannel={youTubeLiveMonitor.checkChannel}
                             />
                         </div>
-                    ),
-                },
-            ]} />
+            )}
         </div>
     );
 };
