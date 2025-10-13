@@ -145,8 +145,8 @@ export const useReparacion = (
         const newStatus = { ...verificationStatus };
         setMainChannels(prev =>
             prev.map(channel => {
-                if (verificationStatus[channel.id] === 'failed') {
-                    newStatus[channel.id] = 'pending';
+                if (verificationStatus[channel.id]?.status === 'failed') {
+                    newStatus[channel.id] = { status: 'pending' };
                     return { ...channel, url: 'http://--' };
                 }
                 return channel;
