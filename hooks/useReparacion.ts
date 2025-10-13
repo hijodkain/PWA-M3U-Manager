@@ -63,7 +63,7 @@ export const useReparacion = (
         setIsCurationLoading(true);
         setCurationError(null);
 
-        const worker = new Worker(new URL('./m3u-parser.worker.ts', import.meta.url), {
+        const worker = new Worker(new URL('../workers/m3u-parser.worker.ts', import.meta.url), {
             type: 'module',
         });
 
