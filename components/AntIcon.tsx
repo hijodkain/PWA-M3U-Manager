@@ -1,10 +1,11 @@
 import React from 'react';
-import type { AntdIconProps } from '@ant-design/icons/es/components/AntdIcon';
 
-interface AntIconProps extends Partial<AntdIconProps> {
+interface Props {
     icon: React.ForwardRefExoticComponent<any>;
+    className?: string;
+    style?: React.CSSProperties;
 }
 
-export const AntIcon: React.FC<AntIconProps> = ({ icon: IconComponent, ...props }) => {
+export const AntIcon: React.FC<Props> = ({ icon: IconComponent, ...props }) => {
     return <IconComponent {...props} />;
 };
