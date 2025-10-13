@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Button, Form, Input, InputNumber, Space, Switch, Table } from 'antd';
 import { DeleteOutlined, ReloadOutlined } from '@ant-design/icons';
 import type { YouTubeChannel, YouTubeChannelStatus } from '../hooks/useYouTubeLiveMonitor';
+import type { CustomIconComponentProps } from '@ant-design/icons/lib/components/Icon';
 
 interface YouTubeLiveSettingsProps {
     channels: YouTubeChannel[];
@@ -93,12 +94,12 @@ const YouTubeLiveSettings: React.FC<YouTubeLiveSettingsProps> = ({
             render: (_: any, record: YouTubeChannel) => (
                 <Space>
                     <Button
-                        icon={<ReloadOutlined />}
+                        icon={<ReloadOutlined className="anticon" />}
                         onClick={() => onCheckChannel(record.id)}
                         loading={channelsStatus[record.id]?.verification.status === 'verifying'}
                     />
                     <Button
-                        icon={<DeleteOutlined />}
+                        icon={<DeleteOutlined className="anticon" />}
                         danger
                         onClick={() => onRemoveChannel(record.id)}
                     />
