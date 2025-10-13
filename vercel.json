@@ -3,6 +3,15 @@
     {
       "source": "/api/proxy",
       "destination": "/api/proxy"
+    },
+    {
+      "source": "/api/youtube_live_monitor",
+      "destination": "/api/youtube_live_monitor"
     }
-  ]
+  ],
+  "functions": {
+    "api/youtube_live_monitor.py": {
+      "runtime": "python3.9"
+    }
+  }
 }
