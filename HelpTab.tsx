@@ -1,5 +1,5 @@
 import React from 'react';
-import { HelpCircle, BookOpen, Key, Tv, Wand, ListMusic, Save, Settings, Download, Upload } from 'lucide-react';
+import { HelpCircle, BookOpen, Key, Tv, Wand, ListMusic, Save, Settings, Download, Upload, Youtube } from 'lucide-react';
 
 const HelpTab: React.FC = () => {
     const Section: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode }> = ({ title, icon, children }) => (
@@ -25,8 +25,9 @@ const HelpTab: React.FC = () => {
             <Section title="Guía de Pestañas" icon={<BookOpen className="text-green-400" />}>
                 <ul>
                     <li><strong><ListMusic size={16} className="inline-block mr-1"/> Editor de Playlist:</strong> Es la vista principal. Aquí puedes ver todos tus canales, cambiar su orden, editar sus nombres, URLs, logos, etc. También puedes añadir nuevos canales o eliminar los que no quieras.</li>
-                    <li><strong><Wand size={16} className="inline-block mr-1"/> Curación:</strong> Esta pestaña te ofrece herramientas para una limpieza automática y masiva de tu lista. Puedes eliminar canales duplicados, quitar atributos que no uses o filtrar y borrar canales en bloque.</li>
-                    <li><strong><Tv size={16} className="inline-block mr-1"/> EPG:</strong> Te permite cargar un archivo XMLTV (el formato estándar para guías de programación) y asignarlo a tus canales. La aplicación intentará encontrar la correspondencia automáticamente, pero también puedes asignarla manualmente.</li>
+                    <li><strong><Wand size={16} className="inline-block mr-1"/> Reparación:</strong> Esta pestaña te ofrece herramientas para una limpieza automática y masiva de tu lista. Puedes cargar listas de respaldo para reparar canales fallidos y transferir atributos entre canales.</li>
+                    <li><strong><Tv size={16} className="inline-block mr-1"/> Asignar EPG:</strong> Te permite cargar un archivo XMLTV (el formato estándar para guías de programación) y asignarlo a tus canales. La aplicación intentará encontrar la correspondencia automáticamente, pero también puedes asignarla manualmente.</li>
+                    <li><strong><Youtube size={16} className="inline-block mr-1"/> YouTube Live:</strong> Añade canales de YouTube que transmiten en vivo a tu playlist. El sistema crea URLs proxy estables que se actualizan automáticamente cuando YouTube cambia la URL del stream.</li>
                     <li><strong><Save size={16} className="inline-block mr-1"/> Guardar y Exportar:</strong> Una vez que has terminado de editar, aquí puedes <Download size={16} className="inline-block mx-1"/>descargar el archivo .m3u resultante a tu ordenador o <Upload size={16} className="inline-block mx-1"/>subirlo directamente a tu Dropbox.</li>
                     <li><strong><Settings size={16} className="inline-block mr-1"/> Configuración:</strong> Aquí puedes guardar tus credenciales de Dropbox para no tener que introducirlas cada vez, y también puedes guardar tus URLs de playlists más usadas para cargarlas rápidamente desde el Editor.</li>
                 </ul>
@@ -77,6 +78,37 @@ const HelpTab: React.FC = () => {
                     </li>
                 </ol>
                 <p className="mt-4 font-bold">Ahora podrás subir tus listas a Dropbox desde la pestaña "Guardar y Exportar" con un solo clic.</p>
+            </Section>
+
+            <Section title="Gestión de Canales de YouTube Live" icon={<Youtube className="text-red-500" />}>
+                <p>
+                    La nueva funcionalidad de YouTube Live te permite añadir canales que transmiten en vivo directamente a tu playlist M3U. El sistema crea URLs proxy estables que nunca cambian, pero internamente se actualizan automáticamente cuando YouTube modifica las URLs de los streams.
+                </p>
+                <h4 className="font-semibold mt-4 mb-2">¿Cómo funciona?</h4>
+                <ol>
+                    <li><strong>Extracción automática:</strong> El sistema analiza la página de YouTube y extrae la URL del stream M3U8 en tiempo real.</li>
+                    <li><strong>URL proxy estable:</strong> Se genera una URL proxy única que siempre apunta al stream actual, sin importar que YouTube cambie las URLs internas.</li>
+                    <li><strong>Monitoreo automático:</strong> Una vez al día (a las 6:00 AM UTC), el sistema verifica todos los canales registrados y actualiza automáticamente las URLs de los streams si han cambiado.</li>
+                    <li><strong>Compatibilidad total:</strong> Las URLs proxy son completamente compatibles con cualquier reproductor M3U (VLC, Kodi, TiviMate, etc.).</li>
+                </ol>
+                <h4 className="font-semibold mt-4 mb-2">Pasos para añadir un canal:</h4>
+                <ol>
+                    <li>Ve a la pestaña <strong>"YouTube Live"</strong></li>
+                    <li>Pega la URL del canal de YouTube que esté transmitiendo en vivo</li>
+                    <li>Opcionalmente personaliza el nombre del canal y el grupo</li>
+                    <li>Haz clic en <strong>"Añadir Canal"</strong></li>
+                    <li>El sistema extraerá automáticamente el stream y lo añadirá a tu playlist</li>
+                </ol>
+                <h4 className="font-semibold mt-4 mb-2">Tipos de URLs soportadas:</h4>
+                <ul>
+                    <li><code>https://www.youtube.com/watch?v=VIDEO_ID</code> - Videos/streams específicos</li>
+                    <li><code>https://www.youtube.com/channel/CHANNEL_ID/live</code> - Canal en vivo</li>
+                    <li><code>https://www.youtube.com/@USERNAME/live</code> - Usuario en vivo</li>
+                    <li><code>https://www.youtube.com/c/CHANNEL_NAME/live</code> - Canal personalizado en vivo</li>
+                </ul>
+                <p className="mt-4 text-yellow-400">
+                    <strong>⚠️ Importante:</strong> El canal debe estar transmitiendo en vivo en el momento de añadirlo. Los videos pregrabados o canales offline no funcionarán.
+                </p>
             </Section>
         </div>
     );
