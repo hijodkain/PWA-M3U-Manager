@@ -207,6 +207,26 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                         <Link size={16} />
                     </button>
                 </div>
+                {settingsHook.savedUrls.length > 0 && (
+                    <div className="mb-2">
+                        <select
+                            value=""
+                            onChange={(e) => {
+                                if (e.target.value) {
+                                    setReparacionUrl(e.target.value);
+                                }
+                            }}
+                            className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-1.5 text-white focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        >
+                            <option value="">o selecciona una lista guardada...</option>
+                            {settingsHook.savedUrls.map(item => (
+                                <option key={item.id} value={item.url}>
+                                    {item.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                )}
                 {isCurationLoading && <p className="text-center text-blue-400 mt-2">Cargando lista de recambios...</p>}
                 {curationError && <p className="text-center text-red-400 bg-red-900/50 p-2 rounded mt-2">{curationError}</p>}
                 <input
