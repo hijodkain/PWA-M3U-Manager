@@ -59,7 +59,7 @@ const HelpTab: React.FC = () => {
                         <ul className="list-disc list-inside ml-4">
                             <li>Vuelve a la pestaña <strong>"Settings"</strong>.</li>
                             <li>Busca el campo <strong>"Redirect URIs"</strong> y haz clic en <strong>"Add"</strong>.</li>
-                            <li>Añade la URL exacta donde se ejecuta la aplicación. Si la usas en tu ordenador local, probablemente sea <code>http://localhost:3000</code>.</li>
+                            <li>Añade la URL exacta donde se ejecuta la aplicación. Para la versión en producción usa <code>https://m3umanager.cat</code>. Si la usas en desarrollo local, probablemente sea <code>http://localhost:3000</code>.</li>
                         </ul>
                     </li>
                     <li><strong>Obtén tu App Key:</strong>
