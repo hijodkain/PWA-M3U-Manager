@@ -30,7 +30,7 @@ export default function PWAM3UManager() {
             case 'asignar-epg':
                 return <AsignarEpgTab epgHook={epgHook} channelsHook={channelsHook} settingsHook={settingsHook} />;
             case 'youtube':
-                return <YouTubeTab channels={channelsHook.channels} setChannels={channelsHook.setChannels} />;
+                return <YouTubeTab channels={channelsHook.channels} setChannels={channelsHook.setChannels} settingsHook={settingsHook} />;
             case 'save':
                 return <SaveTab channelsHook={channelsHook} settingsHook={settingsHook} />;
             case 'settings':

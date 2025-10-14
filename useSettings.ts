@@ -70,6 +70,31 @@ export const useSettings = () => {
         }
     }, [savedUrls]);
 
+    const addOrUpdateSavedUrl = useCallback((name: string, url: string) => {
+        if (!name || !url) return;
+        
+        // Buscar si ya existe una URL con ese nombre
+        const existingIndex = savedUrls.findIndex(savedUrl => savedUrl.name === name);
+        
+        let updatedUrls: SavedUrl[];
+        if (existingIndex >= 0) {
+            // Actualizar URL existente
+            updatedUrls = [...savedUrls];
+            updatedUrls[existingIndex] = { ...updatedUrls[existingIndex], url };
+        } else {
+            // Añadir nueva URL
+            const newUrl: SavedUrl = { id: `url-${Date.now()}`, name, url };
+            updatedUrls = [...savedUrls, newUrl];
+        }
+        
+        try {
+            localStorage.setItem(SAVED_URLS_KEY, JSON.stringify(updatedUrls));
+            setSavedUrls(updatedUrls);
+        } catch (error) {
+            console.error("Error saving URL to localStorage", error);
+        }
+    }, [savedUrls]);
+
     const deleteSavedUrl = useCallback((id: string) => {
         const updatedUrls = savedUrls.filter(url => url.id !== id);
         try {
@@ -109,6 +134,7 @@ export const useSettings = () => {
         clearDropboxSettings,
         savedUrls,
         addSavedUrl,
+        addOrUpdateSavedUrl,
         deleteSavedUrl,
         savedEpgUrls,
         addSavedEpgUrl,

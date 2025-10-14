@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Channel } from './index';
+import { SavedUrl } from './useSettings';
 
 interface YouTubeChannel {
     id: string;
@@ -14,8 +15,9 @@ interface YouTubeChannel {
 
 const STORAGE_KEY = 'youtube_channels_list';
 const M3U_FILENAME = 'mis_canales_youtube.m3u';
+const YOUTUBE_PLAYLIST_KEY = 'youtube_playlist_blob_url';
 
-export const useYouTube = () => {
+export const useYouTube = (addOrUpdateSavedUrl?: (name: string, url: string) => void) => {
     const [youtubeChannels, setYoutubeChannels] = useState<YouTubeChannel[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -46,16 +48,29 @@ export const useYouTube = () => {
             m3uContent += `${channel.proxyUrl}\n`;
         });
         
-        // Crear y descargar archivo M3U automáticamente
+        // Crear blob y URL
         const blob = new Blob([m3uContent], { type: 'text/plain;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         
         // Guardar referencia del archivo para poder cargarlo posteriormente
         localStorage.setItem('youtube_m3u_content', m3uContent);
-        localStorage.setItem('youtube_m3u_url', url);
+        
+        // Revocar URL anterior si existe
+        const oldUrl = localStorage.getItem(YOUTUBE_PLAYLIST_KEY);
+        if (oldUrl) {
+            URL.revokeObjectURL(oldUrl);
+        }
+        
+        // Guardar nueva URL
+        localStorage.setItem(YOUTUBE_PLAYLIST_KEY, url);
+        
+        // Añadir/actualizar en playlists guardadas si hay función disponible
+        if (addOrUpdateSavedUrl && updatedChannels.length > 0) {
+            addOrUpdateSavedUrl(M3U_FILENAME, url);
+        }
         
         console.log(`Lista M3U generada con ${updatedChannels.length} canales`);
-    }, []);
+    }, [addOrUpdateSavedUrl]);
 
     const extractYouTubeStream = useCallback(async (url: string): Promise<{ streamUrl: string; title: string; channelName: string }> => {
         setIsLoading(true);
@@ -67,7 +82,7 @@ export const useYouTube = () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ youtube_url: url }),
+                body: JSON.stringify({ url: url }),
             });
 
             if (!response.ok) {

@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { useYouTube } from './useYouTube';
+import { useSettings } from './useSettings';
 import { Channel } from './index';
 import { Youtube, Plus, RefreshCw, Download, Trash2, ExternalLink, CheckCircle, XCircle, Clock } from 'lucide-react';
 
 interface YouTubeTabProps {
     channels: Channel[];
     setChannels: React.Dispatch<React.SetStateAction<Channel[]>>;
+    settingsHook: ReturnType<typeof useSettings>;
 }
 
-export const YouTubeTab: React.FC<YouTubeTabProps> = ({ channels, setChannels }) => {
+export const YouTubeTab: React.FC<YouTubeTabProps> = ({ channels, setChannels, settingsHook }) => {
     const [youtubeUrl, setYoutubeUrl] = useState('');
     const [customName, setCustomName] = useState('');
     const [customGroup, setCustomGroup] = useState('YouTube Live');
@@ -24,7 +26,7 @@ export const YouTubeTab: React.FC<YouTubeTabProps> = ({ channels, setChannels })
         downloadM3UFile,
         refreshChannel,
         m3uFilename
-    } = useYouTube();
+    } = useYouTube(settingsHook.addOrUpdateSavedUrl);
 
     const handleAddChannel = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -81,7 +83,8 @@ export const YouTubeTab: React.FC<YouTubeTabProps> = ({ channels, setChannels })
                 </h3>
                 <p className="text-blue-800 dark:text-blue-200 text-sm mb-3">
                     Los canales que añadas aquí se guardarán automáticamente en una lista M3U persistente. 
-                    Esta lista se mantiene entre sesiones y puede ser cargada en la pestaña "Reparación" para gestionar tus canales de YouTube.
+                    Esta lista se guarda automáticamente en la pestaña <strong>"Configuración"</strong> bajo "Playlists Guardadas" 
+                    y puede ser cargada en la pestaña "Reparación" para gestionar tus canales de YouTube.
                 </p>
                 <div className="flex gap-2">
                     <button
@@ -246,8 +249,9 @@ export const YouTubeTab: React.FC<YouTubeTabProps> = ({ channels, setChannels })
                     <li>• Solo funcionan canales que estén transmitiendo en vivo</li>
                     <li>• Los canales se verifican automáticamente cada día a las 6:00 AM UTC</li>
                     <li>• Las URLs proxy son estables y nunca cambian</li>
-                    <li>• La lista {m3uFilename} se puede cargar en cualquier reproductor M3U</li>
+                    <li>• La lista {m3uFilename} se guarda automáticamente en "Configuración" → "Playlists Guardadas"</li>
                     <li>• Los canales persisten entre sesiones del navegador</li>
+                    <li>• Puedes cargar la lista desde "Configuración" en la pestaña "Reparación"</li>
                 </ul>
             </div>
         </div>
