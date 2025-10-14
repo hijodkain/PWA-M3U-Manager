@@ -12,6 +12,7 @@ export const YouTubeTab: React.FC<YouTubeTabProps> = ({ channels, setChannels })
     const [youtubeUrl, setYoutubeUrl] = useState('');
     const [customName, setCustomName] = useState('');
     const [customGroup, setCustomGroup] = useState('YouTube Live');
+    const [customLogo, setCustomLogo] = useState('');
     
     const {
         channels: youtubeChannels,
@@ -34,6 +35,7 @@ export const YouTubeTab: React.FC<YouTubeTabProps> = ({ channels, setChannels })
                 youtubeUrl.trim(),
                 customName.trim() || undefined,
                 customGroup.trim() || undefined,
+                customLogo.trim() || undefined,
                 setChannels
             );
             
@@ -41,6 +43,7 @@ export const YouTubeTab: React.FC<YouTubeTabProps> = ({ channels, setChannels })
             setYoutubeUrl('');
             setCustomName('');
             setCustomGroup('YouTube Live');
+            setCustomLogo('');
         } catch (error) {
             console.error('Error adding YouTube channel:', error);
         }
@@ -117,7 +120,7 @@ export const YouTubeTab: React.FC<YouTubeTabProps> = ({ channels, setChannels })
                     />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                         <label htmlFor="custom-name" className="block text-sm font-medium mb-1">
                             Nombre personalizado (opcional)
@@ -142,6 +145,20 @@ export const YouTubeTab: React.FC<YouTubeTabProps> = ({ channels, setChannels })
                             value={customGroup}
                             onChange={(e) => setCustomGroup(e.target.value)}
                             placeholder="YouTube Live"
+                            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
+                        />
+                    </div>
+
+                    <div>
+                        <label htmlFor="custom-logo" className="block text-sm font-medium mb-1">
+                            URL del Logo (opcional)
+                        </label>
+                        <input
+                            id="custom-logo"
+                            type="url"
+                            value={customLogo}
+                            onChange={(e) => setCustomLogo(e.target.value)}
+                            placeholder="https://ejemplo.com/logo.png"
                             className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
                         />
                     </div>

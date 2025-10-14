@@ -7,6 +7,7 @@ interface YouTubeChannel {
     group: string;
     url: string;
     proxyUrl: string;
+    logo: string;
     status: 'active' | 'error' | 'checking';
     lastChecked: string;
 }
@@ -15,7 +16,7 @@ const STORAGE_KEY = 'youtube_channels_list';
 const M3U_FILENAME = 'mis_canales_youtube.m3u';
 
 export const useYouTube = () => {
-    const [channels, setChannels] = useState<YouTubeChannel[]>([]);
+    const [youtubeChannels, setYoutubeChannels] = useState<YouTubeChannel[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -25,7 +26,7 @@ export const useYouTube = () => {
         if (savedChannels) {
             try {
                 const parsedChannels = JSON.parse(savedChannels);
-                setChannels(parsedChannels);
+                setYoutubeChannels(parsedChannels);
             } catch (error) {
                 console.error('Error loading saved YouTube channels:', error);
             }
@@ -40,7 +41,8 @@ export const useYouTube = () => {
         // Generar contenido M3U
         let m3uContent = '#EXTM3U\n';
         updatedChannels.forEach(channel => {
-            m3uContent += `#EXTINF:-1 tvg-name="${channel.name}" group-title="${channel.group}",${channel.name}\n`;
+            const logoAttr = channel.logo ? ` tvg-logo="${channel.logo}"` : '';
+            m3uContent += `#EXTINF:-1 tvg-name="${channel.name}" group-title="${channel.group}"${logoAttr},${channel.name}\n`;
             m3uContent += `${channel.proxyUrl}\n`;
         });
         
@@ -128,6 +130,7 @@ export const useYouTube = () => {
         youtubeUrl: string,
         customName?: string,
         customGroup?: string,
+        customLogo?: string,
         setChannels?: (channels: Channel[] | ((prev: Channel[]) => Channel[])) => void
     ) => {
         setIsLoading(true);
@@ -147,14 +150,15 @@ export const useYouTube = () => {
                 group: customGroup || 'YouTube Live',
                 url: youtubeUrl,
                 proxyUrl: proxyUrl,
+                logo: customLogo || '',
                 status: 'active',
                 lastChecked: new Date().toISOString()
             };
 
             // 4. Añadir a la lista de canales de YouTube y guardar
-            const updatedChannels = [...channels, youtubeChannel];
-            setChannels(updatedChannels);
-            saveChannelsAndGenerateM3U(updatedChannels);
+            const updatedYouTubeChannels = [...youtubeChannels, youtubeChannel];
+            setYoutubeChannels(updatedYouTubeChannels);
+            saveChannelsAndGenerateM3U(updatedYouTubeChannels);
 
             // 5. Añadir al playlist principal si se proporcionó setChannels
             if (setChannels) {
@@ -164,9 +168,9 @@ export const useYouTube = () => {
                     name: youtubeChannel.name,
                     groupTitle: youtubeChannel.group,
                     url: youtubeChannel.proxyUrl,
-                    tvgLogo: '',
+                    tvgLogo: youtubeChannel.logo,
                     tvgId: '',
-                    tvgName: youtubeChannel.name,
+                    tvgName: '',
                     status: 'ok'
                 };
 
@@ -181,13 +185,13 @@ export const useYouTube = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [channels, extractYouTubeStream, createProxyChannel, saveChannelsAndGenerateM3U]);
+    }, [youtubeChannels, extractYouTubeStream, createProxyChannel, saveChannelsAndGenerateM3U]);
 
     const removeYouTubeChannel = useCallback((channelId: string) => {
-        const updatedChannels = channels.filter(channel => channel.id !== channelId);
-        setChannels(updatedChannels);
+        const updatedChannels = youtubeChannels.filter(channel => channel.id !== channelId);
+        setYoutubeChannels(updatedChannels);
         saveChannelsAndGenerateM3U(updatedChannels);
-    }, [channels, saveChannelsAndGenerateM3U]);
+    }, [youtubeChannels, saveChannelsAndGenerateM3U]);
 
     const getM3UContent = useCallback(() => {
         return localStorage.getItem('youtube_m3u_content') || '';
@@ -209,34 +213,34 @@ export const useYouTube = () => {
     }, [getM3UContent]);
 
     const refreshChannel = useCallback(async (channelId: string) => {
-        const channel = channels.find(ch => ch.id === channelId);
+        const channel = youtubeChannels.find(ch => ch.id === channelId);
         if (!channel) return;
 
         try {
-            setChannels(prev => prev.map(ch => 
+            setYoutubeChannels(prev => prev.map(ch => 
                 ch.id === channelId ? { ...ch, status: 'checking' } : ch
             ));
 
             const { streamUrl } = await extractYouTubeStream(channel.url);
             const proxyUrl = await createProxyChannel(channel.url, streamUrl, channel.name);
 
-            const updatedChannels = channels.map(ch => 
+            const updatedChannels = youtubeChannels.map(ch => 
                 ch.id === channelId 
                     ? { ...ch, proxyUrl, status: 'active' as const, lastChecked: new Date().toISOString() }
                     : ch
             );
             
-            setChannels(updatedChannels);
+            setYoutubeChannels(updatedChannels);
             saveChannelsAndGenerateM3U(updatedChannels);
         } catch (error) {
-            setChannels(prev => prev.map(ch => 
+            setYoutubeChannels(prev => prev.map(ch => 
                 ch.id === channelId ? { ...ch, status: 'error' } : ch
             ));
         }
-    }, [channels, extractYouTubeStream, createProxyChannel, saveChannelsAndGenerateM3U]);
+    }, [youtubeChannels, extractYouTubeStream, createProxyChannel, saveChannelsAndGenerateM3U]);
 
     return {
-        channels,
+        channels: youtubeChannels,
         isLoading,
         error,
         extractYouTubeStream,
