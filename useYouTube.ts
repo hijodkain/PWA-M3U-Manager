@@ -14,7 +14,7 @@ interface YouTubeChannel {
 }
 
 const STORAGE_KEY = 'youtube_channels_list';
-const M3U_FILENAME = 'mis_canales_youtube.m3u';
+const M3U_FILENAME = 'YouTube Live';
 const YOUTUBE_PLAYLIST_KEY = 'youtube_playlist_blob_url';
 
 export const useYouTube = (addOrUpdateSavedUrl?: (name: string, url: string) => void) => {
@@ -22,18 +22,45 @@ export const useYouTube = (addOrUpdateSavedUrl?: (name: string, url: string) => 
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Cargar canales del localStorage al iniciar
+    // Cargar canales del localStorage al iniciar y crear lista precargada
     useEffect(() => {
         const savedChannels = localStorage.getItem(STORAGE_KEY);
         if (savedChannels) {
             try {
                 const parsedChannels = JSON.parse(savedChannels);
                 setYoutubeChannels(parsedChannels);
+                // Regenerar la lista M3U con los canales existentes
+                if (parsedChannels.length > 0) {
+                    saveChannelsAndGenerateM3U(parsedChannels);
+                } else {
+                    initializeEmptyPlaylist();
+                }
             } catch (error) {
                 console.error('Error loading saved YouTube channels:', error);
+                initializeEmptyPlaylist();
             }
+        } else {
+            // Si no hay canales guardados, crear lista precargada vacía
+            initializeEmptyPlaylist();
         }
     }, []);
+
+    // Función para inicializar lista vacía precargada
+    const initializeEmptyPlaylist = useCallback(() => {
+        const emptyM3uContent = '#EXTM3U\n# Lista de canales de YouTube Live\n# Esta lista se actualizará automáticamente cuando añadas canales\n';
+        const blob = new Blob([emptyM3uContent], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        
+        localStorage.setItem('youtube_m3u_content', emptyM3uContent);
+        localStorage.setItem(YOUTUBE_PLAYLIST_KEY, url);
+        
+        // Añadir lista precargada vacía a playlists guardadas
+        if (addOrUpdateSavedUrl) {
+            addOrUpdateSavedUrl(M3U_FILENAME, url);
+        }
+        
+        console.log('Lista de YouTube Live inicializada y guardada en Configuración');
+    }, [addOrUpdateSavedUrl]);
 
     // Guardar canales en localStorage y generar archivo M3U
     const saveChannelsAndGenerateM3U = useCallback((updatedChannels: YouTubeChannel[]) => {
@@ -42,11 +69,16 @@ export const useYouTube = (addOrUpdateSavedUrl?: (name: string, url: string) => 
         
         // Generar contenido M3U
         let m3uContent = '#EXTM3U\n';
-        updatedChannels.forEach(channel => {
-            const logoAttr = channel.logo ? ` tvg-logo="${channel.logo}"` : '';
-            m3uContent += `#EXTINF:-1 tvg-name="${channel.name}" group-title="${channel.group}"${logoAttr},${channel.name}\n`;
-            m3uContent += `${channel.proxyUrl}\n`;
-        });
+        if (updatedChannels.length === 0) {
+            m3uContent += '# Lista de canales de YouTube Live\n';
+            m3uContent += '# Esta lista se actualizará automáticamente cuando añadas canales\n';
+        } else {
+            updatedChannels.forEach(channel => {
+                const logoAttr = channel.logo ? ` tvg-logo="${channel.logo}"` : '';
+                m3uContent += `#EXTINF:-1 tvg-name="${channel.name}" group-title="${channel.group}"${logoAttr},${channel.name}\n`;
+                m3uContent += `${channel.proxyUrl}\n`;
+            });
+        }
         
         // Crear blob y URL
         const blob = new Blob([m3uContent], { type: 'text/plain;charset=utf-8' });
@@ -65,7 +97,7 @@ export const useYouTube = (addOrUpdateSavedUrl?: (name: string, url: string) => 
         localStorage.setItem(YOUTUBE_PLAYLIST_KEY, url);
         
         // Añadir/actualizar en playlists guardadas si hay función disponible
-        if (addOrUpdateSavedUrl && updatedChannels.length > 0) {
+        if (addOrUpdateSavedUrl) {
             addOrUpdateSavedUrl(M3U_FILENAME, url);
         }
         
@@ -152,21 +184,48 @@ export const useYouTube = (addOrUpdateSavedUrl?: (name: string, url: string) => 
         setError(null);
 
         try {
-            // 1. Extraer información del stream
-            const { streamUrl, title, channelName } = await extractYouTubeStream(youtubeUrl);
+            // 1. Intentar extraer información del stream
+            let streamUrl = '';
+            let title = customName || 'Canal de YouTube';
+            let channelName = '';
             
-            // 2. Crear canal proxy
-            const proxyUrl = await createProxyChannel(youtubeUrl, streamUrl, title);
+            try {
+                const result = await extractYouTubeStream(youtubeUrl);
+                streamUrl = result.streamUrl;
+                title = customName || result.title;
+                channelName = result.channelName;
+            } catch (extractError) {
+                console.warn('No se pudo extraer el stream, usando datos manuales:', extractError);
+                // Continuar sin stream, será un placeholder que se actualizará cuando esté en vivo
+                streamUrl = ''; // URL vacía, se actualizará con el monitor diario
+            }
+            
+            // 2. Crear canal proxy (aunque no tengamos stream actual)
+            let proxyUrl = '';
+            if (streamUrl) {
+                try {
+                    proxyUrl = await createProxyChannel(youtubeUrl, streamUrl, title);
+                } catch (proxyError) {
+                    console.warn('Error creando proxy, usando URL directa:', proxyError);
+                }
+            }
+            
+            // Si no tenemos proxy, crear una URL placeholder que apunte al canal
+            if (!proxyUrl) {
+                // Generar un ID único para el canal
+                const channelId = `yt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                proxyUrl = `/api/youtube_proxy?id=${channelId}&youtube_url=${encodeURIComponent(youtubeUrl)}`;
+            }
             
             // 3. Crear objeto de canal para YouTube
             const youtubeChannel: YouTubeChannel = {
                 id: `youtube_${Date.now()}`,
-                name: customName || title,
+                name: title,
                 group: customGroup || 'YouTube Live',
                 url: youtubeUrl,
                 proxyUrl: proxyUrl,
                 logo: customLogo || '',
-                status: 'active',
+                status: streamUrl ? 'active' : 'checking',
                 lastChecked: new Date().toISOString()
             };
 
@@ -186,7 +245,7 @@ export const useYouTube = (addOrUpdateSavedUrl?: (name: string, url: string) => 
                     tvgLogo: youtubeChannel.logo,
                     tvgId: '',
                     tvgName: '',
-                    status: 'ok'
+                    status: streamUrl ? 'ok' : 'pending'
                 };
 
                 setChannels(prev => [...prev, playlistChannel]);

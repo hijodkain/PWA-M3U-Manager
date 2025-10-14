@@ -83,21 +83,21 @@ export const YouTubeTab: React.FC<YouTubeTabProps> = ({ channels, setChannels, s
                 </h3>
                 <p className="text-blue-800 dark:text-blue-200 text-sm mb-3">
                     Los canales que añadas aquí se guardarán automáticamente en una lista M3U persistente. 
-                    Esta lista se guarda automáticamente en la pestaña <strong>"Configuración"</strong> bajo "Playlists Guardadas" 
-                    y puede ser cargada en la pestaña "Reparación" para gestionar tus canales de YouTube.
+                    La lista <strong>"{m3uFilename}"</strong> se crea automáticamente en la pestaña <strong>"Configuración"</strong> bajo "Playlists Guardadas" 
+                    y puede ser cargada en la pestaña "Reparación". Los canales se añaden aunque no estén en vivo en ese momento 
+                    y se actualizan automáticamente cuando transmitan.
                 </p>
                 <div className="flex gap-2">
                     <button
                         onClick={downloadM3UFile}
-                        disabled={youtubeChannels.length === 0}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                        className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
                     >
                         <Download className="w-4 h-4" />
                         Descargar Lista ({youtubeChannels.length})
                     </button>
                     <div className="text-sm text-blue-700 dark:text-blue-300 flex items-center">
                         {youtubeChannels.length === 0 ? 
-                            'No hay canales guardados' : 
+                            'Lista vacía creada y guardada en Configuración' : 
                             `${youtubeChannels.length} canal${youtubeChannels.length !== 1 ? 'es' : ''} en la lista`
                         }
                     </div>
@@ -118,7 +118,7 @@ export const YouTubeTab: React.FC<YouTubeTabProps> = ({ channels, setChannels, s
                         value={youtubeUrl}
                         onChange={(e) => setYoutubeUrl(e.target.value)}
                         placeholder="https://www.youtube.com/watch?v=... o https://www.youtube.com/@canal/live"
-                        className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
+                        className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-black dark:text-white"
                         required
                     />
                 </div>
@@ -134,7 +134,7 @@ export const YouTubeTab: React.FC<YouTubeTabProps> = ({ channels, setChannels, s
                             value={customName}
                             onChange={(e) => setCustomName(e.target.value)}
                             placeholder="Se usará el título del stream si se deja vacío"
-                            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
+                            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-black dark:text-white"
                         />
                     </div>
 
@@ -148,7 +148,7 @@ export const YouTubeTab: React.FC<YouTubeTabProps> = ({ channels, setChannels, s
                             value={customGroup}
                             onChange={(e) => setCustomGroup(e.target.value)}
                             placeholder="YouTube Live"
-                            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
+                            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-black dark:text-white"
                         />
                     </div>
 
@@ -162,7 +162,7 @@ export const YouTubeTab: React.FC<YouTubeTabProps> = ({ channels, setChannels, s
                             value={customLogo}
                             onChange={(e) => setCustomLogo(e.target.value)}
                             placeholder="https://ejemplo.com/logo.png"
-                            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
+                            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-black dark:text-white"
                         />
                     </div>
                 </div>
@@ -246,12 +246,13 @@ export const YouTubeTab: React.FC<YouTubeTabProps> = ({ channels, setChannels, s
             <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
                 <h3 className="font-semibold mb-2">ℹ️ Información</h3>
                 <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                    <li>• Solo funcionan canales que estén transmitiendo en vivo</li>
-                    <li>• Los canales se verifican automáticamente cada día a las 6:00 AM UTC</li>
+                    <li>• Los canales se pueden añadir aunque no estén transmitiendo en vivo</li>
+                    <li>• Se verifican automáticamente cada día a las 6:00 AM UTC</li>
                     <li>• Las URLs proxy son estables y nunca cambian</li>
-                    <li>• La lista {m3uFilename} se guarda automáticamente en "Configuración" → "Playlists Guardadas"</li>
+                    <li>• La lista "{m3uFilename}" se crea automáticamente en "Configuración" → "Playlists Guardadas"</li>
                     <li>• Los canales persisten entre sesiones del navegador</li>
                     <li>• Puedes cargar la lista desde "Configuración" en la pestaña "Reparación"</li>
+                    <li>• Los streams se actualizan automáticamente cuando los canales empiecen a transmitir</li>
                 </ul>
             </div>
         </div>
