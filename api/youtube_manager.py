@@ -31,13 +31,23 @@ class handler(BaseHTTPRequestHandler):
                 channel_id = hashlib.md5(f"{youtube_url}_{channel_name}_{int(time.time())}".encode()).hexdigest()[:8]
                 
                 # La URL proxy que será estable
-                proxy_url = f"{self.headers.get('host', 'localhost')}/api/youtube_proxy?id={channel_id}"
+                host = self.headers.get('host', 'localhost')
+                
+                # Detectar si es HTTPS basándose en el host o headers
+                is_https = (
+                    host.startswith('m3umanager.cat') or 
+                    self.headers.get('x-forwarded-proto') == 'https' or
+                    self.headers.get('x-forwarded-ssl') == 'on'
+                )
+                protocol = 'https' if is_https else 'http'
+                
+                proxy_url = f"{protocol}://{host}/api/youtube_proxy?id={channel_id}"
                 
                 # En una implementación real, esto se guardaría en una base de datos
                 # Por ahora, devolvemos la información para que el frontend la maneje
                 result = {
                     'success': True,
-                    'proxy_url': f"http://{proxy_url}",
+                    'proxy_url': proxy_url,
                     'channel_id': channel_id,
                     'youtube_url': youtube_url,
                     'channel_name': channel_name,

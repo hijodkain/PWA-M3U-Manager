@@ -214,7 +214,13 @@ export const useYouTube = (addOrUpdateSavedUrl?: (name: string, url: string) => 
             if (!proxyUrl) {
                 // Generar un ID único para el canal
                 const channelId = `yt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-                proxyUrl = `/api/youtube_proxy?id=${channelId}&youtube_url=${encodeURIComponent(youtubeUrl)}`;
+                // Usar URL absoluta para compatibilidad con reproductores externos
+                const baseUrl = window.location.origin;
+                proxyUrl = `${baseUrl}/api/youtube_proxy?id=${channelId}&youtube_url=${encodeURIComponent(youtubeUrl)}`;
+            } else if (proxyUrl.startsWith('/')) {
+                // Si el proxy devuelve una URL relativa, convertirla a absoluta
+                const baseUrl = window.location.origin;
+                proxyUrl = `${baseUrl}${proxyUrl}`;
             }
             
             // 3. Crear objeto de canal para YouTube
@@ -296,7 +302,13 @@ export const useYouTube = (addOrUpdateSavedUrl?: (name: string, url: string) => 
             ));
 
             const { streamUrl } = await extractYouTubeStream(channel.url);
-            const proxyUrl = await createProxyChannel(channel.url, streamUrl, channel.name);
+            let proxyUrl = await createProxyChannel(channel.url, streamUrl, channel.name);
+            
+            // Asegurar que la URL sea absoluta
+            if (proxyUrl.startsWith('/')) {
+                const baseUrl = window.location.origin;
+                proxyUrl = `${baseUrl}${proxyUrl}`;
+            }
 
             const updatedChannels = youtubeChannels.map(ch => 
                 ch.id === channelId 

@@ -87,6 +87,26 @@ export const useReparacion = (
         setIsCurationLoading(true);
         setCurationError(null);
         try {
+            // Detectar si es una URL blob (generada por YouTube Live)
+            if (reparacionUrl.startsWith('blob:')) {
+                // Para URLs blob, usar el contenido guardado en localStorage
+                const youtubeContent = localStorage.getItem('youtube_m3u_content');
+                if (youtubeContent) {
+                    processCurationM3U(youtubeContent);
+                    return;
+                } else {
+                    // Si no hay contenido guardado, intentar fetch directo de la URL blob
+                    const response = await fetch(reparacionUrl);
+                    if (!response.ok) {
+                        throw new Error(`Error al cargar la lista: ${response.statusText}`);
+                    }
+                    const text = await response.text();
+                    processCurationM3U(text);
+                    return;
+                }
+            }
+            
+            // Para URLs normales, usar el proxy como antes
             const proxyUrl = `/api/proxy?url=${encodeURIComponent(reparacionUrl)}`;
             const response = await fetch(proxyUrl);
             if (!response.ok) {
