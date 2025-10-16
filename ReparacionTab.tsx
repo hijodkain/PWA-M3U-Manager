@@ -82,11 +82,23 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
     ];
 
     const cleanChannelNameForSearch = (name: string): string => {
-        const regex = new RegExp(
-            '\\s*[\\(\[|]*\\s*(4K|UHD|FHD|HD|SD|HEVC|H265|H264|x265|x264|1080p|720p|DUAL|MULTI)\\s*[\\)\]|]*$',
-            'i'
-        );
-        return name.replace(regex, '').trim();
+        let cleanedName = name;
+        
+        // Eliminar prefijos configurables
+        settingsHook.channelPrefixes.forEach(prefix => {
+            if (cleanedName.toLowerCase().startsWith(prefix.toLowerCase())) {
+                cleanedName = cleanedName.substring(prefix.length);
+            }
+        });
+        
+        // Eliminar sufijos configurables
+        settingsHook.channelSuffixes.forEach(suffix => {
+            if (cleanedName.toLowerCase().endsWith(suffix.toLowerCase())) {
+                cleanedName = cleanedName.substring(0, cleanedName.length - suffix.length);
+            }
+        });
+        
+        return cleanedName.trim();
     };
 
     const isAllInGroupSelected = filteredReparacionChannels.length > 0 && filteredReparacionChannels.every(c => selectedReparacionChannels.has(c.id));

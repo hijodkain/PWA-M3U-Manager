@@ -10,12 +10,24 @@ const DB_APP_KEY = 'dropbox_app_key';
 const DB_REFRESH_TOKEN_KEY = 'dropbox_refresh_token';
 const SAVED_URLS_KEY = 'saved_urls';
 const SAVED_EPG_URLS_KEY = 'saved_epg_urls';
+const CHANNEL_PREFIXES_KEY = 'channel_prefixes';
+const CHANNEL_SUFFIXES_KEY = 'channel_suffixes';
+
+// Prefijos y sufijos por defecto
+const DEFAULT_PREFIXES = ['HD ', 'FHD ', 'UHD ', '4K ', 'SD '];
+const DEFAULT_SUFFIXES = [
+    ' 4K', ' UHD', ' FHD', ' HD', ' SD', ' HEVC', ' H265', ' H264', ' x265', ' x264', 
+    ' 1080p', ' 720p', ' DUAL', ' MULTI', ' (4K)', ' (UHD)', ' (FHD)', ' (HD)', ' (SD)',
+    ' [4K]', ' [UHD]', ' [FHD]', ' [HD]', ' [SD]', ' |4K', ' |UHD', ' |FHD', ' |HD', ' |SD'
+];
 
 export const useSettings = () => {
     const [dropboxAppKey, setDropboxAppKey] = useState('');
     const [dropboxRefreshToken, setDropboxRefreshToken] = useState('');
     const [savedUrls, setSavedUrls] = useState<SavedUrl[]>([]);
     const [savedEpgUrls, setSavedEpgUrls] = useState<SavedUrl[]>([]);
+    const [channelPrefixes, setChannelPrefixes] = useState<string[]>(DEFAULT_PREFIXES);
+    const [channelSuffixes, setChannelSuffixes] = useState<string[]>(DEFAULT_SUFFIXES);
 
     useEffect(() => {
         try {
@@ -30,6 +42,16 @@ export const useSettings = () => {
             const savedEpgUrlsJson = localStorage.getItem(SAVED_EPG_URLS_KEY);
             if (savedEpgUrlsJson) {
                 setSavedEpgUrls(JSON.parse(savedEpgUrlsJson));
+            }
+
+            const savedPrefixesJson = localStorage.getItem(CHANNEL_PREFIXES_KEY);
+            if (savedPrefixesJson) {
+                setChannelPrefixes(JSON.parse(savedPrefixesJson));
+            }
+
+            const savedSuffixesJson = localStorage.getItem(CHANNEL_SUFFIXES_KEY);
+            if (savedSuffixesJson) {
+                setChannelSuffixes(JSON.parse(savedSuffixesJson));
             }
         } catch (error) {
             console.error("Error loading settings from localStorage", error);
@@ -55,6 +77,35 @@ export const useSettings = () => {
             setDropboxRefreshToken('');
         } catch (error) {
             console.error("Error clearing Dropbox settings from localStorage", error);
+        }
+    }, []);
+
+    const updateChannelPrefixes = useCallback((prefixes: string[]) => {
+        try {
+            localStorage.setItem(CHANNEL_PREFIXES_KEY, JSON.stringify(prefixes));
+            setChannelPrefixes(prefixes);
+        } catch (error) {
+            console.error("Error saving channel prefixes to localStorage", error);
+        }
+    }, []);
+
+    const updateChannelSuffixes = useCallback((suffixes: string[]) => {
+        try {
+            localStorage.setItem(CHANNEL_SUFFIXES_KEY, JSON.stringify(suffixes));
+            setChannelSuffixes(suffixes);
+        } catch (error) {
+            console.error("Error saving channel suffixes to localStorage", error);
+        }
+    }, []);
+
+    const resetChannelPrefixesAndSuffixes = useCallback(() => {
+        try {
+            localStorage.setItem(CHANNEL_PREFIXES_KEY, JSON.stringify(DEFAULT_PREFIXES));
+            localStorage.setItem(CHANNEL_SUFFIXES_KEY, JSON.stringify(DEFAULT_SUFFIXES));
+            setChannelPrefixes(DEFAULT_PREFIXES);
+            setChannelSuffixes(DEFAULT_SUFFIXES);
+        } catch (error) {
+            console.error("Error resetting channel prefixes and suffixes", error);
         }
     }, []);
 
@@ -139,5 +190,10 @@ export const useSettings = () => {
         savedEpgUrls,
         addSavedEpgUrl,
         deleteSavedEpgUrl,
+        channelPrefixes,
+        channelSuffixes,
+        updateChannelPrefixes,
+        updateChannelSuffixes,
+        resetChannelPrefixesAndSuffixes,
     };
 };

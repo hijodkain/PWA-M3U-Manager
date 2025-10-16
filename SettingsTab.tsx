@@ -39,6 +39,11 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
         savedEpgUrls,
         addSavedEpgUrl,
         deleteSavedEpgUrl,
+        channelPrefixes,
+        channelSuffixes,
+        updateChannelPrefixes,
+        updateChannelSuffixes,
+        resetChannelPrefixesAndSuffixes,
     } = settingsHook;
 
     const [appKey, setAppKey] = useState(dropboxAppKey);
@@ -47,6 +52,8 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
     const [newEpgUrlName, setNewEpgUrlName] = useState('');
     const [newEpgUrl, setNewEpgUrl] = useState('');
     const [authStatus, setAuthStatus] = useState('');
+    const [newPrefix, setNewPrefix] = useState('');
+    const [newSuffix, setNewSuffix] = useState('');
 
     useEffect(() => {
         setAppKey(dropboxAppKey);
@@ -110,6 +117,30 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
             setNewEpgUrlName('');
             setNewEpgUrl('');
         }
+    };
+
+    const handleAddPrefix = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (newPrefix.trim() && !channelPrefixes.includes(newPrefix.trim())) {
+            updateChannelPrefixes([...channelPrefixes, newPrefix.trim()]);
+            setNewPrefix('');
+        }
+    };
+
+    const handleRemovePrefix = (prefixToRemove: string) => {
+        updateChannelPrefixes(channelPrefixes.filter(prefix => prefix !== prefixToRemove));
+    };
+
+    const handleAddSuffix = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (newSuffix.trim() && !channelSuffixes.includes(newSuffix.trim())) {
+            updateChannelSuffixes([...channelSuffixes, newSuffix.trim()]);
+            setNewSuffix('');
+        }
+    };
+
+    const handleRemoveSuffix = (suffixToRemove: string) => {
+        updateChannelSuffixes(channelSuffixes.filter(suffix => suffix !== suffixToRemove));
     };
 
     // This effect runs on component mount and handles the redirect back from Dropbox
@@ -321,6 +352,90 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
                     ) : (
                         <p className="text-gray-400">No tienes ninguna fuente EPG guardada.</p>
                     )}
+                </div>
+            </div>
+
+            {/* Sección de Prefijos y Sufijos de Canales */}
+            <div>
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-bold">Filtros de Nombres de Canales</h2>
+                    <button
+                        onClick={resetChannelPrefixesAndSuffixes}
+                        className="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-md text-sm"
+                    >
+                        Restablecer por defecto
+                    </button>
+                </div>
+                <p className="text-gray-400 text-sm mb-6">
+                    Configura los prefijos y sufijos que se eliminarán automáticamente del nombre del canal cuando hagas clic en él para buscar en la pestaña de Reparación.
+                </p>
+
+                {/* Prefijos */}
+                <div className="mb-6">
+                    <h3 className="text-lg font-semibold mb-3">Prefijos (se eliminan del inicio)</h3>
+                    <form onSubmit={handleAddPrefix} className="flex gap-2 mb-4">
+                        <input
+                            type="text"
+                            value={newPrefix}
+                            onChange={(e) => setNewPrefix(e.target.value)}
+                            placeholder="Ej: HD , FHD , 4K "
+                            className="flex-1 bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-blue-500 focus:border-blue-500"
+                        />
+                        <button
+                            type="submit"
+                            className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md flex items-center"
+                        >
+                            <PlusCircle size={18} className="mr-2" />
+                            Agregar
+                        </button>
+                    </form>
+                    <div className="flex flex-wrap gap-2">
+                        {channelPrefixes.map(prefix => (
+                            <div key={prefix} className="bg-gray-700 px-3 py-1 rounded-full flex items-center gap-2">
+                                <span className="text-sm">"{prefix}"</span>
+                                <button
+                                    onClick={() => handleRemovePrefix(prefix)}
+                                    className="text-red-400 hover:text-red-600"
+                                >
+                                    <XCircle size={14} />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Sufijos */}
+                <div>
+                    <h3 className="text-lg font-semibold mb-3">Sufijos (se eliminan del final)</h3>
+                    <form onSubmit={handleAddSuffix} className="flex gap-2 mb-4">
+                        <input
+                            type="text"
+                            value={newSuffix}
+                            onChange={(e) => setNewSuffix(e.target.value)}
+                            placeholder="Ej:  HD,  4K,  (HD),  [FHD]"
+                            className="flex-1 bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-blue-500 focus:border-blue-500"
+                        />
+                        <button
+                            type="submit"
+                            className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md flex items-center"
+                        >
+                            <PlusCircle size={18} className="mr-2" />
+                            Agregar
+                        </button>
+                    </form>
+                    <div className="flex flex-wrap gap-2">
+                        {channelSuffixes.map(suffix => (
+                            <div key={suffix} className="bg-gray-700 px-3 py-1 rounded-full flex items-center gap-2">
+                                <span className="text-sm">"{suffix}"</span>
+                                <button
+                                    onClick={() => handleRemoveSuffix(suffix)}
+                                    className="text-red-400 hover:text-red-600"
+                                >
+                                    <XCircle size={14} />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
         </div>
