@@ -81,7 +81,7 @@ export const useYouTube = (addOrUpdateSavedUrl?: (name: string, url: string) => 
         }
         
         // Crear blob y URL
-        const blob = new Blob([m3uContent], { type: 'text/plain;charset=utf-8' });
+        const blob = new Blob([m3uContent], { type: 'application/x-mpegurl;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         
         // Guardar referencia del archivo para poder cargarlo posteriormente
@@ -274,11 +274,11 @@ export const useYouTube = (addOrUpdateSavedUrl?: (name: string, url: string) => 
     const downloadM3UFile = useCallback(() => {
         const content = getM3UContent();
         if (content) {
-            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const blob = new Blob([content], { type: 'application/x-mpegurl;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = M3U_FILENAME;
+            link.download = `${M3U_FILENAME}.m3u`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);

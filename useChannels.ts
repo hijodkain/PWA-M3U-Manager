@@ -78,6 +78,28 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
         setIsLoading(true);
         setError(null);
         try {
+            // Detectar si es una URL blob (generada por YouTube Live)
+            if (url.startsWith('blob:')) {
+                // Para URLs blob, usar el contenido guardado en localStorage
+                const youtubeContent = localStorage.getItem('youtube_m3u_content');
+                if (youtubeContent) {
+                    processM3UContent(youtubeContent);
+                    setFileName('YouTube Live');
+                    return;
+                } else {
+                    // Si no hay contenido guardado, intentar fetch directo de la URL blob
+                    const response = await fetch(url);
+                    if (!response.ok) {
+                        throw new Error(`Error al cargar la lista: ${response.statusText}`);
+                    }
+                    const text = await response.text();
+                    processM3UContent(text);
+                    setFileName('YouTube Live');
+                    return;
+                }
+            }
+            
+            // Para URLs normales, usar el proxy como antes
             const proxyUrl = `/api/proxy?url=${encodeURIComponent(url)}`;
             const response = await fetch(proxyUrl);
             if (!response.ok) {
