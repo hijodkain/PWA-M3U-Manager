@@ -8,6 +8,7 @@ interface YouTubeChannel {
     group: string;
     url: string;
     proxyUrl: string;
+    streamUrl?: string; // URL directa del stream .m3u8
     logo: string;
     status: 'active' | 'error' | 'checking';
     lastChecked: string;
@@ -76,7 +77,8 @@ export const useYouTube = (addOrUpdateSavedUrl?: (name: string, url: string) => 
             updatedChannels.forEach(channel => {
                 const logoAttr = channel.logo ? ` tvg-logo="${channel.logo}"` : '';
                 m3uContent += `#EXTINF:-1 tvg-name="${channel.name}" group-title="${channel.group}"${logoAttr},${channel.name}\n`;
-                m3uContent += `${channel.proxyUrl}\n`;
+                // Usar directamente la URL del stream .m3u8 extraída
+                m3uContent += `${channel.streamUrl || channel.url}\n`;
             });
         }
         
@@ -141,38 +143,6 @@ export const useYouTube = (addOrUpdateSavedUrl?: (name: string, url: string) => 
         }
     }, []);
 
-    const createProxyChannel = useCallback(async (youtubeUrl: string, streamUrl: string, title: string): Promise<string> => {
-        try {
-            const response = await fetch('/api/youtube_manager', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    youtube_url: youtubeUrl,
-                    stream_url: streamUrl,
-                    title: title
-                }),
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            const data = await response.json();
-            
-            if (!data.success) {
-                throw new Error(data.error || 'Error creando canal proxy');
-            }
-
-            return data.proxy_url;
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-            setError(errorMessage);
-            throw error;
-        }
-    }, []);
-
     const addYouTubeChannelToPlaylist = useCallback(async (
         youtubeUrl: string,
         customName?: string,
@@ -200,28 +170,8 @@ export const useYouTube = (addOrUpdateSavedUrl?: (name: string, url: string) => 
                 streamUrl = ''; // URL vacía, se actualizará con el monitor diario
             }
             
-            // 2. Crear canal proxy (aunque no tengamos stream actual)
-            let proxyUrl = '';
-            if (streamUrl) {
-                try {
-                    proxyUrl = await createProxyChannel(youtubeUrl, streamUrl, title);
-                } catch (proxyError) {
-                    console.warn('Error creando proxy, usando URL directa:', proxyError);
-                }
-            }
-            
-            // Si no tenemos proxy, crear una URL placeholder que apunte al canal
-            if (!proxyUrl) {
-                // Generar un ID único para el canal
-                const channelId = `yt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-                // Usar URL absoluta para compatibilidad con reproductores externos
-                const baseUrl = window.location.origin;
-                proxyUrl = `${baseUrl}/api/youtube_proxy?id=${channelId}&youtube_url=${encodeURIComponent(youtubeUrl)}`;
-            } else if (proxyUrl.startsWith('/')) {
-                // Si el proxy devuelve una URL relativa, convertirla a absoluta
-                const baseUrl = window.location.origin;
-                proxyUrl = `${baseUrl}${proxyUrl}`;
-            }
+            // 2. Extraer stream directo (método del proyecto original)
+            let finalStreamUrl = streamUrl || youtubeUrl; // Usar stream extraído o URL original
             
             // 3. Crear objeto de canal para YouTube
             const youtubeChannel: YouTubeChannel = {
@@ -229,7 +179,8 @@ export const useYouTube = (addOrUpdateSavedUrl?: (name: string, url: string) => 
                 name: title,
                 group: customGroup || 'YouTube Live',
                 url: youtubeUrl,
-                proxyUrl: proxyUrl,
+                proxyUrl: '', // Ya no usamos proxy
+                streamUrl: finalStreamUrl, // URL directa del stream
                 logo: customLogo || '',
                 status: streamUrl ? 'active' : 'checking',
                 lastChecked: new Date().toISOString()
@@ -247,7 +198,7 @@ export const useYouTube = (addOrUpdateSavedUrl?: (name: string, url: string) => 
                     order: Date.now(),
                     name: youtubeChannel.name,
                     groupTitle: youtubeChannel.group,
-                    url: youtubeChannel.proxyUrl,
+                    url: youtubeChannel.streamUrl || youtubeChannel.url, // Usar streamUrl extraída
                     tvgLogo: youtubeChannel.logo,
                     tvgId: '',
                     tvgName: '',
@@ -265,7 +216,7 @@ export const useYouTube = (addOrUpdateSavedUrl?: (name: string, url: string) => 
         } finally {
             setIsLoading(false);
         }
-    }, [youtubeChannels, extractYouTubeStream, createProxyChannel, saveChannelsAndGenerateM3U]);
+    }, [youtubeChannels, extractYouTubeStream, saveChannelsAndGenerateM3U]);
 
     const removeYouTubeChannel = useCallback((channelId: string) => {
         const updatedChannels = youtubeChannels.filter(channel => channel.id !== channelId);
@@ -302,17 +253,11 @@ export const useYouTube = (addOrUpdateSavedUrl?: (name: string, url: string) => 
             ));
 
             const { streamUrl } = await extractYouTubeStream(channel.url);
-            let proxyUrl = await createProxyChannel(channel.url, streamUrl, channel.name);
-            
-            // Asegurar que la URL sea absoluta
-            if (proxyUrl.startsWith('/')) {
-                const baseUrl = window.location.origin;
-                proxyUrl = `${baseUrl}${proxyUrl}`;
-            }
+            const finalStreamUrl = streamUrl || channel.url;
 
             const updatedChannels = youtubeChannels.map(ch => 
                 ch.id === channelId 
-                    ? { ...ch, proxyUrl, status: 'active' as const, lastChecked: new Date().toISOString() }
+                    ? { ...ch, streamUrl: finalStreamUrl, status: 'active' as const, lastChecked: new Date().toISOString() }
                     : ch
             );
             
@@ -323,14 +268,13 @@ export const useYouTube = (addOrUpdateSavedUrl?: (name: string, url: string) => 
                 ch.id === channelId ? { ...ch, status: 'error' } : ch
             ));
         }
-    }, [youtubeChannels, extractYouTubeStream, createProxyChannel, saveChannelsAndGenerateM3U]);
+    }, [youtubeChannels, extractYouTubeStream, saveChannelsAndGenerateM3U]);
 
     return {
         channels: youtubeChannels,
         isLoading,
         error,
         extractYouTubeStream,
-        createProxyChannel,
         addYouTubeChannelToPlaylist,
         removeYouTubeChannel,
         getM3UContent,

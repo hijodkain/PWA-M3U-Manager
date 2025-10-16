@@ -21,7 +21,7 @@ def extract_youtube_stream(youtube_url):
         
         content = response.text
         
-        # Buscar URLs .m3u8 en el contenido
+        # Buscar URLs .m3u8 en el contenido - Método del proyecto original
         if '.m3u8' not in content:
             return None
             
@@ -34,7 +34,7 @@ def extract_youtube_stream(youtube_url):
             if 'https://' in segment:
                 start_idx = segment.find('https://')
                 if start_idx != -1:
-                    # Extraer la URL completa
+                    # Extraer la URL completa del stream
                     stream_url = segment[start_idx:segment.find('.m3u8') + 5]
                     # Limpiar caracteres extraños
                     stream_url = re.sub(r'["\\\n\r\t]', '', stream_url)
