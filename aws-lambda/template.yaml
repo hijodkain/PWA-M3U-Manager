@@ -21,6 +21,20 @@ Resources:
       CodeUri: .
       Handler: youtube_extractor_lambda.lambda_handler
       Description: Extract YouTube live stream URLs with extended timeout
+      Environment:
+        Variables:
+          YOUTUBE_ACCESS_MODE: "unauthenticated"
+          ALLOW_EXTERNAL_REQUESTS: "true"
+          YOUTUBE_API_ENABLED: "true"
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - "logs:CreateLogGroup"
+                - "logs:CreateLogStream"
+                - "logs:PutLogEvents"
+              Resource: "*"
       Events:
         Api:
           Type: Api
