@@ -13,66 +13,78 @@ def extract_youtube_stream(youtube_url):
     try:
         debug_info.append(f"AWS Lambda - Processing URL: {youtube_url}")
         
-        # Lista de URLs a probar
+        # Lista de URLs a probar con estrategias más inteligentes
         urls_to_try = []
         
-        # Si es una URL de canal, agregar /live automáticamente
-        if '/@' in youtube_url and '/live' not in youtube_url:
-            live_url = youtube_url.rstrip('/') + '/live'
-            urls_to_try.append(live_url)
-            debug_info.append(f"Canal detectado, probando URL de live: {live_url}")
-        
-        # Siempre incluir la URL original
-        urls_to_try.append(youtube_url)
-        
-        # Probar cada URL con timeouts generosos para AWS Lambda
-        for i, url_to_try in enumerate(urls_to_try):
-            debug_info.append(f"Trying URL: {url_to_try}")
+        # Si es una URL de canal, generar múltiples variantes
+        if '/@' in youtube_url:
+            channel_base = youtube_url.split('/live')[0] if '/live' in youtube_url else youtube_url.rstrip('/')
             
-            # Delay entre requests
+            # Agregar variantes de URLs de canal
+            urls_to_try.extend([
+                f"{channel_base}/live",
+                f"{channel_base}/streams", 
+                youtube_url  # URL original también
+            ])
+        else:
+            urls_to_try.append(youtube_url)
+        
+        # Probar también con www. si no lo tiene
+        for url in urls_to_try.copy():
+            if 'www.youtube.com' not in url and 'youtube.com' in url:
+                urls_to_try.append(url.replace('youtube.com', 'www.youtube.com'))
+        
+        debug_info.append(f"Will try {len(urls_to_try)} URL variants: {urls_to_try}")
+        
+        # Probar cada URL con diferentes estrategias
+        for i, url_to_try in enumerate(urls_to_try):
+            debug_info.append(f"Attempt {i+1}/{len(urls_to_try)}: {url_to_try}")
+            
+            # Delay entre requests para parecer más humano
             if i > 0:
                 import time
                 import random
-                delay = random.uniform(1.0, 3.0)
+                delay = random.uniform(2.0, 4.0)  # Delay más largo
                 debug_info.append(f"Adding random delay: {delay:.1f}s")
                 time.sleep(delay)
             
+            # Usar diferentes User-Agents para cada intento
+            user_agents = [
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36', 
+                'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
+                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:121.0) Gecko/20100101 Firefox/121.0'
+            ]
+            
+            selected_ua = user_agents[i % len(user_agents)]
+            debug_info.append(f"Using User-Agent #{i+1}: {selected_ua[:50]}...")
+            
+            headers = {
+                'User-Agent': selected_ua,
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9,es;q=0.8',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'DNT': '1',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1',
+                'Sec-Fetch-Dest': 'document',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Site': 'none',
+                'Cache-Control': 'no-cache'  # Evitar contenido cacheado
+            }
+            
             content = ""
-            debug_info.append("AWS Lambda strategy: longer timeouts and better resources")
+            debug_info.append("AWS Lambda strategy: improved detection and multiple attempts")
             
             # Usar requests con timeout generoso (AWS Lambda permite 15 min)
             try:
-                import random
-                
-                user_agents = [
-                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36',
-                    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36',
-                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/118.0'
-                ]
-                
-                selected_ua = random.choice(user_agents)
-                debug_info.append(f"Using User-Agent: {selected_ua[:50]}...")
-                
-                headers = {
-                    'User-Agent': selected_ua,
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-                    'Accept-Language': 'en-US,en;q=0.9,es;q=0.8',
-                    'Accept-Encoding': 'gzip, deflate, br',
-                    'DNT': '1',
-                    'Connection': 'keep-alive',
-                    'Upgrade-Insecure-Requests': '1',
-                    'Sec-Fetch-Dest': 'document',
-                    'Sec-Fetch-Mode': 'navigate',
-                    'Sec-Fetch-Site': 'none',
-                    'Cache-Control': 'max-age=0'
-                }
-                
                 debug_info.append("Making requests call with 60s timeout (AWS Lambda)")
                 session = requests.Session()
                 session.headers.update(headers)
                 
-                # Request de calentamiento
-                if url_to_try.endswith('/live'):
+                # Request de calentamiento solo en el primer intento
+                if i == 0 and url_to_try.endswith('/live'):
                     try:
                         session.get('https://www.youtube.com', timeout=10)
                         debug_info.append("Warmup request completed")
@@ -85,27 +97,82 @@ def extract_youtube_stream(youtube_url):
                     debug_info.append(f"Requests successful: {len(content)} characters, status: {response.status_code}")
                 else:
                     debug_info.append(f"Requests failed with status: {response.status_code}")
+                    continue  # Probar siguiente URL
                     
             except requests.exceptions.Timeout:
-                debug_info.append("Requests timeout (60s) - trying curl fallback")
+                debug_info.append("Requests timeout (60s) - trying next URL")
+                continue
             except Exception as e:
                 debug_info.append(f"Requests error: {e}")
+                continue
             
             debug_info.append(f"Final content length: {len(content)} characters")
             
-            # Verificar indicadores de live
-            live_indicators = ['isLive":true', '"isLiveContent":true', 'hls_manifest_url', '.m3u8']
+            # Verificar indicadores de live con patrones más amplios
+            live_indicators = [
+                'isLive":true', 
+                '"isLiveContent":true', 
+                '"isLiveNow":true',
+                'hls_manifest_url', 
+                '.m3u8',
+                '"liveBroadcastContent":"live"',
+                '"broadcastId"',
+                '"isLiveContent":true',
+                'videoDetails.*isLive',
+                'player_response.*isLive'
+            ]
             live_found = any(indicator in content for indicator in live_indicators)
             debug_info.append(f"Live indicators found: {live_found}")
             
-            # Buscar .m3u8 URLs
+            # Buscar patrones específicos de streaming
+            streaming_patterns = [
+                r'"hlsManifestUrl":\s*"([^"]+)"',
+                r'"videoPlaybackUberProto".*?"url":\s*"([^"]*\.m3u8[^"]*)"',
+                r'hlsManifestUrl.*?([^"]*googlevideo\.com[^"]*\.m3u8[^"]*)',
+                r'"streamingData".*?"hlsManifestUrl":\s*"([^"]+)"'
+            ]
+            
+            # Si encontramos indicadores de live, buscar patrones
+            for pattern in streaming_patterns:
+                matches = re.findall(pattern, content, re.IGNORECASE | re.DOTALL)
+                for match in matches:
+                    if isinstance(match, tuple):
+                        match = match[0] if match else ""
+                    
+                    # Limpiar y validar URL
+                    clean_url = match.replace('\\u002F', '/').replace('\\/', '/').replace('\\u0026', '&')
+                    if clean_url.startswith('https://') and 'googlevideo.com' in clean_url and '.m3u8' in clean_url:
+                        debug_info.append(f"Found streaming URL via regex pattern: {pattern}")
+                        return clean_url, debug_info
+            
+            # Buscar .m3u8 URLs manualmente (método existente mejorado)
             if '.m3u8' in content:
                 debug_info.append(f"Found .m3u8 in content from {url_to_try}")
                 
                 m3u8_count = content.count('.m3u8')
                 debug_info.append(f"Found {m3u8_count} .m3u8 occurrences")
                 
-                # Algoritmo de extracción (mismo que local)
+                # Buscar todos los patrones posibles de URLs con .m3u8
+                m3u8_patterns = [
+                    r'https://[^"\s]+\.m3u8[^"\s]*',  # URLs completas
+                    r'"(https://[^"]*googlevideo\.com[^"]*\.m3u8[^"]*)"',  # URLs entrecomilladas
+                    r"'(https://[^']*googlevideo\.com[^']*\.m3u8[^']*)'",  # URLs con comillas simples
+                ]
+                
+                for pattern in m3u8_patterns:
+                    pattern_matches = re.findall(pattern, content)
+                    for match in pattern_matches:
+                        # Si es tupla, tomar el primer elemento
+                        url_candidate = match[0] if isinstance(match, tuple) else match
+                        url_candidate = url_candidate.replace('\\u002F', '/').replace('\\/', '/').replace('\\u0026', '&')
+                        
+                        if ('googlevideo.com' in url_candidate and 
+                            url_candidate.startswith('https://') and 
+                            url_candidate.endswith('.m3u8')):
+                            debug_info.append(f"Valid YouTube stream URL found via pattern: {pattern}")
+                            return url_candidate, debug_info
+                
+                # Método original de búsqueda posicional (fallback)
                 position = 0
                 while True:
                     pos = content.find('.m3u8', position)
@@ -127,15 +194,18 @@ def extract_youtube_stream(youtube_url):
                         if ('googlevideo.com' in url_candidate and 
                             url_candidate.startswith('https://') and 
                             url_candidate.endswith('.m3u8')):
-                            debug_info.append("Valid YouTube stream URL found in AWS Lambda")
+                            debug_info.append("Valid YouTube stream URL found via positional search")
                             return url_candidate, debug_info
                         
                         search_pos = https_pos + 1
                     
                     position = pos + 1
             
-            # Buscar patrones alternativos
+            # Buscar patrones alternativos si tenemos indicadores de live
             if live_found and len(content) > 500000:
+                debug_info.append("Searching for alternative patterns with live indicators")
+                
+                # Buscar hlsManifestUrl específicamente
                 hls_pattern = r'"hlsManifestUrl":\s*"([^"]+)"'
                 matches = re.findall(hls_pattern, content)
                 if matches:
@@ -144,6 +214,40 @@ def extract_youtube_stream(youtube_url):
                     if hls_url.startswith('https://') and 'googlevideo.com' in hls_url:
                         debug_info.append("Valid HLS manifest found via regex")
                         return hls_url, debug_info
+                
+                # Buscar en streamingData
+                streaming_pattern = r'"streamingData"[^}]+?"hlsManifestUrl":\s*"([^"]+)"'
+                streaming_matches = re.findall(streaming_pattern, content, re.DOTALL)
+                if streaming_matches:
+                    streaming_url = streaming_matches[0].replace('\\u0026', '&').replace('\\/', '/')
+                    debug_info.append(f"Found streamingData URL: {streaming_url[:100]}...")
+                    if streaming_url.startswith('https://') and 'googlevideo.com' in streaming_url:
+                        debug_info.append("Valid streaming URL found in streamingData")
+                        return streaming_url, debug_info
+            
+            # Si el canal parece estar en vivo pero no encontramos URLs, intentar estrategia diferente
+            if live_found and '.m3u8' not in content:
+                debug_info.append("Live indicators found but no .m3u8 - trying embedded data search")
+                
+                # Buscar datos embebidos en variables JavaScript
+                js_patterns = [
+                    r'var ytInitialPlayerResponse\s*=\s*({.+?});',
+                    r'window\[\"ytInitialPlayerResponse\"\]\s*=\s*({.+?});',
+                    r'ytInitialPlayerResponse[\"\']\s*:\s*({.+?})[\"\'"]',
+                ]
+                
+                for js_pattern in js_patterns:
+                    js_matches = re.findall(js_pattern, content, re.DOTALL)
+                    for js_match in js_matches:
+                        if 'hlsManifestUrl' in js_match:
+                            # Extraer URL de los datos JavaScript
+                            hls_in_js = re.findall(r'"hlsManifestUrl":\s*"([^"]+)"', js_match)
+                            if hls_in_js:
+                                js_url = hls_in_js[0].replace('\\u0026', '&').replace('\\/', '/')
+                                debug_info.append(f"Found URL in JavaScript data: {js_url[:100]}...")
+                                if js_url.startswith('https://') and 'googlevideo.com' in js_url:
+                                    debug_info.append("Valid URL found in embedded JavaScript")
+                                    return js_url, debug_info
         
         debug_info.append("AWS Lambda: No valid stream found after all attempts")
         return None, debug_info
