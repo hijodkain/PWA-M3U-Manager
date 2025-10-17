@@ -1,0 +1,39 @@
+===========================================
+Monitor ejecutado: jueves, 16 de octubre de 2025, 21:14:33 CEST
+===========================================
+/Users/juancarlos/Sites/PWA-M3U-Manager/.venv/lib/python3.8/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+🔄 Iniciando monitoreo de canales de YouTube Live
+⏰ Hora: 2025-10-16 21:14:33
+============================================================
+📺 Monitoreando 3 canal(es):
+   1. NASA Live (checking)
+   2. CNN Live (checking)
+   3. BBC News (checking)
+
+Verificando canal: NASA Live
+URL: https://www.youtube.com/@NASA/live
+No .m3u8 found in content for https://www.youtube.com/@NASA/live
+⏸️  Canal no está en vivo
+--------------------------------------------------
+Verificando canal: CNN Live
+URL: https://www.youtube.com/@CNN/live
+No .m3u8 found in content for https://www.youtube.com/@CNN/live
+⏸️  Canal no está en vivo
+--------------------------------------------------
+Verificando canal: BBC News
+URL: https://www.youtube.com/@BBCNews/live
+No .m3u8 found in content for https://www.youtube.com/@BBCNews/live
+⏸️  Canal no está en vivo
+--------------------------------------------------
+============================================================
+✅ Monitoreo completado
+📊 Resumen: 0/3 canales activos
+📄 Archivo M3U actualizado: youtube_live.m3u
+
+📋 Estado actual:
+   🟡 NASA Live: checking
+   🟡 CNN Live: checking
+   🟡 BBC News: checking
+Monitor finalizado: jueves, 16 de octubre de 2025, 21:14:34 CEST
+

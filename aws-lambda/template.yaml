@@ -1,0 +1,45 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: YouTube Extractor Lambda Function with CORS
+
+Globals:
+  Function:
+    Timeout: 900
+    MemorySize: 1024
+    Runtime: python3.8
+  Api:
+    Cors:
+      AllowOrigin: "'*'"
+      AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With'"
+      AllowMethods: "'POST,GET,OPTIONS'"
+      MaxAge: "'600'"
+
+Resources:
+  YouTubeExtractorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: youtube_extractor_lambda.lambda_handler
+      Description: Extract YouTube live stream URLs with extended timeout
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /extract
+            Method: POST
+        OptionsApi:
+          Type: Api
+          Properties:
+            Path: /extract
+            Method: OPTIONS
+
+Outputs:
+  YouTubeExtractorApi:
+    Description: "API Gateway endpoint URL for YouTube Extractor function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/extract"
+  YouTubeExtractorFunction:
+    Description: "YouTube Extractor Lambda Function ARN"
+    Value: !GetAtt YouTubeExtractorFunction.Arn
+  YouTubeExtractorFunctionIamRole:
+    Description: "Implicit IAM Role created for YouTube Extractor function"
+    Value: !GetAtt YouTubeExtractorFunctionRole.Arn

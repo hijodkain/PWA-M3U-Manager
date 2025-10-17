@@ -82,23 +82,27 @@ export const YouTubeTab: React.FC<YouTubeTabProps> = ({ channels, setChannels, s
                     📋 Lista M3U Automática: {m3uFilename}
                 </h3>
                 <p className="text-blue-800 dark:text-blue-200 text-sm mb-3">
-                    Los canales que añadas aquí se guardarán automáticamente en una lista M3U persistente. 
+                    Los canales que añadas aquí se extraen automáticamente como <strong>URLs .m3u8 directas</strong> compatibles con reproductores IPTV. 
                     La lista <strong>"{m3uFilename}"</strong> se crea automáticamente en la pestaña <strong>"Configuración"</strong> bajo "Playlists Guardadas" 
-                    y puede ser cargada en la pestaña "Reparación". Los canales se añaden aunque no estén en vivo en ese momento 
-                    y se actualizan automáticamente cuando transmitan.
+                    y puede ser cargada en la pestaña "Reparación". 
                 </p>
+                <div className="text-xs text-blue-700 dark:text-blue-300 mb-3 space-y-1">
+                    <div>🟢 <strong>Canales Activos:</strong> En vivo con stream .m3u8 extraído</div>
+                    <div>🟡 <strong>Canales en Espera:</strong> Guardados, esperando a que entren en vivo</div>
+                    <div>⚙️ <strong>Monitor Automático:</strong> Verifica periódicamente y actualiza las URLs cuando detecta streams en vivo</div>
+                </div>
                 <div className="flex gap-2">
                     <button
                         onClick={downloadM3UFile}
                         className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
                     >
                         <Download className="w-4 h-4" />
-                        Descargar Lista ({youtubeChannels.length})
+                        Descargar Lista ({youtubeChannels.filter(ch => ch.status === 'active').length}/{youtubeChannels.length})
                     </button>
                     <div className="text-sm text-blue-700 dark:text-blue-300 flex items-center">
                         {youtubeChannels.length === 0 ? 
                             'Lista vacía creada y guardada en Configuración' : 
-                            `${youtubeChannels.length} canal${youtubeChannels.length !== 1 ? 'es' : ''} en la lista`
+                            `${youtubeChannels.filter(ch => ch.status === 'active').length} activo${youtubeChannels.filter(ch => ch.status === 'active').length !== 1 ? 's' : ''} de ${youtubeChannels.length} total${youtubeChannels.length !== 1 ? 'es' : ''}`
                         }
                     </div>
                 </div>
@@ -205,11 +209,29 @@ export const YouTubeTab: React.FC<YouTubeTabProps> = ({ channels, setChannels, s
                                         <span className="text-sm text-gray-500 dark:text-gray-400">
                                             • {channel.group}
                                         </span>
+                                        {channel.status === 'active' && (
+                                            <span className="text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 px-2 py-1 rounded">
+                                                EN VIVO
+                                            </span>
+                                        )}
+                                        {channel.status === 'checking' && (
+                                            <span className="text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 px-2 py-1 rounded">
+                                                ESPERANDO
+                                            </span>
+                                        )}
                                     </div>
-                                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                        <div>Original: {channel.url.length > 50 ? channel.url.substring(0, 50) + '...' : channel.url}</div>
-                                        <div>Proxy: {channel.proxyUrl}</div>
-                                        <div>Última verificación: {new Date(channel.lastChecked).toLocaleString()}</div>
+                                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-1 space-y-1">
+                                        <div>
+                                            <strong>Original:</strong> {channel.url.length > 60 ? channel.url.substring(0, 60) + '...' : channel.url}
+                                        </div>
+                                        {channel.streamUrl && channel.streamUrl !== channel.url && (
+                                            <div className="text-green-600 dark:text-green-400">
+                                                <strong>Stream .m3u8:</strong> {channel.streamUrl.length > 60 ? channel.streamUrl.substring(0, 60) + '...' : channel.streamUrl}
+                                            </div>
+                                        )}
+                                        <div>
+                                            <strong>Última verificación:</strong> {new Date(channel.lastChecked).toLocaleString()}
+                                        </div>
                                     </div>
                                 </div>
                                 
@@ -244,15 +266,15 @@ export const YouTubeTab: React.FC<YouTubeTabProps> = ({ channels, setChannels, s
 
             {/* Información de ayuda */}
             <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-                <h3 className="font-semibold mb-2">ℹ️ Información</h3>
+                <h3 className="font-semibold mb-2">ℹ️ Cómo funciona el sistema</h3>
                 <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                    <li>• Los canales se pueden añadir aunque no estén transmitiendo en vivo</li>
-                    <li>• Se verifican automáticamente cada día a las 6:00 AM UTC</li>
-                    <li>• Las URLs proxy son estables y nunca cambian</li>
-                    <li>• La lista "{m3uFilename}" se crea automáticamente en "Configuración" → "Playlists Guardadas"</li>
-                    <li>• Los canales persisten entre sesiones del navegador</li>
-                    <li>• Puedes cargar la lista desde "Configuración" en la pestaña "Reparación"</li>
-                    <li>• Los streams se actualizan automáticamente cuando los canales empiecen a transmitir</li>
+                    <li>• <strong>Extracción directa:</strong> Convierte URLs de YouTube a streams .m3u8 reales compatibles con IPTV</li>
+                    <li>• <strong>Sistema de placeholders:</strong> Los canales se guardan aunque no estén en vivo</li>
+                    <li>• <strong>Monitor automático:</strong> Verifica periódicamente y actualiza las URLs cuando detecta streams activos</li>
+                    <li>• <strong>Compatible con IPTV:</strong> Las URLs .m3u8 funcionan en reproductores como VLC, IPTV Smarters, etc.</li>
+                    <li>• <strong>Persistencia:</strong> Los canales se guardan permanentemente en el navegador</li>
+                    <li>• <strong>Integración:</strong> La lista "{m3uFilename}" aparece automáticamente en "Configuración" → "Playlists Guardadas"</li>
+                    <li>• <strong>Sincronización:</strong> El monitor automático mantiene las URLs actualizadas cuando los streams cambien</li>
                 </ul>
             </div>
         </div>

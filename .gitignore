@@ -21,3 +21,14 @@ yarn-error.log*
 # Custom
 .vscode/
 archivos_aportados/
+
+# AWS SAM build artifacts  
+.aws-sam/
+*.pkg
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
