@@ -40,6 +40,7 @@ export const useAsignarEpg = (
     const [smartSearchResults, setSmartSearchResults] = useState<SearchMatch<EpgChannel>[]>([]);
     const [assignmentMode, setAssignmentMode] = useState<'tvg-id' | 'tvg-name'>('tvg-id');
     const [selectedEpgChannels, setSelectedEpgChannels] = useState<Set<string>>(new Set());
+    const [lastSelectedEpgChannelIndex, setLastSelectedEpgChannelIndex] = useState<number | null>(null);
 
     // Inicializar búsqueda inteligente
     const smartSearch = useSmartSearch({
@@ -193,18 +194,48 @@ export const useAsignarEpg = (
         return result ? result.score : 0;
     }, [smartSearchResults]);
 
-    // Función para alternar selección de canales EPG
-    const toggleEpgChannelSelection = useCallback((channelId: string) => {
-        setSelectedEpgChannels(prev => {
-            const newSelected = new Set(prev);
-            if (newSelected.has(channelId)) {
-                newSelected.delete(channelId);
-            } else {
-                newSelected.add(channelId);
-            }
-            return newSelected;
-        });
-    }, []);
+    // Función para alternar selección de canales EPG con soporte para selección por rango (Shift)
+    const toggleEpgChannelSelection = useCallback((channelId: string, shiftKey: boolean = false) => {
+        const currentIndex = filteredEpgChannels.findIndex(ch => ch.id === channelId);
+        
+        if (shiftKey && lastSelectedEpgChannelIndex !== null && currentIndex !== -1) {
+            // Selección por rango con Shift
+            const startIndex = Math.min(lastSelectedEpgChannelIndex, currentIndex);
+            const endIndex = Math.max(lastSelectedEpgChannelIndex, currentIndex);
+            
+            setSelectedEpgChannels(prev => {
+                const newSelected = new Set(prev);
+                const channelsInRange = filteredEpgChannels.slice(startIndex, endIndex + 1);
+                
+                // Determinar si vamos a seleccionar o deseleccionar basado en el canal clickeado
+                const shouldSelect = !newSelected.has(channelId);
+                
+                channelsInRange.forEach(channel => {
+                    if (shouldSelect) {
+                        newSelected.add(channel.id);
+                    } else {
+                        newSelected.delete(channel.id);
+                    }
+                });
+                
+                return newSelected;
+            });
+        } else {
+            // Selección individual normal
+            setSelectedEpgChannels(prev => {
+                const newSelected = new Set(prev);
+                if (newSelected.has(channelId)) {
+                    newSelected.delete(channelId);
+                } else {
+                    newSelected.add(channelId);
+                }
+                return newSelected;
+            });
+        }
+        
+        // Actualizar el último índice seleccionado
+        setLastSelectedEpgChannelIndex(currentIndex);
+    }, [filteredEpgChannels, lastSelectedEpgChannelIndex]);
 
     // Función para seleccionar/deseleccionar todos los canales EPG visibles
     const toggleSelectAllEpgChannels = useCallback(() => {

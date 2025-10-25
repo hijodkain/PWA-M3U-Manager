@@ -7,7 +7,7 @@ interface EpgChannelItemProps {
     style?: React.CSSProperties;
     isSelected?: boolean;
     showCheckbox?: boolean;
-    onCheckboxChange?: (channelId: string) => void;
+    onCheckboxChange?: (channelId: string, shiftKey: boolean) => void;
     assignmentMode?: 'tvg-id' | 'tvg-name';
     score?: number;
     matchType?: 'exact' | 'partial' | 'fuzzy';
@@ -36,7 +36,7 @@ const EpgChannelItem: React.FC<EpgChannelItemProps> = ({
                     checked={isSelected}
                     onChange={(e) => {
                         e.stopPropagation();
-                        onCheckboxChange?.(epgChannel.id);
+                        onCheckboxChange?.(epgChannel.id, e.shiftKey);
                     }}
                     className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
                 />
