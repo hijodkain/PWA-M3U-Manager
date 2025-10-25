@@ -6,6 +6,8 @@ import { useChannels } from './useChannels';
 import ReparacionChannelItem from './ReparacionChannelItem';
 import { useSettings } from './useSettings';
 import { AttributeKey } from './index';
+import { SmartSearchInput } from './SmartSearchInput';
+import { SearchResultItem } from './SearchResultComponents';
 
 interface ReparacionTabProps {
     reparacionHook: ReturnType<typeof useReparacion>;
@@ -48,6 +50,12 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         isCurationLoading,
         curationError,
         verifyAllChannelsInGroup,
+        // Nuevas funciones de búsqueda inteligente
+        smartSearchResults,
+        isSmartSearchEnabled,
+        toggleSmartSearch,
+        getChannelSimilarityScore,
+        smartSearch,
     } = reparacionHook;
 
     const { undo, history } = channelsHook;
@@ -81,38 +89,21 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         { key: 'url', label: 'URL' },
     ];
 
-    const cleanChannelNameForSearch = (name: string): string => {
-        let cleanedName = name;
-        
-        // Eliminar prefijos configurables
-        settingsHook.channelPrefixes.forEach(prefix => {
-            if (cleanedName.toLowerCase().startsWith(prefix.toLowerCase())) {
-                cleanedName = cleanedName.substring(prefix.length);
-            }
-        });
-        
-        // Eliminar sufijos configurables
-        settingsHook.channelSuffixes.forEach(suffix => {
-            if (cleanedName.toLowerCase().endsWith(suffix.toLowerCase())) {
-                cleanedName = cleanedName.substring(0, cleanedName.length - suffix.length);
-            }
-        });
-        
-        return cleanedName.trim();
-    };
-
     const isAllInGroupSelected = filteredReparacionChannels.length > 0 && filteredReparacionChannels.every(c => selectedReparacionChannels.has(c.id));
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-11 gap-4">
             <div className="lg:col-span-5 bg-gray-800 p-4 rounded-lg flex flex-col">
                 <h3 className="font-bold text-lg mb-2">Lista Principal</h3>
-                <input
-                    type="text"
-                    placeholder="Buscar canal..."
-                    value={mainListSearch}
-                    onChange={(e) => setMainListSearch(e.target.value)}
-                    className="bg-gray-700 border border-gray-600 rounded-md px-3 py-1.5 text-white focus:ring-blue-500 focus:border-blue-500 mb-2 w-full"
+                <SmartSearchInput
+                    searchTerm={mainListSearch}
+                    onSearchChange={setMainListSearch}
+                    isSmartSearchEnabled={isSmartSearchEnabled}
+                    onToggleSmartSearch={toggleSmartSearch}
+                    placeholder="Buscar canal en lista principal..."
+                    showResults={true}
+                    resultCount={filteredMainChannels.length}
+                    className="mb-2"
                 />
                 <select
                     value={mainListFilter}
@@ -151,7 +142,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     channel={ch}
                                     onBodyClick={() => {
                                         setDestinationChannelId(ch.id)
-                                        setReparacionListSearch(cleanChannelNameForSearch(ch.name));
+                                        setReparacionListSearch(smartSearch.normalizeChannelName(ch.name));
                                     }}
                                     isSelected={destinationChannelId === ch.id}
                                     showCheckbox={false}
@@ -241,12 +232,15 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 )}
                 {isCurationLoading && <p className="text-center text-blue-400 mt-2">Cargando lista de recambios...</p>}
                 {curationError && <p className="text-center text-red-400 bg-red-900/50 p-2 rounded mt-2">{curationError}</p>}
-                <input
-                    type="text"
-                    placeholder="Buscar canal..."
-                    value={reparacionListSearch}
-                    onChange={(e) => setReparacionListSearch(e.target.value)}
-                    className="bg-gray-700 border border-gray-600 rounded-md px-3 py-1.5 text-white focus:ring-blue-500 focus:border-blue-500 mb-2 w-full"
+                <SmartSearchInput
+                    searchTerm={reparacionListSearch}
+                    onSearchChange={setReparacionListSearch}
+                    isSmartSearchEnabled={isSmartSearchEnabled}
+                    onToggleSmartSearch={toggleSmartSearch}
+                    placeholder="Buscar canal en lista de reparación..."
+                    showResults={true}
+                    resultCount={filteredReparacionChannels.length}
+                    className="mb-2"
                 />
                 <select
                     value={reparacionListFilter}

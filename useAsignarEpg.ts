@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Channel, EpgChannel, AttributeKey } from './index';
+import { useSmartSearch, SearchMatch } from './useSmartSearch';
 
 const parseXMLTV = (content: string): EpgChannel[] => {
     if (typeof window === 'undefined') {
@@ -23,7 +24,8 @@ const parseXMLTV = (content: string): EpgChannel[] => {
 export const useAsignarEpg = (
     channels: Channel[],
     setChannels: React.Dispatch<React.SetStateAction<Channel[]>>,
-    saveStateToHistory: () => void
+    saveStateToHistory: () => void,
+    settingsHook: { channelPrefixes: string[], channelSuffixes: string[] }
 ) => {
     const [epgChannels, setEpgChannels] = useState<EpgChannel[]>([]);
     const [isEpgLoading, setIsEpgLoading] = useState(false);
@@ -33,6 +35,15 @@ export const useAsignarEpg = (
     const [epgLogoFolderUrl, setEpgLogoFolderUrl] = useState('');
     const [destinationChannelId, setDestinationChannelId] = useState<string | null>(null);
     const [attributesToCopy, setAttributesToCopy] = useState<Set<AttributeKey>>(new Set());
+    const [epgSearchTerm, setEpgSearchTerm] = useState('');
+    const [isSmartSearchEnabled, setIsSmartSearchEnabled] = useState(true);
+    const [smartSearchResults, setSmartSearchResults] = useState<SearchMatch<EpgChannel>[]>([]);
+
+    // Inicializar búsqueda inteligente
+    const smartSearch = useSmartSearch({
+        channelPrefixes: settingsHook.channelPrefixes,
+        channelSuffixes: settingsHook.channelSuffixes
+    });
 
     const handleEpgFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -109,6 +120,28 @@ export const useAsignarEpg = (
 
     const epgIdSet = useMemo(() => new Set(epgChannels.map((c) => c.id)), [epgChannels]);
 
+    // Filtrar canales EPG con búsqueda inteligente
+    const filteredEpgChannels = useMemo(() => {
+        if (!epgSearchTerm.trim()) {
+            setSmartSearchResults([]);
+            return epgChannels;
+        }
+
+        if (isSmartSearchEnabled) {
+            // Usar búsqueda inteligente
+            const searchResults = smartSearch.searchChannels(epgChannels, epgSearchTerm, 0.4);
+            setSmartSearchResults(searchResults);
+            return searchResults.map(result => result.item);
+        } else {
+            // Búsqueda tradicional exacta
+            setSmartSearchResults([]);
+            return epgChannels.filter(channel => 
+                channel.name.toLowerCase().includes(epgSearchTerm.toLowerCase()) ||
+                channel.id.toLowerCase().includes(epgSearchTerm.toLowerCase())
+            );
+        }
+    }, [epgChannels, epgSearchTerm, isSmartSearchEnabled, smartSearch]);
+
     const handleEpgSourceClick = (sourceEpg: EpgChannel) => {
         if (!destinationChannelId) return;
         saveStateToHistory();
@@ -127,8 +160,27 @@ export const useAsignarEpg = (
         setDestinationChannelId(null);
     };
 
+    // Función para buscar canales EPG similares automáticamente
+    const findSimilarEpgChannels = useCallback((channelName: string) => {
+        if (!channelName.trim()) return [];
+        return smartSearch.searchChannels(epgChannels, channelName, 0.5);
+    }, [smartSearch, epgChannels]);
+
+    // Función para alternar entre búsqueda inteligente y exacta
+    const toggleSmartSearch = useCallback(() => {
+        setIsSmartSearchEnabled(prev => !prev);
+        setSmartSearchResults([]);
+    }, []);
+
+    // Función para obtener el score de similitud de un canal EPG
+    const getEpgSimilarityScore = useCallback((channelId: string): number => {
+        const result = smartSearchResults.find(result => result.item.id === channelId);
+        return result ? result.score : 0;
+    }, [smartSearchResults]);
+
     return {
         epgChannels,
+        filteredEpgChannels,
         isEpgLoading,
         epgError,
         epgUrl,
@@ -146,5 +198,14 @@ export const useAsignarEpg = (
         handleGenerateEpgFromUrls,
         epgIdSet,
         handleEpgSourceClick,
+        // Nuevas funciones de búsqueda inteligente
+        epgSearchTerm,
+        setEpgSearchTerm,
+        isSmartSearchEnabled,
+        toggleSmartSearch,
+        findSimilarEpgChannels,
+        getEpgSimilarityScore,
+        smartSearchResults,
+        smartSearch,
     };
 };

@@ -1,411 +1,498 @@
 import json
 import requests
-import re
-from urllib.parse import urlparse, parse_qs
+import os
 
 def extract_youtube_stream(youtube_url):
     """
     Extrae la URL del stream M3U8 de una URL de YouTube
-    Versión optimizada para AWS Lambda con múltiples estrategias
+    Método simplificado basado en YouTube_To_m3u que SÍ funciona
     """
     debug_info = []
     try:
-        debug_info.append(f"AWS Lambda - Processing URL: {youtube_url}")
+        debug_info.append(f"Simple YouTube extractor - Processing: {youtube_url}")
         
-        # ESTRATEGIA 1: Intentar extraer video ID y usar API directa
-        video_id = None
+        # Método simple y directo como YouTube_To_m3u
+        stream_url = grab_stream_url(youtube_url, debug_info)
         
-        # Extraer video ID de diferentes formatos de URL
-        if 'watch?v=' in youtube_url:
-            video_id = youtube_url.split('watch?v=')[1].split('&')[0]
-            debug_info.append(f"Extracted video ID from watch URL: {video_id}")
-        elif '/live' in youtube_url or '/@' in youtube_url:
-            debug_info.append("Channel URL detected, will try web scraping")
-        
-        # Si tenemos video ID, intentar acceso directo
-        if video_id and len(video_id) == 11:
-            direct_result = try_direct_video_access(video_id, debug_info)
-            if direct_result:
-                return direct_result, debug_info
-        
-        # ESTRATEGIA 2: Web scraping mejorado
-        web_result = try_web_scraping_strategy(youtube_url, debug_info)
-        if web_result:
-            return web_result, debug_info
-        
-        # ESTRATEGIA 3: Endpoint móvil
-        mobile_result = try_mobile_endpoint_strategy(youtube_url, debug_info)
-        if mobile_result:
-            return mobile_result, debug_info
-        
-        debug_info.append("AWS Lambda: All strategies failed - no valid stream found")
-        return None, debug_info
+        if stream_url:
+            debug_info.append(f"SUCCESS: Found stream URL")
+            return stream_url, debug_info
+        else:
+            debug_info.append("No stream URL found - returning placeholder")
+            return None, debug_info
         
     except Exception as e:
-        debug_info.append(f"AWS Lambda error: {e}")
+        debug_info.append(f"Error in extraction: {e}")
         return None, debug_info
 
-def try_direct_video_access(video_id, debug_info):
-    """Estrategia 1: Acceso directo usando API interna de YouTube con autenticación"""
+def grab_stream_url(url, debug_info):
+    """
+    Método basado en youtube_non_stream_link.py del proyecto purplescorpion1/youtube-to-m3u
+    Extrae URLs HLS m3u8 directamente del HTML de YouTube
+    """
     try:
-        debug_info.append(f"Strategy 1: Direct video access with auth for ID: {video_id}")
+        debug_info.append(f"Using direct HLS extraction method for: {url}")
         
-        # Intentar primero sin autenticación
-        api_url = f"https://www.youtube.com/youtubei/v1/player?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8"
-        
-        payload = {
-            "context": {
-                "client": {
-                    "clientName": "WEB",
-                    "clientVersion": "2.20231201.01.00",
-                    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-                }
-            },
-            "videoId": video_id
-        }
-        
-        headers = {
-            'Content-Type': 'application/json',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'X-YouTube-Client-Name': '1',
-            'X-YouTube-Client-Version': '2.20231201.01.00',
-            'Origin': 'https://www.youtube.com',
-            'Referer': f'https://www.youtube.com/watch?v={video_id}'
-        }
-        
-        response = requests.post(api_url, json=payload, headers=headers, timeout=30)
-        if response.status_code == 200:
-            data = response.json()
+        # Intentar método directo como youtube_non_stream_link.py
+        try:
+            import re
             
-            if 'streamingData' in data and 'hlsManifestUrl' in data['streamingData']:
-                hls_url = data['streamingData']['hlsManifestUrl']
-                debug_info.append(f"Direct API success: Found HLS URL")
-                return hls_url
-            else:
-                debug_info.append("Direct API: No streaming data found (trying with auth)")
-                
-                # Intentar con headers de autenticación simulada
-                auth_headers = headers.copy()
-                auth_headers.update({
-                    'Cookie': 'CONSENT=PENDING+987; VISITOR_INFO1_LIVE=dQw4w9WgXcQ; PREF=f1=50000000&f6=40000000&hl=en&gl=US',
-                    'X-Goog-Visitor-Id': 'CgtWSVNJVE9SX0lORl9MQ1dJU0lUT1I',
-                    'X-YouTube-Bootstrap-Logged-In': 'false'
-                })
-                
-                # Payload con más contexto para usuario autenticado
-                auth_payload = {
-                    "context": {
-                        "client": {
-                            "clientName": "WEB",
-                            "clientVersion": "2.20231201.01.00",
-                            "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                            "gl": "US",
-                            "hl": "en"
-                        },
-                        "user": {
-                            "lockedSafetyMode": False
-                        },
-                        "request": {
-                            "useSsl": True
-                        }
-                    },
-                    "videoId": video_id,
-                    "playbackContext": {
-                        "contentPlaybackContext": {
-                            "html5Preference": "HTML5_PREF_WANTS"
-                        }
-                    }
-                }
-                
-                debug_info.append("Retrying API with auth simulation")
-                auth_response = requests.post(api_url, json=auth_payload, headers=auth_headers, timeout=30)
-                
-                if auth_response.status_code == 200:
-                    auth_data = auth_response.json()
-                    if 'streamingData' in auth_data and 'hlsManifestUrl' in auth_data['streamingData']:
-                        hls_url = auth_data['streamingData']['hlsManifestUrl']
-                        debug_info.append(f"Direct API with auth success: Found HLS URL")
-                        return hls_url
-                    else:
-                        debug_info.append("Direct API with auth: Still no streaming data")
-                else:
-                    debug_info.append(f"Direct API with auth failed: {auth_response.status_code}")
-        else:
-            debug_info.append(f"Direct API failed with status: {response.status_code}")
-            
-    except Exception as e:
-        debug_info.append(f"Direct access error: {e}")
-    
-    return None
-
-def try_web_scraping_strategy(youtube_url, debug_info):
-    """Estrategia 2: Web scraping mejorado con autenticación simulada"""
-    try:
-        debug_info.append("Strategy 2: Enhanced web scraping with auth simulation")
-        
-        # Lista de URLs a probar
-        urls_to_try = []
-        
-        if '/@' in youtube_url:
-            channel_base = youtube_url.split('/live')[0] if '/live' in youtube_url else youtube_url.rstrip('/')
-            urls_to_try.extend([
-                f"{channel_base}/live",
-                f"{channel_base}/streams", 
-                youtube_url
-            ])
-        else:
-            urls_to_try.append(youtube_url)
-        
-        # Asegurar www.
-        for url in urls_to_try.copy():
-            if 'www.youtube.com' not in url and 'youtube.com' in url:
-                urls_to_try.append(url.replace('youtube.com', 'www.youtube.com'))
-        
-        debug_info.append(f"Will try {len(urls_to_try)} URL variants")
-        
-        # User agents más realistas
-        user_agents = [
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        ]
-        
-        # Cookies básicas de sesión para simular usuario autenticado
-        session_cookies = {
-            'CONSENT': 'PENDING+987',
-            'VISITOR_INFO1_LIVE': 'dQw4w9WgXcQ',
-            'PREF': 'f1=50000000&f6=40000000&hl=en&gl=US',
-            'SID': 'g.a000bQiOGf0123456789abcdefghijklmnop',
-            'HSID': 'A1bcD2efG3hiJ4',
-            'SSID': 'A1bcD2efG3hiJ4',
-            'APISID': 'abcdef123456/7890123456789012345',
-            'SAPISID': '7890123456789012345/abcdef123456'
-        }
-        
-        for i, url_to_try in enumerate(urls_to_try):
-            debug_info.append(f"Attempt {i+1}/{len(urls_to_try)}: {url_to_try}")
-            
-            if i > 0:
-                import time
-                import random
-                time.sleep(random.uniform(2.0, 4.0))
-            
+            # Headers similares a un navegador real
             headers = {
-                'User-Agent': user_agents[i % len(user_agents)],
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9,es;q=0.8',
-                'Accept-Encoding': 'gzip, deflate, br',
-                'Cache-Control': 'no-cache',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Encoding': 'gzip, deflate',
+                'Referer': 'https://www.youtube.com/',
+                'Origin': 'https://www.youtube.com',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1',
                 'Sec-Fetch-Dest': 'document',
                 'Sec-Fetch-Mode': 'navigate',
-                'Sec-Fetch-Site': 'none',
-                'Sec-Fetch-User': '?1',
-                'Upgrade-Insecure-Requests': '1',
-                'X-YouTube-Client-Name': '1',
-                'X-YouTube-Client-Version': '2.20231201.01.00'
+                'Sec-Fetch-Site': 'same-origin',
+                'Cache-Control': 'max-age=0',
             }
             
-            try:
-                session = requests.Session()
-                session.headers.update(headers)
+            debug_info.append("Making request to YouTube with browser headers")
+            response = requests.get(url, headers=headers, timeout=20)
+            
+            if response.status_code != 200:
+                debug_info.append(f"Failed to access YouTube URL. HTTP Status: {response.status_code}")
+                return None
+            
+            debug_info.append(f"Response received. Content length: {len(response.text)}")
+            
+            # Método de youtube_non_stream_link.py: buscar URLs .m3u8 directamente
+            hls_patterns = [
+                r'https?://[^\s"\']+\.m3u8[^\s"\']*',
+                r'https?://manifest\.googlevideo\.com[^\s"\']+',
+                r'"(https://manifest\.googlevideo\.com[^"]+\.m3u8[^"]*)"',
+                r"'(https://manifest\.googlevideo\.com[^']+\.m3u8[^']*)'",
+                r'hlsManifestUrl["\']:\s*["\']([^"\']+)["\']',
+                r'"hlsManifestUrl":"([^"]+)"'
+            ]
+            
+            debug_info.append(f"Searching with {len(hls_patterns)} HLS patterns")
+            
+            for i, pattern in enumerate(hls_patterns, 1):
+                matches = re.findall(pattern, response.text, re.IGNORECASE)
+                debug_info.append(f"HLS Pattern {i}: found {len(matches)} matches")
                 
-                # Establecer cookies de sesión
-                for name, value in session_cookies.items():
-                    session.cookies.set(name, value, domain='.youtube.com')
-                
-                debug_info.append(f"Using authenticated session with {len(session_cookies)} cookies")
-                
-                # Hacer request inicial para establecer sesión
-                response = session.get('https://www.youtube.com', timeout=15)
-                debug_info.append(f"Session warmup: {response.status_code}")
-                
-                # Hacer request al URL objetivo
-                response = session.get(url_to_try, timeout=60)
-                if response.status_code != 200:
-                    debug_info.append(f"Failed with status: {response.status_code}")
-                    continue
-                
-                content = response.text
-                debug_info.append(f"Got {len(content)} characters with auth session")
-                
-                # Buscar indicadores de live con patrones más amplios
-                live_indicators = [
-                    'isLive":true', '"isLiveContent":true', '"isLiveNow":true',
-                    'hls_manifest_url', '.m3u8', '"liveBroadcastContent":"live"',
-                    '"videoDetails".*"isLive":true',
-                    '"playabilityStatus".*"LIVE_STREAM"',
-                    '"streamingData"', '"hlsManifestUrl"', '"dashManifestUrl"',
-                    'videoplayback', 'manifest', '/live/', 'livestream',
-                    '"isLiveContent":true', '"isLiveBroadcast":true',
-                    'BADGE_STYLE_TYPE_LIVE_NOW', 'live-badge'
-                ]
-                live_found = any(indicator in content for indicator in live_indicators)
-                debug_info.append(f"Live indicators found with auth: {live_found}")
-                
-                # Si encontramos indicadores, buscar más agresivamente
-                if live_found:
-                    debug_info.append("Live indicators detected - searching for streams")
-                    stream_url = extract_stream_url_from_content(content, debug_info)
-                    if stream_url:
-                        return stream_url
-                
-                # Buscar URLs de streaming incluso sin indicadores explícitos
-                elif any(fmt in content for fmt in ['.m3u8', 'manifest', 'videoplayback']):
-                    debug_info.append("No live indicators but found streaming formats - attempting extraction")
-                    stream_url = extract_stream_url_from_content(content, debug_info)
-                    if stream_url:
-                        return stream_url
+                for match in matches:
+                    # Si es una tupla (por grupos en regex), tomar el primer elemento
+                    if isinstance(match, tuple):
+                        hls_url = match[0]
+                    else:
+                        hls_url = match
+                    
+                    # Limpiar la URL
+                    hls_url = hls_url.replace('\\u002F', '/').replace('\\/', '/').replace('\\u0026', '&')
+                    hls_url = hls_url.strip().strip('"\'')
+                    
+                    debug_info.append(f"Found candidate HLS URL: {hls_url[:150]}...")
+                    
+                    # Verificar que es una URL válida de HLS
+                    if (hls_url.startswith('https://') and 
+                        ('m3u8' in hls_url or 'manifest' in hls_url) and
+                        ('googlevideo.com' in hls_url or 'youtube.com' in hls_url)):
                         
-            except Exception as e:
-                debug_info.append(f"Request error: {e}")
-                continue
+                        debug_info.append(f"SUCCESS: Found valid HLS URL via direct extraction")
+                        return hls_url
+            
+            debug_info.append("Direct HLS extraction failed, no valid URLs found")
+                
+        except Exception as e:
+            debug_info.append(f"Direct HLS extraction error: {e}")
         
-        debug_info.append("Web scraping with auth: No valid stream found")
-        return None
+        # Fallback método 2: API interna de YouTube
+        debug_info.append("yt-dlp failed, trying YouTube internal API method")
         
-    except Exception as e:
-        debug_info.append(f"Web scraping error: {e}")
-        return None
-
-def try_mobile_endpoint_strategy(youtube_url, debug_info):
-    """Estrategia 3: Endpoint móvil"""
-    try:
-        debug_info.append("Strategy 3: Mobile endpoint")
+        # Extraer video ID de la URL
+        import re
+        video_id = None
+        patterns = [
+            r'(?:v=|\/)([0-9A-Za-z_-]{11}).*',
+            r'youtu\.be\/([0-9A-Za-z_-]{11})',
+            r'embed\/([0-9A-Za-z_-]{11})'
+        ]
         
-        mobile_url = youtube_url.replace('www.youtube.com', 'm.youtube.com')
+        for pattern in patterns:
+            match = re.search(pattern, url)
+            if match:
+                video_id = match.group(1)
+                break
         
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+        if not video_id:
+            debug_info.append("Could not extract video ID from URL")
+            return None
+        
+        debug_info.append(f"Extracted video ID: {video_id}")
+        
+        api_url = "https://www.youtube.com/youtubei/v1/player"
+        
+        # Headers de app móvil de YouTube
+        mobile_headers = {
+            'User-Agent': 'com.google.android.youtube/19.09.36 (Linux; U; Android 11) gzip',
+            'Content-Type': 'application/json',
+            'X-YouTube-Client-Name': '3',
+            'X-YouTube-Client-Version': '19.09.36',
         }
         
-        response = requests.get(mobile_url, headers=headers, timeout=45)
-        if response.status_code == 200:
-            content = response.text
-            debug_info.append(f"Mobile: Got {len(content)} characters")
-            
-            stream_url = extract_stream_url_from_content(content, debug_info, is_mobile=True)
-            if stream_url:
-                return stream_url
-        else:
-            debug_info.append(f"Mobile failed: {response.status_code}")
-            
-    except Exception as e:
-        debug_info.append(f"Mobile error: {e}")
-    
-    return None
-
-def extract_stream_url_from_content(content, debug_info, is_mobile=False):
-    """Extrae URLs de streaming del contenido HTML/JSON - Busca múltiples formatos"""
-    
-    # Patrones para buscar URLs de streaming (no solo .m3u8)
-    patterns = [
-        # HLS manifest URLs
-        r'"hlsManifestUrl":\s*"([^"]+)"',
-        r'"hlsManifestUrl":"([^"]+)"',
-        # Stream URLs directas
-        r'"url":"([^"]*\.m3u8[^"]*)"',
-        r'"url":"([^"]*manifest[^"]*)"',
-        r'"url":"([^"]*stream[^"]*)"',
-        # Dash manifest
-        r'"dashManifestUrl":\s*"([^"]+)"',
-        r'"dashManifestUrl":"([^"]+)"',
-        # URLs de video en vivo generales
-        r'https://[^"\s]+\.m3u8[^"\s]*',
-        r'https://[^"\s]+manifest[^"\s]*',
-        r'https://[^"\s]+/videoplayback[^"\s]*',
-        # Nuevos patrones específicos de YouTube Live
-        r'"streamingData"[^}]*"hlsManifestUrl":\s*"([^"]+)"',
-        r'"formats"[^}]*"url":\s*"([^"]*googlevideo[^"]*)"',
-        r'"adaptiveFormats"[^}]*"url":\s*"([^"]*googlevideo[^"]*)"'
-    ]
-    
-    if is_mobile:
-        patterns.extend([
-            r'manifest_url["\']:\s*["\']([^"\']+)["\']',
-            r'stream_url["\']:\s*["\']([^"\']+)["\']',
-            r'"video_url":\s*"([^"]+)"'
-        ])
-    
-    debug_info.append(f"Searching with {len(patterns)} patterns for streaming URLs")
-    
-    for i, pattern in enumerate(patterns):
-        matches = re.findall(pattern, content, re.IGNORECASE | re.DOTALL)
-        debug_info.append(f"Pattern {i+1}: found {len(matches)} matches")
+        # Payload de API interna
+        api_payload = {
+            "context": {
+                "client": {
+                    "clientName": "ANDROID",
+                    "clientVersion": "19.09.36",
+                    "androidSdkVersion": 30,
+                    "userAgent": "com.google.android.youtube/19.09.36 (Linux; U; Android 11) gzip",
+                    "hl": "en",
+                    "timeZone": "UTC",
+                    "utcOffsetMinutes": 0
+                }
+            },
+            "videoId": video_id,
+            "playbackContext": {
+                "contentPlaybackContext": {
+                    "html5Preference": "HTML5_PREF_WANTS"
+                }
+            },
+            "contentCheckOk": True,
+            "racyCheckOk": True
+        }
         
-        for match in matches:
-            if isinstance(match, tuple):
-                match = match[0]
+        try:
+            api_response = requests.post(api_url, json=api_payload, headers=mobile_headers, timeout=15)
+            debug_info.append(f"API response status: {api_response.status_code}")
             
-            clean_url = match.replace('\\u002F', '/').replace('\\/', '/').replace('\\u0026', '&')
-            debug_info.append(f"Checking URL: {clean_url[:150]}...")
+            if api_response.status_code == 200:
+                api_data = api_response.json()
+                debug_info.append("Successfully got API response")
+                
+                # Buscar streamingData en la respuesta de API
+                if 'streamingData' in api_data:
+                    streaming_data = api_data['streamingData']
+                    debug_info.append("Found streamingData in API response")
+                    
+                    # Buscar hlsManifestUrl
+                    if 'hlsManifestUrl' in streaming_data:
+                        hls_url = streaming_data['hlsManifestUrl']
+                        debug_info.append(f"Found HLS manifest from API: {hls_url[:100]}...")
+                        return hls_url
+                    
+                    # Buscar adaptiveFormats
+                    if 'adaptiveFormats' in streaming_data:
+                        formats = streaming_data['adaptiveFormats']
+                        debug_info.append(f"Found {len(formats)} adaptive formats from API")
+                        
+                        for fmt in formats:
+                            if 'url' in fmt and 'googlevideo.com' in fmt['url']:
+                                debug_info.append(f"Found googlevideo URL from API: {fmt['url'][:100]}...")
+                                return fmt['url']
+                
+                if 'playabilityStatus' in api_data:
+                    status = api_data['playabilityStatus']
+                    debug_info.append(f"API playability status: {status.get('status')}, reason: {status.get('reason', 'N/A')}")
             
-            # Criterios más amplios para URLs válidas
-            if clean_url.startswith('https://'):
-                if (('googlevideo.com' in clean_url or 'youtube.com' in clean_url) and 
-                    ('.m3u8' in clean_url or 'manifest' in clean_url or 'videoplayback' in clean_url)):
-                    debug_info.append(f"Found valid YouTube stream URL via pattern {i+1}")
-                    return clean_url
-                elif (len(clean_url) > 50 and 
-                      any(fmt in clean_url.lower() for fmt in ['m3u8', 'manifest', 'stream', 'video', 'live'])):
-                    debug_info.append(f"Found potential non-YouTube stream URL via pattern {i+1}: {clean_url[:200]}")
-                    return clean_url
-    
-    # Búsqueda manual más amplia
-    streaming_formats = ['.m3u8', 'manifest', 'videoplayback', '/live/', '/stream/']
-    
-    for format_type in streaming_formats:
-        if format_type in content:
-            debug_info.append(f"Found '{format_type}' in content - doing manual search")
-            position = 0
-            occurrences = 0
+        except Exception as e:
+            debug_info.append(f"API method failed: {e}")
+        
+        # Fallback final: método web scraping
+        debug_info.append("All methods failed, trying basic web scraping")
+        
+        # Headers básicos
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'identity',
+            'Connection': 'keep-alive',
+        }
+        
+        response = requests.get(url, headers=headers, timeout=15)
+        response_text = response.text
+        
+        debug_info.append(f"Web response status: {response.status_code}, Content length: {len(response_text)}")
+        
+        # Buscar patterns de googlevideo.com básicos
+        googlevideo_patterns = [
+            'manifest.googlevideo.com',
+            'googlevideo.com',
+            'manifest.googlevideo',
+            'hls_variant',
+            'hls_playlist'
+        ]
+        
+        found_googlevideo = False
+        for pattern in googlevideo_patterns:
+            if pattern in response_text:
+                debug_info.append(f"Found pattern '{pattern}' in response")
+                found_googlevideo = True
+                break
+        
+        if not found_googlevideo:
+            debug_info.append("No googlevideo patterns found in web scraping")
+            return None
+        
+        # Buscar URLs completas de manifest.googlevideo.com
+        import re
+        
+        # Patterns más específicos para URLs de streaming de YouTube
+        url_patterns = [
+            r'https://manifest\.googlevideo\.com/api/manifest/hls_variant[^"\s]+',
+            r'https://manifest\.googlevideo\.com[^"\s]+\.m3u8[^"\s]*',
+            r'https://[^"\s]*googlevideo\.com[^"\s]*manifest[^"\s]*',
+            r'https://[^"\s]*googlevideo\.com[^"\s]*\.m3u8[^"\s]*',
+            r'"(https://manifest\.googlevideo\.com[^"]+)"',
+            r"'(https://manifest\.googlevideo\.com[^']+)'"
+        ]
+        
+        debug_info.append(f"Searching with {len(url_patterns)} URL patterns")
+        
+        for i, pattern in enumerate(url_patterns):
+            matches = re.findall(pattern, response_text, re.IGNORECASE)
+            debug_info.append(f"Pattern {i+1}: found {len(matches)} matches")
             
+            for match in matches:
+                # Si es una tupla (por grupos en regex), tomar el primer elemento
+                if isinstance(match, tuple):
+                    stream_url = match[0]
+                else:
+                    stream_url = match
+                
+                # Limpiar la URL de caracteres de escape
+                stream_url = stream_url.replace('\\u002F', '/').replace('\\/', '/').replace('\\u0026', '&')
+                
+                debug_info.append(f"Found candidate URL: {stream_url[:100]}...")
+                
+                # Verificar que es una URL válida de YouTube streaming
+                if (stream_url.startswith('https://') and 
+                    'googlevideo.com' in stream_url and 
+                    ('manifest' in stream_url or '.m3u8' in stream_url)):
+                    
+                    debug_info.append(f"SUCCESS: Found valid YouTube stream URL")
+                    return stream_url
+        
+        # Si no encontramos con regex, buscar manualmente como YouTube_To_m3u
+        debug_info.append("Regex search failed, trying manual search")
+        
+        # Buscar fragmentos y reconstruir URLs
+        search_terms = [
+            'manifest.googlevideo.com',
+            'googlevideo.com/api/manifest',
+            'googlevideo.com',
+            'manifest/hls_variant',
+            'hls_variant',
+            '/api/manifest/'
+        ]
+        
+        all_fragments = []
+        
+        for term in search_terms:
+            pos = 0
             while True:
-                pos = content.find(format_type, position)
+                pos = response_text.find(term, pos)
                 if pos == -1:
                     break
                 
-                occurrences += 1
-                if occurrences > 50:  # Límite para evitar bucles infinitos
-                    break
+                debug_info.append(f"Found '{term}' at position {pos}")
                 
-                # Buscar hacia atrás para encontrar el inicio de la URL
-                start = pos
-                for i in range(pos, max(0, pos - 2000), -1):
-                    if content[i:i+8] == 'https://':
-                        start = i
-                        break
+                # Extraer un fragmento más grande alrededor del término
+                start_search = max(0, pos - 200)
+                end_search = min(len(response_text), pos + 1500)
+                fragment = response_text[start_search:end_search]
                 
-                # Buscar hacia adelante para encontrar el final
-                end = pos + len(format_type)
-                for i in range(end, min(len(content), end + 500)):
-                    if content[i] in ['"', "'", ' ', '\n', '\r', '\t']:
-                        end = i
-                        break
+                # Limpiar caracteres de escape
+                clean_fragment = fragment.replace('\\u002F', '/').replace('\\/', '/').replace('\\u0026', '&').replace('\\"', '"')
                 
-                url_candidate = content[start:end]
-                url_candidate = url_candidate.replace('\\u002F', '/').replace('\\/', '/').replace('\\u0026', '&')
-                
-                debug_info.append(f"Manual check: {url_candidate[:150]}...")
-                
-                # Criterios más permisivos para debugging
-                if url_candidate.startswith('https://'):
-                    if ('googlevideo.com' in url_candidate or 'youtube.com' in url_candidate):
-                        debug_info.append(f"Found valid URL via manual search for '{format_type}'")
-                        return url_candidate
-                    elif len(url_candidate) > 50:  # URL significativa
-                        debug_info.append(f"Found potential URL (non-YouTube): {url_candidate[:200]}")
-                        # Si es una URL larga y parece ser de streaming, intentémosla
-                        if any(indicator in url_candidate.lower() for indicator in ['stream', 'video', 'live', 'manifest', 'm3u8']):
-                            debug_info.append(f"Accepting non-YouTube streaming URL")
-                            return url_candidate
-                
-                position = pos + 1
+                all_fragments.append(clean_fragment)
+                pos += 1
+        
+        debug_info.append(f"Collected {len(all_fragments)} fragments for analysis")
+        
+        # Para debugging, mostrar algunos fragmentos
+        if all_fragments:
+            debug_info.append(f"Sample fragment 1: {repr(all_fragments[0][:150])}")
+            if len(all_fragments) > 5:
+                debug_info.append(f"Sample fragment 6: {repr(all_fragments[5][:150])}")
+        
+        # Estrategia mejorada: Buscar configuraciones JSON de YouTube
+        debug_info.append("Searching for YouTube JSON configurations")
+        
+        # Buscar específicamente ytInitialPlayerResponse
+        import json
+        
+        # Patrón más robusto para ytInitialPlayerResponse
+        player_response_patterns = [
+            r'var\s+ytInitialPlayerResponse\s*=\s*({.+?});',
+            r'ytInitialPlayerResponse\s*=\s*({.+?});',
+            r'window\["ytInitialPlayerResponse"\]\s*=\s*({.+?});'
+        ]
+        
+        for pattern in player_response_patterns:
+            matches = re.findall(pattern, response_text, re.DOTALL)
+            debug_info.append(f"Player response pattern found {len(matches)} matches")
             
-            debug_info.append(f"Manual search for '{format_type}': checked {occurrences} occurrences")
-    
-    debug_info.append("No valid streaming URLs found in content")
-    return None
+            for match in matches:
+                try:
+                    debug_info.append(f"Trying to parse player response JSON (length: {len(match)})")
+                    
+                    # Intentar parsear el JSON
+                    player_data = json.loads(match)
+                    debug_info.append("Successfully parsed ytInitialPlayerResponse JSON")
+                    
+                    # Mostrar las claves principales para debugging
+                    main_keys = list(player_data.keys())[:10]  # Limitar a 10 para evitar overflow
+                    debug_info.append(f"Main keys in player response: {main_keys}")
+                    
+                    # Buscar streamingData
+                    if 'streamingData' in player_data:
+                        streaming_data = player_data['streamingData']
+                        debug_info.append("Found streamingData in player response")
+                        
+                        # Buscar hlsManifestUrl
+                        if 'hlsManifestUrl' in streaming_data:
+                            hls_url = streaming_data['hlsManifestUrl']
+                            debug_info.append(f"Found hlsManifestUrl: {hls_url[:100]}...")
+                            if 'googlevideo.com' in hls_url:
+                                return hls_url
+                        
+                        # Buscar adaptiveFormats
+                        if 'adaptiveFormats' in streaming_data:
+                            formats = streaming_data['adaptiveFormats']
+                            debug_info.append(f"Found {len(formats)} adaptive formats")
+                            
+                            for fmt in formats:
+                                if 'url' in fmt and 'googlevideo.com' in fmt['url']:
+                                    debug_info.append(f"Found googlevideo URL in format: {fmt['url'][:100]}...")
+                                    return fmt['url']
+                        
+                        # Buscar formats regulares
+                        if 'formats' in streaming_data:
+                            formats = streaming_data['formats']
+                            debug_info.append(f"Found {len(formats)} regular formats")
+                            
+                            for fmt in formats:
+                                if 'url' in fmt and 'googlevideo.com' in fmt['url']:
+                                    debug_info.append(f"Found googlevideo URL in regular format: {fmt['url'][:100]}...")
+                                    return fmt['url']
+                    
+                    debug_info.append("No streaming URLs found in ytInitialPlayerResponse")
+                    
+                    # También verificar si hay videoDetails o playabilityStatus que puedan indicar por qué no hay streams
+                    if 'videoDetails' in player_data:
+                        video_details = player_data['videoDetails']
+                        debug_info.append(f"Video details available: videoId={video_details.get('videoId', 'N/A')}, isLiveContent={video_details.get('isLiveContent', 'N/A')}")
+                    
+                    if 'playabilityStatus' in player_data:
+                        playability = player_data['playabilityStatus']
+                        debug_info.append(f"Playability status: {playability.get('status', 'N/A')}, reason={playability.get('reason', 'N/A')}")
+                    
+                except json.JSONDecodeError as e:
+                    debug_info.append(f"JSON decode error: {e}")
+                    
+                    # Intentar encontrar JSON válido dentro del match
+                    try:
+                        # Buscar el primer { y el último } que coincida
+                        start = match.find('{')
+                        if start != -1:
+                            brace_count = 0
+                            end = start
+                            for i in range(start, len(match)):
+                                if match[i] == '{':
+                                    brace_count += 1
+                                elif match[i] == '}':
+                                    brace_count -= 1
+                                    if brace_count == 0:
+                                        end = i + 1
+                                        break
+                            
+                            clean_json = match[start:end]
+                            player_data = json.loads(clean_json)
+                            debug_info.append("Successfully parsed cleaned JSON")
+                            
+                            # Repetir búsqueda con JSON limpio
+                            if 'streamingData' in player_data:
+                                streaming_data = player_data['streamingData']
+                                if 'hlsManifestUrl' in streaming_data:
+                                    hls_url = streaming_data['hlsManifestUrl']
+                                    if 'googlevideo.com' in hls_url:
+                                        return hls_url
+                    
+                    except Exception as e2:
+                        debug_info.append(f"Cleanup attempt failed: {e2}")
+                        continue
+                
+                except Exception as e:
+                    debug_info.append(f"General JSON parsing error: {e}")
+                    continue
+                    
+        # Fallback: Analizar fragmentos para reconstruir URLs
+        debug_info.append("JSON search failed, analyzing fragments manually")
+        
+        for i, fragment in enumerate(all_fragments):
+            debug_info.append(f"Analyzing fragment {i+1}")
+            
+            # Solo procesar los primeros 5 fragmentos para evitar timeout
+            if i >= 5:
+                debug_info.append("Limiting fragment analysis to first 5 for performance")
+                break
+            
+            # Buscar patrones de URL dentro del fragmento
+            url_starts = []
+            for j in range(len(fragment) - 8):
+                if fragment[j:j+8] == 'https://':
+                    url_starts.append(j)
+            
+            for start_pos in url_starts:
+                # Buscar el final de la URL
+                end_pos = start_pos + 8
+                for k in range(start_pos + 8, len(fragment)):
+                    if fragment[k] in ['"', "'", ' ', '\n', '\r', '\t', ')', '}', ']']:
+                        end_pos = k
+                        break
+                    elif k == len(fragment) - 1:
+                        end_pos = len(fragment)
+                
+                candidate_url = fragment[start_pos:end_pos]
+                
+                if (len(candidate_url) > 50 and 
+                    'googlevideo.com' in candidate_url and
+                    ('manifest' in candidate_url or 'hls' in candidate_url)):
+                    
+                    debug_info.append(f"Fragment analysis found candidate: {candidate_url[:100]}...")
+                    
+                    # Validar que la URL sea accesible
+                    if candidate_url.startswith('https://manifest.googlevideo.com'):
+                        debug_info.append(f"SUCCESS: Fragment analysis found valid manifest URL")
+                        return candidate_url
+        
+        # Último intento: buscar texto codificado/ofuscado
+        debug_info.append("Trying to decode obfuscated content")
+        
+        # Buscar patrones típicos de URLs ofuscadas de YouTube
+        encoded_patterns = [
+            r'manifest\.googlevideo\.com[^"\\]*',
+            r'googlevideo\.com[^"\\]*manifest[^"\\]*',
+            r'[a-zA-Z0-9+/=]{50,}',  # Base64-like strings
+        ]
+        
+        for pattern in encoded_patterns:
+            matches = re.findall(pattern, response_text)
+            for match in matches:
+                if 'googlevideo' in match:
+                    decoded = match.replace('\\u002F', '/').replace('\\/', '/')
+                    if decoded.startswith('manifest.googlevideo'):
+                        full_url = f"https://{decoded}"
+                        debug_info.append(f"Decoded obfuscated URL: {full_url[:100]}...")
+                        return full_url
+        
+        debug_info.append("No valid googlevideo.com URLs found")
+        return None
+        
+    except Exception as e:
+        debug_info.append(f"Error in grab_stream_url: {e}")
+        return None
 
 def lambda_handler(event, context):
     """AWS Lambda handler function con CORS"""
@@ -459,14 +546,14 @@ def lambda_handler(event, context):
                     'success': True,
                     'stream_url': stream_url,
                     'debug_info': debug_info,
-                    'source': 'AWS Lambda Enhanced'
+                    'source': 'AWS Lambda Simple (YouTube_To_m3u method)'
                 }
             else:
                 result = {
                     'success': False,
-                    'error': 'No se pudo extraer el stream de YouTube. Puede que no esté en vivo.',
+                    'error': 'No se pudo extraer el stream de YouTube usando método simple.',
                     'debug_info': debug_info,
-                    'source': 'AWS Lambda Enhanced'
+                    'source': 'AWS Lambda Simple (YouTube_To_m3u method)'
                 }
             
             return {
@@ -480,7 +567,7 @@ def lambda_handler(event, context):
         error_details = {
             "error": str(e),
             "traceback": traceback.format_exc(),
-            "source": "AWS Lambda Enhanced"
+            "source": "AWS Lambda Simple (YouTube_To_m3u method)"
         }
         
         return {

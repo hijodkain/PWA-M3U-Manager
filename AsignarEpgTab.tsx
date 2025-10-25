@@ -7,6 +7,8 @@ import ReparacionChannelItem from './ReparacionChannelItem';
 import { useSettings } from './useSettings';
 import EpgChannelItem from './EpgChannelItem';
 import { AttributeKey, Channel } from './index';
+import { SmartSearchInput } from './SmartSearchInput';
+import { SearchResultItem } from './SearchResultComponents';
 
 interface AsignarEpgTabProps {
     epgHook: ReturnType<typeof useAsignarEpg>;
@@ -17,6 +19,7 @@ interface AsignarEpgTabProps {
 const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, settingsHook }) => {
     const {
         epgChannels,
+        filteredEpgChannels,
         isEpgLoading,
         epgError,
         epgUrl,
@@ -33,12 +36,18 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
         handleGenerateEpgFromUrls,
         epgIdSet,
         handleEpgSourceClick,
+        // Nuevas funciones de búsqueda inteligente
+        epgSearchTerm,
+        setEpgSearchTerm,
+        isSmartSearchEnabled,
+        toggleSmartSearch,
+        getEpgSimilarityScore,
+        smartSearch,
     } = epgHook;
 
     const { channels } = channelsHook;
     const { savedEpgUrls } = settingsHook;
     const [mainListSearch, setMainListSearch] = useState('');
-    const [epgListSearch, setEpgListSearch] = useState('');
     const [selectedGroup, setSelectedGroup] = useState('all');
     const [isGeneratorVisible, setIsGeneratorVisible] = useState(false);
 
@@ -53,18 +62,17 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
             channelsToFilter = channelsToFilter.filter(c => c.groupTitle === selectedGroup);
         }
         if (mainListSearch) {
-            channelsToFilter = channelsToFilter.filter(c => c.name.toLowerCase().includes(mainListSearch.toLowerCase()));
+            if (isSmartSearchEnabled) {
+                // Usar búsqueda inteligente
+                const searchResults = smartSearch.searchChannels(channelsToFilter, mainListSearch, 0.4);
+                return searchResults.map(result => result.item);
+            } else {
+                // Búsqueda tradicional exacta
+                channelsToFilter = channelsToFilter.filter(c => c.name.toLowerCase().includes(mainListSearch.toLowerCase()));
+            }
         }
         return channelsToFilter;
-    }, [channels, mainListSearch, selectedGroup]);
-
-    const filteredEpgChannels = useMemo(() => {
-        let channelsToFilter = epgChannels;
-        if (epgListSearch) {
-            channelsToFilter = channelsToFilter.filter(c => c.name.toLowerCase().includes(epgListSearch.toLowerCase()));
-        }
-        return channelsToFilter;
-    }, [epgChannels, epgListSearch]);
+    }, [channels, mainListSearch, selectedGroup, isSmartSearchEnabled, smartSearch]);
 
     const mainListParentRef = useRef<HTMLDivElement>(null);
     const epgListParentRef = useRef<HTMLDivElement>(null);
@@ -88,7 +96,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
 
     const handleMainChannelClick = (channel: Channel) => {
         setDestinationChannelId(channel.id);
-        setEpgListSearch(channel.name);
+                                setEpgSearchTerm(smartSearch.normalizeChannelName(channel.name));
     };
 
     return (
@@ -157,12 +165,15 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
             </div>
             <div className="lg:col-span-5 bg-gray-800 p-4 rounded-lg flex flex-col">
                 <h3 className="font-bold text-lg mb-2">Fuente EPG</h3>
-                <input
-                    type="text"
+                <SmartSearchInput
+                    searchTerm={epgSearchTerm}
+                    onSearchChange={setEpgSearchTerm}
+                    isSmartSearchEnabled={isSmartSearchEnabled}
+                    onToggleSmartSearch={toggleSmartSearch}
                     placeholder="Buscar en la fuente EPG..."
-                    value={epgListSearch}
-                    onChange={(e) => setEpgListSearch(e.target.value)}
-                    className="bg-gray-700 border border-gray-600 rounded-md px-3 py-1.5 text-white focus:ring-blue-500 focus:border-blue-500 mb-2 w-full"
+                    showResults={true}
+                    resultCount={filteredEpgChannels.length}
+                    className="mb-2"
                 />
                 <div className="space-y-4">
                     <div className="flex items-center gap-2">
