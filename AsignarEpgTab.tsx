@@ -48,6 +48,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
         toggleAssignmentMode,
         selectedEpgChannels,
         toggleEpgChannelSelection,
+        toggleSelectAllEpgChannels,
         addSelectedEpgChannels,
     } = epgHook;
     
@@ -208,6 +209,20 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                     >
                         Añadir {selectedEpgChannels.size > 0 ? `(${selectedEpgChannels.size})` : 'Seleccionados'}
                     </button>
+                </div>
+
+                {/* Checkbox para seleccionar todos */}
+                <div className="flex items-center gap-2 mb-2">
+                    <input
+                        type="checkbox"
+                        id="select-all-epg"
+                        checked={filteredEpgChannels.length > 0 && filteredEpgChannels.every(ch => selectedEpgChannels.has(ch.id))}
+                        onChange={toggleSelectAllEpgChannels}
+                        className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+                    />
+                    <label htmlFor="select-all-epg" className="text-sm text-gray-300 cursor-pointer">
+                        Seleccionar todos ({filteredEpgChannels.length} canales)
+                    </label>
                 </div>
                 <div className="space-y-4">
                     <div className="flex items-center gap-2">
