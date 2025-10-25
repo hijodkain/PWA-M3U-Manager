@@ -36,7 +36,7 @@ const EpgChannelItem: React.FC<EpgChannelItemProps> = ({
                     checked={isSelected}
                     onChange={(e) => {
                         e.stopPropagation();
-                        onCheckboxChange?.(epgChannel.id, e.shiftKey);
+                        onCheckboxChange?.(epgChannel.id, (e.nativeEvent as MouseEvent).shiftKey);
                     }}
                     className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
                 />
