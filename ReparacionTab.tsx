@@ -7,7 +7,6 @@ import ReparacionChannelItem from './ReparacionChannelItem';
 import { useSettings } from './useSettings';
 import { AttributeKey } from './index';
 import { SmartSearchInput } from './SmartSearchInput';
-import { SearchResultItem } from './SearchResultComponents';
 
 interface ReparacionTabProps {
     reparacionHook: ReturnType<typeof useReparacion>;
