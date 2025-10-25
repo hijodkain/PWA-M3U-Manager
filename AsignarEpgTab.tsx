@@ -43,6 +43,12 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
         toggleSmartSearch,
         getEpgSimilarityScore,
         smartSearch,
+        // Nuevas funciones para modo de asignación y selección
+        assignmentMode,
+        toggleAssignmentMode,
+        selectedEpgChannels,
+        toggleEpgChannelSelection,
+        addSelectedEpgChannels,
     } = epgHook;
     
     // Extraer funciones para evitar problemas de dependencias
@@ -178,6 +184,31 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                     resultCount={filteredEpgChannels.length}
                     className="mb-2"
                 />
+                
+                {/* Controles de modo de asignación y selección múltiple */}
+                <div className="flex gap-2 mb-2">
+                    <button
+                        onClick={toggleAssignmentMode}
+                        className={`flex-1 text-sm py-2 px-3 rounded-md transition-colors ${
+                            assignmentMode === 'tvg-id' 
+                                ? 'bg-green-600 text-white' 
+                                : 'bg-yellow-600 text-white'
+                        }`}
+                    >
+                        {assignmentMode === 'tvg-id' ? 'Modo: tvg-id' : 'Modo: tvg-name'}
+                    </button>
+                    <button
+                        onClick={addSelectedEpgChannels}
+                        disabled={selectedEpgChannels.size === 0}
+                        className={`flex-1 text-sm py-2 px-3 rounded-md transition-colors ${
+                            selectedEpgChannels.size > 0
+                                ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                                : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                        }`}
+                    >
+                        Añadir {selectedEpgChannels.size > 0 ? `(${selectedEpgChannels.size})` : 'Seleccionados'}
+                    </button>
+                </div>
                 <div className="space-y-4">
                     <div className="flex items-center gap-2">
                         <input
@@ -275,6 +306,12 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                         width: '100%',
                                         transform: `translateY(${virtualItem.start}px)`,
                                     }}
+                                    isSelected={selectedEpgChannels.has(ch.id)}
+                                    showCheckbox={true}
+                                    onCheckboxChange={toggleEpgChannelSelection}
+                                    assignmentMode={assignmentMode}
+                                    score={getEpgSimilarityScore(ch.id)}
+                                    matchType={epgSearchTerm && ch.name.toLowerCase().includes(epgSearchTerm.toLowerCase()) ? 'exact' : 'similarity'}
                                 />
                             );
                         })}

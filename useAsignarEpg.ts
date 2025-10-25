@@ -38,6 +38,8 @@ export const useAsignarEpg = (
     const [epgSearchTerm, setEpgSearchTerm] = useState('');
     const [isSmartSearchEnabled, setIsSmartSearchEnabled] = useState(true);
     const [smartSearchResults, setSmartSearchResults] = useState<SearchMatch<EpgChannel>[]>([]);
+    const [assignmentMode, setAssignmentMode] = useState<'tvg-id' | 'tvg-name'>('tvg-id');
+    const [selectedEpgChannels, setSelectedEpgChannels] = useState<Set<string>>(new Set());
 
     // Inicializar búsqueda inteligente
     const smartSearch = useSmartSearch({
@@ -151,10 +153,20 @@ export const useAsignarEpg = (
         setChannels((prev) =>
             prev.map((dest) => {
                 if (dest.id === destinationChannelId) {
-                    const updated = { ...dest, tvgId: sourceEpg.id };
+                    const updated = { ...dest };
+                    
+                    // Asignar según el modo seleccionado
+                    if (assignmentMode === 'tvg-id') {
+                        updated.tvgId = sourceEpg.id;
+                    } else {
+                        updated.tvgName = sourceEpg.name;
+                    }
+                    
+                    // Copiar logo si está seleccionado
                     if (attributesToCopy.has('tvgLogo')) {
                         updated.tvgLogo = sourceEpg.logo;
                     }
+                    
                     return updated;
                 }
                 return dest;
@@ -180,6 +192,71 @@ export const useAsignarEpg = (
         const result = smartSearchResults.find(result => result.item.id === channelId);
         return result ? result.score : 0;
     }, [smartSearchResults]);
+
+    // Función para alternar selección de canales EPG
+    const toggleEpgChannelSelection = useCallback((channelId: string) => {
+        setSelectedEpgChannels(prev => {
+            const newSelected = new Set(prev);
+            if (newSelected.has(channelId)) {
+                newSelected.delete(channelId);
+            } else {
+                newSelected.add(channelId);
+            }
+            return newSelected;
+        });
+    }, []);
+
+    // Función para seleccionar/deseleccionar todos los canales EPG visibles
+    const toggleSelectAllEpgChannels = useCallback(() => {
+        const allVisibleIds = filteredEpgChannels.map(c => c.id);
+        const currentSelection = new Set(selectedEpgChannels);
+        
+        const allSelected = allVisibleIds.length > 0 && allVisibleIds.every(id => currentSelection.has(id));
+        
+        if (allSelected) {
+            // Deseleccionar todos los visibles
+            allVisibleIds.forEach(id => currentSelection.delete(id));
+        } else {
+            // Seleccionar todos los visibles
+            allVisibleIds.forEach(id => currentSelection.add(id));
+        }
+        
+        setSelectedEpgChannels(new Set(currentSelection));
+    }, [filteredEpgChannels, selectedEpgChannels]);
+
+    // Función para añadir canales EPG seleccionados a la lista principal
+    const addSelectedEpgChannels = useCallback(() => {
+        if (selectedEpgChannels.size === 0) return;
+        
+        saveStateToHistory();
+        
+        const channelsToAdd = epgChannels
+            .filter(c => selectedEpgChannels.has(c.id))
+            .map((epgChannel, index) => ({
+                id: `epg-${Date.now()}-${index}`,
+                order: 0, // Se actualizará después
+                tvgId: epgChannel.id,
+                tvgName: epgChannel.name,
+                tvgLogo: epgChannel.logo,
+                groupTitle: 'EPG Channels',
+                name: epgChannel.name,
+                url: 'http://error-stream-not-available.invalid/stream.m3u8'
+            }));
+        
+        setChannels(prev => {
+            const newChannels = [...prev, ...channelsToAdd];
+            // Actualizar órdenes
+            return newChannels.map((c, i) => ({ ...c, order: i + 1 }));
+        });
+        
+        // Limpiar selección
+        setSelectedEpgChannels(new Set());
+    }, [selectedEpgChannels, epgChannels, setChannels, saveStateToHistory]);
+
+    // Función para alternar entre modos de asignación
+    const toggleAssignmentMode = useCallback(() => {
+        setAssignmentMode(prev => prev === 'tvg-id' ? 'tvg-name' : 'tvg-id');
+    }, []);
 
     return {
         epgChannels,
@@ -210,5 +287,12 @@ export const useAsignarEpg = (
         getEpgSimilarityScore,
         smartSearchResults,
         smartSearch,
+        // Nuevas funciones para modo de asignación y añadir canales
+        assignmentMode,
+        toggleAssignmentMode,
+        selectedEpgChannels,
+        toggleEpgChannelSelection,
+        toggleSelectAllEpgChannels,
+        addSelectedEpgChannels,
     };
 };
