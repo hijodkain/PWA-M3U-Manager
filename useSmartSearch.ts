@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 
 export interface SearchMatch<T> {
     item: T;
@@ -20,7 +20,7 @@ export const useSmartSearch = ({ channelPrefixes, channelSuffixes }: UseSmartSea
     /**
      * Normaliza un nombre de canal eliminando prefijos y sufijos configurados
      */
-    const normalizeChannelName = useMemo(() => (name: string): string => {
+    const normalizeChannelName = useCallback((name: string): string => {
         if (!name) return '';
         
         let normalized = name.trim();
@@ -47,7 +47,7 @@ export const useSmartSearch = ({ channelPrefixes, channelSuffixes }: UseSmartSea
     /**
      * Calcula la similaridad entre dos strings usando distancia de Levenshtein normalizada
      */
-    const calculateSimilarity = (str1: string, str2: string): number => {
+    const calculateSimilarity = useCallback((str1: string, str2: string): number => {
         if (str1 === str2) return 1;
         
         const len1 = str1.length;
@@ -81,12 +81,43 @@ export const useSmartSearch = ({ channelPrefixes, channelSuffixes }: UseSmartSea
         
         const maxLen = Math.max(len1, len2);
         return (maxLen - matrix[len1][len2]) / maxLen;
-    };
+    }, []);
+
+    /**
+     * Escapa caracteres especiales de regex
+     */
+    const escapeRegExp = useCallback((string: string): string => {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }, []);
+
+    /**
+     * Resalta las coincidencias en el nombre del canal
+     */
+    const highlightMatches = useCallback((originalName: string, searchTerm: string, normalizedSearchTerm: string): string => {
+        let highlighted = originalName;
+        
+        // Intentar resaltar la búsqueda original
+        const regex1 = new RegExp(`(${escapeRegExp(searchTerm)})`, 'gi');
+        if (regex1.test(originalName)) {
+            highlighted = originalName.replace(regex1, '<mark>$1</mark>');
+        }
+        // Si no hay coincidencias, intentar con término normalizado
+        else if (normalizedSearchTerm !== searchTerm) {
+            const regex2 = new RegExp(`(${escapeRegExp(normalizedSearchTerm)})`, 'gi');
+            const normalizedName = normalizeChannelName(originalName);
+            if (regex2.test(normalizedName)) {
+                // Mapear coincidencias del nombre normalizado al original
+                highlighted = originalName.replace(regex2, '<mark>$1</mark>');
+            }
+        }
+        
+        return highlighted;
+    }, [normalizeChannelName, escapeRegExp]);
 
     /**
      * Busca canales con coincidencias inteligentes
      */
-    const searchChannels = <T extends { name: string }>(
+    const searchChannels = useCallback(<T extends { name: string }>(
         channels: T[],
         searchTerm: string,
         minSimilarity: number = 0.6
@@ -182,43 +213,12 @@ export const useSmartSearch = ({ channelPrefixes, channelSuffixes }: UseSmartSea
         
         // Ordenar por score descendente
         return matches.sort((a, b) => b.score - a.score);
-    };
-
-    /**
-     * Resalta las coincidencias en el nombre del canal
-     */
-    const highlightMatches = (originalName: string, searchTerm: string, normalizedSearchTerm: string): string => {
-        let highlighted = originalName;
-        
-        // Intentar resaltar la búsqueda original
-        const regex1 = new RegExp(`(${escapeRegExp(searchTerm)})`, 'gi');
-        if (regex1.test(originalName)) {
-            highlighted = originalName.replace(regex1, '<mark>$1</mark>');
-        }
-        // Si no hay coincidencias, intentar con término normalizado
-        else if (normalizedSearchTerm !== searchTerm) {
-            const regex2 = new RegExp(`(${escapeRegExp(normalizedSearchTerm)})`, 'gi');
-            const normalizedName = normalizeChannelName(originalName);
-            if (regex2.test(normalizedName)) {
-                // Mapear coincidencias del nombre normalizado al original
-                highlighted = originalName.replace(regex2, '<mark>$1</mark>');
-            }
-        }
-        
-        return highlighted;
-    };
-
-    /**
-     * Escapa caracteres especiales de regex
-     */
-    const escapeRegExp = (string: string): string => {
-        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    };
+    }, [normalizeChannelName, calculateSimilarity, highlightMatches]);
 
     /**
      * Obtiene sugerencias de búsqueda basadas en canales existentes
      */
-    const getSuggestions = <T extends { name: string }>(
+    const getSuggestions = useCallback(<T extends { name: string }>(
         channels: T[],
         searchTerm: string,
         maxSuggestions: number = 5
@@ -243,7 +243,7 @@ export const useSmartSearch = ({ channelPrefixes, channelSuffixes }: UseSmartSea
         }
         
         return Array.from(suggestions);
-    };
+    }, [normalizeChannelName]);
 
     return {
         normalizeChannelName,
