@@ -30,11 +30,23 @@ export const SearchResultItem: React.FC<SearchResultItemProps> = ({
     const getMatchIcon = (matchType: string) => {
         switch (matchType) {
             case 'exact':
-                return <Target className="h-3 w-3 text-green-400" title="Coincidencia exacta" />;
+                return (
+                    <div title="Coincidencia exacta">
+                        <Target className="h-3 w-3 text-green-400" />
+                    </div>
+                );
             case 'partial':
-                return <Star className="h-3 w-3 text-yellow-400" title="Coincidencia parcial" />;
+                return (
+                    <div title="Coincidencia parcial">
+                        <Star className="h-3 w-3 text-yellow-400" />
+                    </div>
+                );
             case 'fuzzy':
-                return <Zap className="h-3 w-3 text-blue-400" title="Coincidencia por similaridad" />;
+                return (
+                    <div title="Coincidencia por similaridad">
+                        <Zap className="h-3 w-3 text-blue-400" />
+                    </div>
+                );
             default:
                 return null;
         }
