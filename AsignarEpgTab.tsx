@@ -311,7 +311,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                     onCheckboxChange={toggleEpgChannelSelection}
                                     assignmentMode={assignmentMode}
                                     score={getEpgSimilarityScore(ch.id)}
-                                    matchType={epgSearchTerm && ch.name.toLowerCase().includes(epgSearchTerm.toLowerCase()) ? 'exact' : 'similarity'}
+                                    matchType={epgSearchTerm && ch.name.toLowerCase().includes(epgSearchTerm.toLowerCase()) ? 'exact' : 'fuzzy'}
                                 />
                             );
                         })}
