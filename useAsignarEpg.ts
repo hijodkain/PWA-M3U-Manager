@@ -44,6 +44,9 @@ export const useAsignarEpg = (
         channelPrefixes: settingsHook.channelPrefixes,
         channelSuffixes: settingsHook.channelSuffixes
     });
+    
+    // Extraer funciones para evitar problemas de dependencias
+    const { searchChannels, normalizeChannelName } = smartSearch;
 
     const handleEpgFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -129,7 +132,7 @@ export const useAsignarEpg = (
 
         if (isSmartSearchEnabled) {
             // Usar búsqueda inteligente
-            const searchResults = smartSearch.searchChannels(epgChannels, epgSearchTerm, 0.4);
+            const searchResults = searchChannels(epgChannels, epgSearchTerm, 0.4);
             setSmartSearchResults(searchResults);
             return searchResults.map(result => result.item);
         } else {
@@ -140,7 +143,7 @@ export const useAsignarEpg = (
                 channel.id.toLowerCase().includes(epgSearchTerm.toLowerCase())
             );
         }
-    }, [epgChannels, epgSearchTerm, isSmartSearchEnabled, smartSearch]);
+    }, [epgChannels, epgSearchTerm, isSmartSearchEnabled, searchChannels]);
 
     const handleEpgSourceClick = (sourceEpg: EpgChannel) => {
         if (!destinationChannelId) return;
@@ -163,8 +166,8 @@ export const useAsignarEpg = (
     // Función para buscar canales EPG similares automáticamente
     const findSimilarEpgChannels = useCallback((channelName: string) => {
         if (!channelName.trim()) return [];
-        return smartSearch.searchChannels(epgChannels, channelName, 0.5);
-    }, [smartSearch, epgChannels]);
+        return searchChannels(epgChannels, channelName, 0.5);
+    }, [searchChannels, epgChannels]);
 
     // Función para alternar entre búsqueda inteligente y exacta
     const toggleSmartSearch = useCallback(() => {

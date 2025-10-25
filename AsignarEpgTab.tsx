@@ -44,6 +44,9 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
         getEpgSimilarityScore,
         smartSearch,
     } = epgHook;
+    
+    // Extraer funciones para evitar problemas de dependencias
+    const { searchChannels: epgSearchChannels, normalizeChannelName: epgNormalizeChannelName } = smartSearch;
 
     const { channels } = channelsHook;
     const { savedEpgUrls } = settingsHook;
@@ -64,7 +67,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
         if (mainListSearch) {
             if (isSmartSearchEnabled) {
                 // Usar búsqueda inteligente
-                const searchResults = smartSearch.searchChannels(channelsToFilter, mainListSearch, 0.4);
+                const searchResults = epgSearchChannels(channelsToFilter, mainListSearch, 0.4);
                 return searchResults.map(result => result.item);
             } else {
                 // Búsqueda tradicional exacta
@@ -72,7 +75,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
             }
         }
         return channelsToFilter;
-    }, [channels, mainListSearch, selectedGroup, isSmartSearchEnabled, smartSearch]);
+    }, [channels, mainListSearch, selectedGroup, isSmartSearchEnabled, epgSearchChannels]);
 
     const mainListParentRef = useRef<HTMLDivElement>(null);
     const epgListParentRef = useRef<HTMLDivElement>(null);
@@ -96,7 +99,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
 
     const handleMainChannelClick = (channel: Channel) => {
         setDestinationChannelId(channel.id);
-                                setEpgSearchTerm(smartSearch.normalizeChannelName(channel.name));
+                                setEpgSearchTerm(epgNormalizeChannelName(channel.name));
     };
 
     return (

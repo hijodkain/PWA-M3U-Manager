@@ -56,6 +56,9 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         getChannelSimilarityScore,
         smartSearch,
     } = reparacionHook;
+    
+    // Extraer funciones para evitar problemas de dependencias
+    const { normalizeChannelName } = smartSearch;
 
     const { undo, history } = channelsHook;
 
@@ -141,7 +144,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     channel={ch}
                                     onBodyClick={() => {
                                         setDestinationChannelId(ch.id)
-                                        setReparacionListSearch(smartSearch.normalizeChannelName(ch.name));
+                                        setReparacionListSearch(normalizeChannelName(ch.name));
                                     }}
                                     isSelected={destinationChannelId === ch.id}
                                     showCheckbox={false}

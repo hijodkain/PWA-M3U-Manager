@@ -32,6 +32,9 @@ export const useReparacion = (
         channelPrefixes: settingsHook.channelPrefixes,
         channelSuffixes: settingsHook.channelSuffixes
     });
+    
+    // Extraer funciones para evitar problemas de dependencias
+    const { searchChannels, normalizeChannelName } = smartSearch;
 
     const verifyChannel = async (channelId: string, url: string) => {
         setVerificationStatus(prev => ({ ...prev, [channelId]: 'verifying' }));
@@ -227,7 +230,7 @@ export const useReparacion = (
         if (mainListSearch) {
             if (isSmartSearchEnabled) {
                 // Usar búsqueda inteligente
-                const searchResults = smartSearch.searchChannels(channels, mainListSearch, 0.4);
+                const searchResults = searchChannels(channels, mainListSearch, 0.4);
                 return searchResults.map(result => result.item);
             } else {
                 // Búsqueda tradicional exacta
@@ -235,7 +238,7 @@ export const useReparacion = (
             }
         }
         return channels;
-    }, [mainChannels, mainListFilter, mainListSearch, isSmartSearchEnabled, smartSearch]);
+    }, [mainChannels, mainListFilter, mainListSearch, isSmartSearchEnabled, searchChannels]);
 
     const filteredReparacionChannels = useMemo(() => {
         let channels = reparacionChannels;
@@ -245,7 +248,7 @@ export const useReparacion = (
         if (reparacionListSearch) {
             if (isSmartSearchEnabled) {
                 // Usar búsqueda inteligente y guardar resultados para mostrar scores
-                const searchResults = smartSearch.searchChannels(channels, reparacionListSearch, 0.4);
+                const searchResults = searchChannels(channels, reparacionListSearch, 0.4);
                 setSmartSearchResults(searchResults);
                 return searchResults.map(result => result.item);
             } else {
@@ -257,7 +260,7 @@ export const useReparacion = (
             setSmartSearchResults([]);
         }
         return channels;
-    }, [reparacionChannels, reparacionListFilter, reparacionListSearch, isSmartSearchEnabled, smartSearch]);
+    }, [reparacionChannels, reparacionListFilter, reparacionListSearch, isSmartSearchEnabled, searchChannels]);
 
     const toggleReparacionSelection = useCallback((id: string, index: number, shiftKey: boolean, metaKey: boolean, ctrlKey: boolean) => {
         const newSelected = new Set(selectedReparacionChannels);
@@ -312,8 +315,8 @@ export const useReparacion = (
     // Función para buscar canales similares automáticamente
     const findSimilarChannels = useCallback((channelName: string, sourceChannels: Channel[] = reparacionChannels) => {
         if (!channelName.trim()) return [];
-        return smartSearch.searchChannels(sourceChannels, channelName, 0.5);
-    }, [smartSearch, reparacionChannels]);
+        return searchChannels(sourceChannels, channelName, 0.5);
+    }, [searchChannels, reparacionChannels]);
 
     // Función para alternar entre búsqueda inteligente y exacta
     const toggleSmartSearch = useCallback(() => {
