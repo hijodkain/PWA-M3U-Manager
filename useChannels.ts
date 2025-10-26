@@ -189,28 +189,25 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
         URL.revokeObjectURL(url);
     };
 
-    const handleUpdateChannel = (channelId: string, field: keyof Channel, newValue: any) => {
-        const isGroupUpdate =
-            field === 'groupTitle' &&
-            selectedChannels.includes(channelId) &&
-            selectedChannels.length > 1;
-
-        if (isGroupUpdate) {
-            if (window.confirm(`¿Quieres actualizar el grupo de los ${selectedChannels.length} canales seleccionados?`)) {
+    const handleUpdateChannel = (channelId: string, field: keyof Channel, newValue: string) => {
+        const isMultiSelect = selectedChannels.includes(channelId) && selectedChannels.length > 1;
+        
+        if (isMultiSelect) {
+            if (field === 'groupTitle') {
                 setChannels((prev) =>
                     prev.map((ch) =>
                         selectedChannels.includes(ch.id) ? { ...ch, groupTitle: newValue } : ch
                     )
                 );
+                // Deseleccionar todos los canales después de aplicar el cambio
+                setSelectedChannels([]);
             }
         } else {
             setChannels((prev) =>
                 prev.map((ch) => (ch.id === channelId ? { ...ch, [field]: newValue } : ch))
             );
         }
-    };
-
-    const handleOrderChange = (channelId: string, newOrderStr: string) => {
+    };    const handleOrderChange = (channelId: string, newOrderStr: string) => {
         const newOrder = parseInt(newOrderStr, 10);
         if (isNaN(newOrder) || newOrder <= 0) return;
 
