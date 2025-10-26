@@ -1,3 +1,6 @@
+export type QualityLevel = 'SD' | 'HD' | 'FHD' | '4K' | 'unknown';
+export type ChannelStatus = 'ok' | 'failed' | 'verifying' | 'pending';
+
 export interface Channel {
   id: string;
   order: number;
@@ -7,7 +10,9 @@ export interface Channel {
   groupTitle: string;
   name: string;
   url: string;
-  status?: 'ok' | 'failed' | 'verifying' | 'pending';
+  status?: ChannelStatus;
+  quality?: QualityLevel;
+  resolution?: string; // e.g., "1920x1080"
 }
 
 export interface EpgChannel {

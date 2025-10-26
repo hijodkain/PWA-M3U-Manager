@@ -1,5 +1,5 @@
 import React from 'react';
-import { Channel } from './index';
+import { Channel, QualityLevel, ChannelStatus } from './index';
 
 interface ReparacionChannelItemProps {
     channel: Channel;
@@ -9,7 +9,9 @@ interface ReparacionChannelItemProps {
     isChecked?: boolean;
     hasEpg?: boolean;
     showCheckbox?: boolean;
-    verificationStatus?: 'pending' | 'verifying' | 'ok' | 'failed';
+    verificationStatus?: ChannelStatus;
+    quality?: QualityLevel;
+    resolution?: string;
     onVerifyClick?: () => void;
     style?: React.CSSProperties;
 }
@@ -23,6 +25,8 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
     hasEpg,
     showCheckbox = false,
     verificationStatus = 'pending',
+    quality = 'unknown',
+    resolution,
     onVerifyClick,
     style,
 }) => {
@@ -45,14 +49,33 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
     const statusIndicator = () => {
         switch (verificationStatus) {
             case 'ok':
-                return <span className="text-green-500">OK</span>;
+                return <span className="text-green-500 text-xs">✓ OK</span>;
             case 'failed':
-                return <span className="text-red-500">Failed</span>;
+                return <span className="text-red-500 text-xs">✗ Failed</span>;
             case 'verifying':
-                return <span className="text-yellow-500">Verifying...</span>;
+                return <span className="text-yellow-500 text-xs animate-pulse">⟳ Verifying...</span>;
             default:
-                return <span className="text-gray-500">Pending</span>;
+                return <span className="text-gray-500 text-xs">○ Pending</span>;
         }
+    };
+
+    const qualityBadge = () => {
+        if (quality === 'unknown' || verificationStatus !== 'ok') return null;
+        
+        const qualityColors: Record<QualityLevel, string> = {
+            '4K': 'bg-purple-600 text-white',
+            'FHD': 'bg-blue-600 text-white',
+            'HD': 'bg-green-600 text-white',
+            'SD': 'bg-yellow-600 text-white',
+            'unknown': 'bg-gray-600 text-white',
+        };
+
+        return (
+            <div className={`${qualityColors[quality]} px-2 py-0.5 rounded text-xs font-bold mb-1`}>
+                {quality}
+                {resolution && <span className="text-[10px] ml-1 opacity-80">({resolution})</span>}
+            </div>
+        );
     };
 
     return (
@@ -83,7 +106,8 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
                     <span className="font-semibold text-gray-300">URL:</span> {getDomainFromUrl(channel.url)}
                 </p>
             </div>
-            <div className="flex flex-col items-center justify-center ml-auto">
+            <div className="flex flex-col items-center justify-center ml-auto min-w-[80px]">
+                {qualityBadge()}
                 {statusIndicator()}
                 <button
                     onClick={(e) => {
@@ -91,9 +115,9 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
                         if (onVerifyClick) onVerifyClick();
                     }}
                     disabled={verificationStatus === 'verifying'}
-                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-xs mt-1 disabled:opacity-50"
+                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-xs mt-1 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
-                    Verify
+                    {verificationStatus === 'verifying' ? 'Verifying...' : 'Verify'}
                 </button>
             </div>
             {showCheckbox && (

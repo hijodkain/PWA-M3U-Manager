@@ -39,7 +39,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         setMainListSearch,
         reparacionListSearch,
         setReparacionListSearch,
-        verificationStatus,
+        verificationInfo,
         verifyChannel,
         clearFailedChannelsUrls,
         failedChannelsByGroup,
@@ -138,6 +138,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                         {mainListVirtualItems.map((virtualItem) => {
                             const ch = filteredMainChannels[virtualItem.index];
                             if (!ch) return null;
+                            const channelInfo = verificationInfo[ch.id] || { status: 'pending', quality: 'unknown' };
                             return (
                                 <ReparacionChannelItem
                                     key={ch.id}
@@ -148,7 +149,9 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     }}
                                     isSelected={destinationChannelId === ch.id}
                                     showCheckbox={false}
-                                    verificationStatus={verificationStatus[ch.id] || 'pending'}
+                                    verificationStatus={channelInfo.status}
+                                    quality={channelInfo.quality}
+                                    resolution={channelInfo.resolution}
                                     onVerifyClick={() => verifyChannel(ch.id, ch.url)}
                                     style={{
                                         position: 'absolute',
@@ -290,6 +293,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                         {reparacionListVirtualItems.map((virtualItem) => {
                             const ch = filteredReparacionChannels[virtualItem.index];
                             if (!ch) return null;
+                            const channelInfo = verificationInfo[ch.id] || { status: 'pending', quality: 'unknown' };
                             return (
                                 <ReparacionChannelItem
                                     key={ch.id}
@@ -299,7 +303,9 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     isSelected={false}
                                     isChecked={selectedReparacionChannels.has(ch.id)}
                                     showCheckbox={true}
-                                    verificationStatus={verificationStatus[ch.id] || 'pending'}
+                                    verificationStatus={channelInfo.status}
+                                    quality={channelInfo.quality}
+                                    resolution={channelInfo.resolution}
                                     onVerifyClick={() => verifyChannel(ch.id, ch.url)}
                                     style={{
                                         position: 'absolute',

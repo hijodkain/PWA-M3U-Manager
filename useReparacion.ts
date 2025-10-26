@@ -1,8 +1,12 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Channel, AttributeKey } from './index';
+import { Channel, AttributeKey, QualityLevel, ChannelStatus } from './index';
 import { useSmartSearch, SearchMatch } from './useSmartSearch';
 
-type VerificationStatus = 'pending' | 'verifying' | 'ok' | 'failed';
+interface ChannelVerificationInfo {
+    status: ChannelStatus;
+    quality: QualityLevel;
+    resolution?: string;
+}
 
 export const useReparacion = (
     mainChannels: Channel[],
@@ -14,7 +18,7 @@ export const useReparacion = (
     const [selectedReparacionChannels, setSelectedReparacionChannels] = useState<Set<string>>(new Set());
     const [attributesToCopy, setAttributesToCopy] = useState<Set<AttributeKey>>(new Set());
     const [destinationChannelId, setDestinationChannelId] = useState<string | null>(null);
-    const [verificationStatus, setVerificationStatus] = useState<Record<string, VerificationStatus>>({});
+    const [verificationInfo, setVerificationInfo] = useState<Record<string, ChannelVerificationInfo>>({});
     const [reparacionUrl, setReparacionUrl] = useState('');
     const [isCurationLoading, setIsCurationLoading] = useState(false);
     const [curationError, setCurationError] = useState<string | null>(null);
@@ -37,15 +41,46 @@ export const useReparacion = (
     const { searchChannels, normalizeChannelName } = smartSearch;
 
     const verifyChannel = async (channelId: string, url: string) => {
-        setVerificationStatus(prev => ({ ...prev, [channelId]: 'verifying' }));
+        setVerificationInfo(prev => ({ 
+            ...prev, 
+            [channelId]: { status: 'verifying', quality: 'unknown' }
+        }));
+        
         try {
-            const proxyUrl = `/api/verify_channel?url=${encodeURIComponent(url)}&spoof=true`;
-            const response = await fetch(proxyUrl);
+            const apiUrl = `/api/verify_channel?url=${encodeURIComponent(url)}`;
+            const response = await fetch(apiUrl);
             const data = await response.json();
-            setVerificationStatus(prev => ({ ...prev, [channelId]: data.status || 'failed' }));
+            
+            setVerificationInfo(prev => ({ 
+                ...prev, 
+                [channelId]: {
+                    status: data.status || 'failed',
+                    quality: data.quality || 'unknown',
+                    resolution: data.resolution,
+                }
+            }));
+
+            // También actualizar el canal con la calidad detectada
+            setReparacionChannels(prevChannels => 
+                prevChannels.map(ch => 
+                    ch.id === channelId 
+                        ? { ...ch, quality: data.quality, resolution: data.resolution, status: data.status }
+                        : ch
+                )
+            );
+            setMainChannels(prevChannels => 
+                prevChannels.map(ch => 
+                    ch.id === channelId 
+                        ? { ...ch, quality: data.quality, resolution: data.resolution, status: data.status }
+                        : ch
+                )
+            );
         } catch (error) {
             console.error('Verification failed', error);
-            setVerificationStatus(prev => ({ ...prev, [channelId]: 'failed' }));
+            setVerificationInfo(prev => ({ 
+                ...prev, 
+                [channelId]: { status: 'failed', quality: 'unknown' }
+            }));
         }
     };
 
@@ -136,28 +171,28 @@ export const useReparacion = (
 
     const clearFailedChannelsUrls = () => {
         saveStateToHistory();
-        const newStatus = { ...verificationStatus };
+        const newInfo = { ...verificationInfo };
         setMainChannels(prev =>
             prev.map(channel => {
-                if (verificationStatus[channel.id] === 'failed') {
-                    newStatus[channel.id] = 'pending';
-                    return { ...channel, url: 'http://--' };
+                if (verificationInfo[channel.id]?.status === 'failed') {
+                    newInfo[channel.id] = { status: 'pending', quality: 'unknown' };
+                    return { ...channel, url: 'http://--', status: 'pending', quality: 'unknown' };
                 }
                 return channel;
             })
         );
-        setVerificationStatus(newStatus);
+        setVerificationInfo(newInfo);
     };
 
     const failedChannelsByGroup = useMemo(() => {
         return mainChannels.reduce((acc, channel) => {
-            if (verificationStatus[channel.id] === 'failed') {
+            if (verificationInfo[channel.id]?.status === 'failed') {
                 const group = channel.groupTitle || 'Sin Grupo';
                 acc[group] = (acc[group] || 0) + 1;
             }
             return acc;
         }, {} as Record<string, number>);
-    }, [mainChannels, verificationStatus]);
+    }, [mainChannels, verificationInfo]);
 
 
     const handleReparacionFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -356,7 +391,7 @@ export const useReparacion = (
         reparacionListSearch,
         setReparacionListSearch,
         setReparacionChannels,
-        verificationStatus,
+        verificationInfo,
         verifyChannel,
         clearFailedChannelsUrls,
         failedChannelsByGroup,
