@@ -60,8 +60,8 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
     };
 
     const qualityBadge = () => {
-        // Mostrar badge solo si la verificación fue exitosa y tiene una calidad válida
-        if (verificationStatus !== 'ok' || quality === 'unknown') return null;
+        // Mostrar badge solo si la verificación fue exitosa
+        if (verificationStatus !== 'ok') return null;
         
         const qualityColors: Record<QualityLevel, string> = {
             '4K': 'bg-purple-600 text-white shadow-lg',
@@ -71,10 +71,12 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
             'unknown': 'bg-gray-600 text-white',
         };
 
+        const qualityText = quality === 'unknown' ? 'Unknown' : quality;
+
         return (
             <div className={`${qualityColors[quality]} px-3 py-1 rounded-md text-sm font-bold mb-1 text-center`}>
-                {quality}
-                {resolution && <div className="text-[9px] opacity-90">{resolution}</div>}
+                {qualityText}
+                {resolution && quality !== 'unknown' && <div className="text-[9px] opacity-90">{resolution}</div>}
             </div>
         );
     };

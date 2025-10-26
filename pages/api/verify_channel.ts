@@ -141,10 +141,7 @@ async function verifyChannel(url: string): Promise<VerificationResponse> {
     }
 
     try {
-        // 1. Intentar detectar calidad por URL primero (rápido)
-        const urlQuality = detectQualityFromURL(url);
-
-        // 2. Si es M3U8, analizar el manifest
+        // 1. Si es M3U8, analizar el manifest (método más preciso)
         if (url.includes('.m3u8')) {
             const streams = await analyzeM3U8MasterPlaylist(url);
             
@@ -187,25 +184,26 @@ async function verifyChannel(url: string): Promise<VerificationResponse> {
                 }
             }
             
-            // Si no se pudo analizar el M3U8 pero la URL tiene indicadores
-            if (urlQuality) {
-                return {
-                    status: 'ok',
-                    quality: urlQuality,
-                };
-            }
+            // Si no se pudo analizar el M3U8, devolver unknown
+            return {
+                status: 'ok',
+                quality: 'unknown',
+                error: 'No se pudo analizar el manifest M3U8',
+            };
         }
 
-        // 3. Para streams no-M3U8, verificar si responde
+        // 2. Para streams no-M3U8, intentar descargar una muestra
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 15000);
 
         try {
+            // Intentar GET con Range para obtener headers y una muestra
             const response = await fetch(url, {
-                method: 'HEAD',
+                method: 'GET',
                 headers: {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                     'Accept': '*/*',
+                    'Range': 'bytes=0-65536', // Primeros 64KB
                 },
                 signal: controller.signal,
                 redirect: 'follow',
@@ -225,20 +223,36 @@ async function verifyChannel(url: string): Promise<VerificationResponse> {
                     };
                 }
 
-                // Stream válido - usar calidad detectada por URL o HD por defecto
+                // Verificar si es un stream de video válido
+                const isValidStream = contentType.includes('video') || 
+                                     contentType.includes('mpegurl') || 
+                                     contentType.includes('octet-stream') ||
+                                     contentType.includes('mpeg');
+
+                if (!isValidStream) {
+                    return {
+                        status: 'failed',
+                        quality: 'unknown',
+                        error: 'Content-Type inválido',
+                    };
+                }
+
+                // Stream válido pero sin información de calidad
+                // Como último recurso, intentar detectar por URL
+                const urlQuality = detectQualityFromURL(url);
+                
                 return {
                     status: 'ok',
-                    quality: urlQuality || 'HD',
+                    quality: urlQuality || 'unknown',
                 };
             }
-        } catch (headError) {
-            // Si HEAD falla, intentar GET
-            console.log('HEAD failed, trying GET');
+        } catch (rangeError) {
+            console.log('GET with Range failed, trying HEAD');
         }
 
-        // 4. Fallback a GET
+        // 3. Fallback a HEAD si GET con Range falla
         const response2 = await fetch(url, {
-            method: 'GET',
+            method: 'HEAD',
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                 'Accept': '*/*',
@@ -257,9 +271,12 @@ async function verifyChannel(url: string): Promise<VerificationResponse> {
                 };
             }
 
+            // Como último recurso, usar detección por URL
+            const urlQuality = detectQualityFromURL(url);
+            
             return {
                 status: 'ok',
-                quality: urlQuality || 'HD',
+                quality: urlQuality || 'unknown',
             };
         }
 
