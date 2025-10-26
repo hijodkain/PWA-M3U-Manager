@@ -110,67 +110,113 @@ async function verifyChannel(url: string): Promise<VerificationResponse> {
     }
 
     try {
-        // Primer intento: verificar si la URL responde
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 segundos
-
-        const response = await fetch(url, {
-            method: 'HEAD', // Solo headers para ser más rápido
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                'Accept': '*/*',
-            },
-            signal: controller.signal,
-            redirect: 'follow',
-        });
-
-        clearTimeout(timeoutId);
-
-        // Verificar si la respuesta es válida
-        if (response.status < 200 || response.status >= 400) {
-            return {
-                status: 'failed',
-                quality: 'unknown',
-                error: `HTTP ${response.status}`,
-            };
-        }
-
-        const contentType = response.headers.get('content-type')?.toLowerCase() || '';
-
-        // Verificar que no sea HTML, JSON, etc. (debe ser un stream)
-        if (['text/html', 'application/json', 'text/plain'].some(ct => contentType.includes(ct))) {
-            return {
-                status: 'failed',
-                quality: 'unknown',
-                error: 'Not a valid stream',
-            };
-        }
-
-        // Si es M3U8 (HLS), analizar para obtener calidad
-        if (url.includes('.m3u8') || contentType.includes('mpegurl') || contentType.includes('m3u8')) {
+        // Si es M3U8, intentar analizarlo directamente
+        if (url.includes('.m3u8')) {
             const { quality, resolution } = await analyzeM3U8(url);
             return {
-                status: 'ok',
+                status: quality !== 'unknown' ? 'ok' : 'failed',
                 quality,
                 resolution,
             };
         }
 
-        // Para otros tipos de streams (MPEG-TS, etc.)
-        // Intentar estimar basado en el content-length si está disponible
-        const contentLength = response.headers.get('content-length');
-        if (contentLength) {
-            const size = parseInt(contentLength);
-            // Si es muy grande, probablemente sea alta calidad
-            // Esto es solo una estimación básica
-            if (size > 50000000) return { status: 'ok', quality: 'FHD' };
-            if (size > 20000000) return { status: 'ok', quality: 'HD' };
+        // Para otros tipos de streams (MPEG-TS, MP4, etc.)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 segundos para streams lentos
+
+        try {
+            const response = await fetch(url, {
+                method: 'HEAD',
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                },
+                signal: controller.signal,
+                redirect: 'follow',
+            });
+
+            clearTimeout(timeoutId);
+
+            // Verificar si la respuesta es válida (incluir 206 para partial content)
+            if (response.status >= 200 && response.status < 400) {
+                const contentType = response.headers.get('content-type')?.toLowerCase() || '';
+
+                // Si es HTML, JSON o texto plano, probablemente no sea un stream
+                if (['text/html', 'application/json', 'text/plain'].some(ct => contentType.includes(ct))) {
+                    return {
+                        status: 'failed',
+                        quality: 'unknown',
+                        error: 'Not a valid stream (HTML/JSON detected)',
+                    };
+                }
+
+                // Stream válido - intentar determinar calidad por parámetros de URL o content-type
+                // Buscar indicios de calidad en la URL
+                const urlLower = url.toLowerCase();
+                if (urlLower.includes('4k') || urlLower.includes('2160p') || urlLower.includes('uhd')) {
+                    return { status: 'ok', quality: '4K' };
+                }
+                if (urlLower.includes('1080') || urlLower.includes('fhd') || urlLower.includes('fullhd')) {
+                    return { status: 'ok', quality: 'FHD' };
+                }
+                if (urlLower.includes('720') || urlLower.includes('hd')) {
+                    return { status: 'ok', quality: 'HD' };
+                }
+                if (urlLower.includes('480') || urlLower.includes('sd')) {
+                    return { status: 'ok', quality: 'SD' };
+                }
+
+                // Si tiene video en content-type, es válido pero calidad desconocida
+                if (contentType.includes('video') || contentType.includes('octet-stream') || contentType.includes('mpeg')) {
+                    return { status: 'ok', quality: 'HD' }; // Asumimos HD por defecto
+                }
+
+                // Stream válido genérico
+                return { status: 'ok', quality: 'HD' };
+            }
+        } catch (headError) {
+            // Si HEAD falla, intentar con GET limitado
+            console.log('HEAD failed, trying GET:', headError);
         }
 
-        // Stream válido pero no podemos determinar calidad exacta
+        // Fallback: intentar GET con timeout más corto
+        const controller2 = new AbortController();
+        const timeoutId2 = setTimeout(() => controller2.abort(), 8000);
+
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept': '*/*',
+            },
+            signal: controller2.signal,
+            redirect: 'follow',
+        });
+
+        clearTimeout(timeoutId2);
+
+        if (response.status >= 200 && response.status < 400) {
+            const contentType = response.headers.get('content-type')?.toLowerCase() || '';
+
+            // Verificar que no sea HTML, JSON, etc.
+            if (['text/html', 'application/json', 'text/plain'].some(ct => contentType.includes(ct))) {
+                return {
+                    status: 'failed',
+                    quality: 'unknown',
+                    error: 'Not a valid stream',
+                };
+            }
+
+            // Stream válido
+            return {
+                status: 'ok',
+                quality: 'HD', // Por defecto HD para streams que responden correctamente
+            };
+        }
+
         return {
-            status: 'ok',
+            status: 'failed',
             quality: 'unknown',
+            error: `HTTP ${response.status}`,
         };
 
     } catch (error: any) {
