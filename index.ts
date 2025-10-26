@@ -13,6 +13,8 @@ export interface Channel {
   status?: ChannelStatus;
   quality?: QualityLevel;
   resolution?: string; // e.g., "1920x1080"
+  codec?: string; // e.g., "avc1.64001f,mp4a.40.2"
+  bitrate?: number; // in bps
 }
 
 export interface EpgChannel {

@@ -7,11 +7,22 @@ interface VerificationResponse {
     status: ChannelStatus;
     quality: QualityLevel;
     resolution?: string;
+    codec?: string;
+    bitrate?: number;
     error?: string;
+}
+
+interface StreamInfo {
+    resolution?: string;
+    width?: number;
+    height?: number;
+    bandwidth?: number;
+    codecs?: string;
 }
 
 /**
  * Detecta la calidad del stream basándose en la resolución
+ * Basado en IPTVChecker quality detection
  */
 function getQualityFromResolution(width: number, height: number): QualityLevel {
     if (height >= 2160 || width >= 3840) return '4K';
@@ -22,83 +33,103 @@ function getQualityFromResolution(width: number, height: number): QualityLevel {
 }
 
 /**
- * Analiza un archivo M3U8 para extraer información de calidad
+ * Detecta calidad basándose en el bitrate (en bps)
+ * Similar al enfoque de IPTVChecker
  */
-async function analyzeM3U8(url: string): Promise<{ quality: QualityLevel; resolution?: string }> {
+function getQualityFromBitrate(bitrate: number): QualityLevel {
+    if (bitrate >= 20000000) return '4K';      // >= 20 Mbps
+    if (bitrate >= 8000000) return 'FHD';      // >= 8 Mbps
+    if (bitrate >= 3000000) return 'HD';       // >= 3 Mbps
+    if (bitrate >= 1000000) return 'SD';       // >= 1 Mbps
+    return 'SD';
+}
+
+/**
+ * Analiza un archivo M3U8 master playlist para extraer información de calidad
+ * Implementación inspirada en IPTVChecker
+ */
+async function analyzeM3U8MasterPlaylist(url: string): Promise<StreamInfo[]> {
     try {
         const response = await fetch(url, {
             method: 'GET',
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept': '*/*',
             },
-            signal: AbortSignal.timeout(10000),
+            signal: AbortSignal.timeout(12000),
         });
 
         if (!response.ok) {
-            return { quality: 'unknown' };
+            return [];
         }
 
         const content = await response.text();
         const lines = content.split('\n');
-
-        // Buscar etiquetas EXT-X-STREAM-INF que contienen información de resolución
-        let maxResolution: { width: number; height: number } | null = null;
-        let maxBandwidth = 0;
+        const streams: StreamInfo[] = [];
 
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i].trim();
 
-            // Buscar resolución en EXT-X-STREAM-INF
+            // Buscar EXT-X-STREAM-INF (master playlist)
             if (line.startsWith('#EXT-X-STREAM-INF:')) {
+                const streamInfo: StreamInfo = {};
+
                 // Extraer RESOLUTION
                 const resolutionMatch = line.match(/RESOLUTION=(\d+)x(\d+)/i);
                 if (resolutionMatch) {
-                    const width = parseInt(resolutionMatch[1]);
-                    const height = parseInt(resolutionMatch[2]);
-                    
-                    if (!maxResolution || height > maxResolution.height) {
-                        maxResolution = { width, height };
-                    }
+                    streamInfo.width = parseInt(resolutionMatch[1]);
+                    streamInfo.height = parseInt(resolutionMatch[2]);
+                    streamInfo.resolution = `${streamInfo.width}x${streamInfo.height}`;
                 }
 
-                // Extraer BANDWIDTH como fallback
+                // Extraer BANDWIDTH
                 const bandwidthMatch = line.match(/BANDWIDTH=(\d+)/i);
                 if (bandwidthMatch) {
-                    const bandwidth = parseInt(bandwidthMatch[1]);
-                    if (bandwidth > maxBandwidth) {
-                        maxBandwidth = bandwidth;
-                    }
+                    streamInfo.bandwidth = parseInt(bandwidthMatch[1]);
                 }
+
+                // Extraer CODECS
+                const codecsMatch = line.match(/CODECS="([^"]+)"/i);
+                if (codecsMatch) {
+                    streamInfo.codecs = codecsMatch[1];
+                }
+
+                streams.push(streamInfo);
             }
         }
 
-        // Si encontramos resolución, usarla
-        if (maxResolution) {
-            const quality = getQualityFromResolution(maxResolution.width, maxResolution.height);
-            return {
-                quality,
-                resolution: `${maxResolution.width}x${maxResolution.height}`,
-            };
-        }
-
-        // Si solo tenemos bandwidth, estimar calidad
-        if (maxBandwidth > 0) {
-            // Estimaciones basadas en bandwidth típico
-            if (maxBandwidth >= 15000000) return { quality: '4K' }; // >= 15 Mbps
-            if (maxBandwidth >= 5000000) return { quality: 'FHD' }; // >= 5 Mbps
-            if (maxBandwidth >= 2500000) return { quality: 'HD' }; // >= 2.5 Mbps
-            return { quality: 'SD' }; // < 2.5 Mbps
-        }
-
-        return { quality: 'unknown' };
+        return streams;
     } catch (error) {
         console.error('Error analyzing M3U8:', error);
-        return { quality: 'unknown' };
+        return [];
     }
 }
 
 /**
+ * Detecta calidad analizando patrones en la URL
+ * Basado en el enfoque de IPTVChecker
+ */
+function detectQualityFromURL(url: string): QualityLevel | null {
+    const urlLower = url.toLowerCase();
+    
+    // Patrones de 4K
+    if (urlLower.match(/\b(4k|2160p?|uhd|ultra)\b/)) return '4K';
+    
+    // Patrones de FHD
+    if (urlLower.match(/\b(1080p?|fhd|fullhd|full.?hd)\b/)) return 'FHD';
+    
+    // Patrones de HD
+    if (urlLower.match(/\b(720p?|hd)\b/)) return 'HD';
+    
+    // Patrones de SD
+    if (urlLower.match(/\b(480p?|sd|360p?|240p?)\b/)) return 'SD';
+    
+    return null;
+}
+
+/**
  * Verifica un canal de streaming y detecta su calidad
+ * Implementación inspirada en IPTVChecker
  */
 async function verifyChannel(url: string): Promise<VerificationResponse> {
     if (!url || url === 'http://--' || url.trim() === '') {
@@ -110,25 +141,71 @@ async function verifyChannel(url: string): Promise<VerificationResponse> {
     }
 
     try {
-        // Si es M3U8, intentar analizarlo directamente
+        // 1. Intentar detectar calidad por URL primero (rápido)
+        const urlQuality = detectQualityFromURL(url);
+
+        // 2. Si es M3U8, analizar el manifest
         if (url.includes('.m3u8')) {
-            const { quality, resolution } = await analyzeM3U8(url);
-            return {
-                status: quality !== 'unknown' ? 'ok' : 'failed',
-                quality,
-                resolution,
-            };
+            const streams = await analyzeM3U8MasterPlaylist(url);
+            
+            if (streams.length > 0) {
+                // Encontrar el stream de mayor calidad
+                const bestStream = streams.reduce((best, current) => {
+                    const bestHeight = best.height || 0;
+                    const currentHeight = current.height || 0;
+                    const bestBandwidth = best.bandwidth || 0;
+                    const currentBandwidth = current.bandwidth || 0;
+                    
+                    // Preferir por resolución, luego por bandwidth
+                    if (currentHeight > bestHeight) return current;
+                    if (currentHeight === bestHeight && currentBandwidth > bestBandwidth) return current;
+                    return best;
+                }, streams[0]);
+
+                let quality: QualityLevel = 'unknown';
+                
+                // Determinar calidad por resolución
+                if (bestStream.width && bestStream.height) {
+                    quality = getQualityFromResolution(bestStream.width, bestStream.height);
+                    return {
+                        status: 'ok',
+                        quality,
+                        resolution: bestStream.resolution,
+                        codec: bestStream.codecs,
+                        bitrate: bestStream.bandwidth,
+                    };
+                }
+                
+                // Si no hay resolución, usar bandwidth
+                if (bestStream.bandwidth) {
+                    quality = getQualityFromBitrate(bestStream.bandwidth);
+                    return {
+                        status: 'ok',
+                        quality,
+                        bitrate: bestStream.bandwidth,
+                    };
+                }
+            }
+            
+            // Si no se pudo analizar el M3U8 pero la URL tiene indicadores
+            if (urlQuality) {
+                return {
+                    status: 'ok',
+                    quality: urlQuality,
+                };
+            }
         }
 
-        // Para otros tipos de streams (MPEG-TS, MP4, etc.)
+        // 3. Para streams no-M3U8, verificar si responde
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 segundos para streams lentos
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
 
         try {
             const response = await fetch(url, {
                 method: 'HEAD',
                 headers: {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    'Accept': '*/*',
                 },
                 signal: controller.signal,
                 redirect: 'follow',
@@ -136,68 +213,42 @@ async function verifyChannel(url: string): Promise<VerificationResponse> {
 
             clearTimeout(timeoutId);
 
-            // Verificar si la respuesta es válida (incluir 206 para partial content)
             if (response.status >= 200 && response.status < 400) {
                 const contentType = response.headers.get('content-type')?.toLowerCase() || '';
 
-                // Si es HTML, JSON o texto plano, probablemente no sea un stream
+                // Rechazar HTML/JSON/texto
                 if (['text/html', 'application/json', 'text/plain'].some(ct => contentType.includes(ct))) {
                     return {
                         status: 'failed',
                         quality: 'unknown',
-                        error: 'Not a valid stream (HTML/JSON detected)',
+                        error: 'Not a valid stream',
                     };
                 }
 
-                // Stream válido - intentar determinar calidad por parámetros de URL o content-type
-                // Buscar indicios de calidad en la URL
-                const urlLower = url.toLowerCase();
-                if (urlLower.includes('4k') || urlLower.includes('2160p') || urlLower.includes('uhd')) {
-                    return { status: 'ok', quality: '4K' };
-                }
-                if (urlLower.includes('1080') || urlLower.includes('fhd') || urlLower.includes('fullhd')) {
-                    return { status: 'ok', quality: 'FHD' };
-                }
-                if (urlLower.includes('720') || urlLower.includes('hd')) {
-                    return { status: 'ok', quality: 'HD' };
-                }
-                if (urlLower.includes('480') || urlLower.includes('sd')) {
-                    return { status: 'ok', quality: 'SD' };
-                }
-
-                // Si tiene video en content-type, es válido pero calidad desconocida
-                if (contentType.includes('video') || contentType.includes('octet-stream') || contentType.includes('mpeg')) {
-                    return { status: 'ok', quality: 'HD' }; // Asumimos HD por defecto
-                }
-
-                // Stream válido genérico
-                return { status: 'ok', quality: 'HD' };
+                // Stream válido - usar calidad detectada por URL o HD por defecto
+                return {
+                    status: 'ok',
+                    quality: urlQuality || 'HD',
+                };
             }
         } catch (headError) {
-            // Si HEAD falla, intentar con GET limitado
-            console.log('HEAD failed, trying GET:', headError);
+            // Si HEAD falla, intentar GET
+            console.log('HEAD failed, trying GET');
         }
 
-        // Fallback: intentar GET con timeout más corto
-        const controller2 = new AbortController();
-        const timeoutId2 = setTimeout(() => controller2.abort(), 8000);
-
-        const response = await fetch(url, {
+        // 4. Fallback a GET
+        const response2 = await fetch(url, {
             method: 'GET',
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                 'Accept': '*/*',
             },
-            signal: controller2.signal,
-            redirect: 'follow',
+            signal: AbortSignal.timeout(8000),
         });
 
-        clearTimeout(timeoutId2);
+        if (response2.status >= 200 && response2.status < 400) {
+            const contentType = response2.headers.get('content-type')?.toLowerCase() || '';
 
-        if (response.status >= 200 && response.status < 400) {
-            const contentType = response.headers.get('content-type')?.toLowerCase() || '';
-
-            // Verificar que no sea HTML, JSON, etc.
             if (['text/html', 'application/json', 'text/plain'].some(ct => contentType.includes(ct))) {
                 return {
                     status: 'failed',
@@ -206,17 +257,16 @@ async function verifyChannel(url: string): Promise<VerificationResponse> {
                 };
             }
 
-            // Stream válido
             return {
                 status: 'ok',
-                quality: 'HD', // Por defecto HD para streams que responden correctamente
+                quality: urlQuality || 'HD',
             };
         }
 
         return {
             status: 'failed',
             quality: 'unknown',
-            error: `HTTP ${response.status}`,
+            error: `HTTP ${response2.status}`,
         };
 
     } catch (error: any) {
