@@ -1,6 +1,7 @@
 # Binarios de Lambda
 aws-lambda/layer/
 aws-lambda/iptv-checker-rs/
+aws-lambda/.aws-sam/
 
 # Node
 node_modules/

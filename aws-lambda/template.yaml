@@ -6,7 +6,7 @@ Globals:
   Function:
     Timeout: 900
     MemorySize: 1024
-    Runtime: python3.8
+    Runtime: python3.11
   Api:
     Cors:
       AllowOrigin: "'*'"
@@ -15,38 +15,6 @@ Globals:
       MaxAge: "'600'"
 
 Resources:
-  YouTubeExtractorFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: .
-      Handler: youtube_extractor_lambda.lambda_handler
-      Description: Extract YouTube live stream URLs with extended timeout
-      Environment:
-        Variables:
-          YOUTUBE_ACCESS_MODE: "unauthenticated"
-          ALLOW_EXTERNAL_REQUESTS: "true"
-          YOUTUBE_API_ENABLED: "true"
-      Policies:
-        - Version: "2012-10-17"
-          Statement:
-            - Effect: Allow
-              Action:
-                - "logs:CreateLogGroup"
-                - "logs:CreateLogStream"
-                - "logs:PutLogEvents"
-              Resource: "*"
-      Events:
-        Api:
-          Type: Api
-          Properties:
-            Path: /extract
-            Method: POST
-        OptionsApi:
-          Type: Api
-          Properties:
-            Path: /extract
-            Method: OPTIONS
-
   StreamAnalyzerFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -96,16 +64,6 @@ Resources:
       RetentionPolicy: Retain
 
 Outputs:
-  YouTubeExtractorApi:
-    Description: "API Gateway endpoint URL for YouTube Extractor function"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/extract"
-  YouTubeExtractorFunction:
-    Description: "YouTube Extractor Lambda Function ARN"
-    Value: !GetAtt YouTubeExtractorFunction.Arn
-  YouTubeExtractorFunctionIamRole:
-    Description: "Implicit IAM Role created for YouTube Extractor function"
-    Value: !GetAtt YouTubeExtractorFunctionRole.Arn
-  
   StreamAnalyzerApi:
     Description: "API Gateway endpoint URL for Stream Analyzer function"
     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/analyze"
