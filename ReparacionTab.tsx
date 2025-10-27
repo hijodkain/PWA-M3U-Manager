@@ -25,6 +25,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         reparacionListFilter,
         setReparacionListFilter,
         handleReparacionFileUpload,
+        processCurationM3U,
         toggleAttributeToCopy,
         handleSourceChannelClick,
         mainListUniqueGroups,
@@ -217,18 +218,33 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                         <Link size={16} />
                     </button>
                 </div>
-                {settingsHook.savedUrls.length > 0 && (
+                {(settingsHook.savedUrls.length > 0 || settingsHook.youtubeChannels.length > 0) && (
                     <div className="mb-2">
                         <select
                             value=""
                             onChange={(e) => {
                                 if (e.target.value) {
-                                    setReparacionUrl(e.target.value);
+                                    if (e.target.value === 'YOUTUBE_M3U_LOCAL') {
+                                        // Cargar canales de YouTube desde localStorage
+                                        const m3uContent = settingsHook.exportYoutubeM3U();
+                                        if (m3uContent) {
+                                            processCurationM3U(m3uContent);
+                                        } else {
+                                            alert('No hay canales de YouTube guardados. Ve a la pestaña YouTube Live para añadir canales.');
+                                        }
+                                    } else {
+                                        setReparacionUrl(e.target.value);
+                                    }
                                 }
                             }}
                             className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-1.5 text-white focus:ring-blue-500 focus:border-blue-500 text-sm"
                         >
                             <option value="">o selecciona una lista guardada...</option>
+                            {settingsHook.youtubeChannels.length > 0 && (
+                                <option value="YOUTUBE_M3U_LOCAL">
+                                    📺 Youtube.m3u ({settingsHook.youtubeChannels.length} canales)
+                                </option>
+                            )}
                             {settingsHook.savedUrls.map(item => (
                                 <option key={item.id} value={item.url}>
                                     {item.name}

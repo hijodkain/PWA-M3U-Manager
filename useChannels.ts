@@ -417,6 +417,7 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
         undo,
         history,
         generateM3UContent,
+        processM3UContent,
         handleVerifyChannels,
         handleDeleteFailed,
         isVerifying,

@@ -630,6 +630,7 @@ export const useReparacion = (
         reparacionListFilter,
         setReparacionListFilter,
         handleReparacionFileUpload,
+        processCurationM3U,
         toggleAttributeToCopy,
         handleSourceChannelClick,
         mainListUniqueGroups,
