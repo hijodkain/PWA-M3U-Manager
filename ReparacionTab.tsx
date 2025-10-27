@@ -40,6 +40,8 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         reparacionListSearch,
         setReparacionListSearch,
         verificationInfo,
+        verificationProgress,
+        cancelVerification,
         verifyChannel,
         clearFailedChannelsUrls,
         failedChannelsByGroup,
@@ -268,9 +270,33 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                     />
                     <label htmlFor="select-all-group" className="text-sm text-gray-300">Seleccionar todo el grupo</label>
                 </div>
+                
+                {/* Indicador de progreso de verificación */}
+                {verificationProgress.isRunning && (
+                    <div className="mb-2 p-3 bg-gray-700 rounded-md">
+                        <div className="flex justify-between items-center mb-2">
+                            <span className="text-xs text-gray-300">
+                                Verificando: {verificationProgress.completed} / {verificationProgress.total}
+                            </span>
+                            <button
+                                onClick={cancelVerification}
+                                className="text-xs px-2 py-1 bg-red-600 hover:bg-red-700 rounded"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                        <div className="w-full bg-gray-600 rounded-full h-2">
+                            <div
+                                className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                                style={{ width: `${(verificationProgress.completed / verificationProgress.total) * 100}%` }}
+                            />
+                        </div>
+                    </div>
+                )}
+                
                 <button
                     onClick={verifySelectedReparacionChannels}
-                    disabled={selectedReparacionChannels.size === 0}
+                    disabled={selectedReparacionChannels.size === 0 || verificationProgress.isRunning}
                     className="w-full text-xs py-2 px-1 rounded-md flex items-center justify-center gap-1 transition-colors bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 mb-2"
                 >
                     <Check size={14} /> Verificar Seleccionados

@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { arrayMove } from '@dnd-kit/sortable';
-import { Channel } from './index';
+import { Channel, ChannelStatus } from './index';
 
 function extractDropboxFileName(url: string): string | null {
     if (!url || !url.includes('dropbox.com')) {
@@ -316,48 +316,58 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
         const channelsToVerify = channels.filter(c => channelIdsToVerify.includes(c.id));
         setChannels(prev => prev.map(c => channelIdsToVerify.includes(c.id) ? { ...c, status: 'verifying' } : c));
 
-        const batchSize = 10;
+        const batchSize = 5; // Reducido para evitar saturación
         let verifiedCount = 0;
         let finalChannels: Channel[] = [];
 
         for (let i = 0; i < channelsToVerify.length; i += batchSize) {
             const batch = channelsToVerify.slice(i, i + batchSize);
-            const urls = batch.map(c => c.url).filter(Boolean);
-
-            if (urls.length === 0) {
-                verifiedCount += batch.length;
-                setVerificationProgress(Math.round((verifiedCount / channelsToVerify.length) * 100));
-                continue;
-            }
-
-            try {
-                const response = await fetch('/api/verify', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ urls }),
-                });
-
-                const results: VerificationResult = await response.json();
-
-                setChannels(prev => {
-                    const newChannels = prev.map(c => {
-                        if (results[c.url]) {
-                            return { ...c, status: results[c.url] } as Channel;
-                        }
-                        return c;
+            
+            // Verificación simple LOCAL (sin AWS Lambda, solo online/offline)
+            const verificationPromises = batch.map(async (channel) => {
+                try {
+                    // Petición HEAD con timeout de 10 segundos
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000);
+                    
+                    const response = await fetch(channel.url, {
+                        method: 'HEAD',
+                        signal: controller.signal,
+                        cache: 'no-store',
                     });
-                    finalChannels = newChannels;
-                    return newChannels;
-                });
+                    
+                    clearTimeout(timeoutId);
+                    
+                    // Considerar OK si responde 200 o 403 (a veces 403 significa online pero requiere headers)
+                    const isOnline = response.ok || response.status === 403;
+                    
+                    return {
+                        id: channel.id,
+                        status: isOnline ? 'ok' as ChannelStatus : 'failed' as ChannelStatus
+                    };
+                } catch (error) {
+                    console.error(`Verification failed for ${channel.name}:`, error);
+                    return {
+                        id: channel.id,
+                        status: 'failed' as ChannelStatus
+                    };
+                }
+            });
 
-            } catch (error) {
-                console.error("Verification batch failed:", error);
-                setChannels(prev => {
-                    const newChannels = prev.map(c => batch.some(bc => bc.id === c.id) ? { ...c, status: 'failed' } as Channel : c);
-                    finalChannels = newChannels;
-                    return newChannels;
+            const batchResults = await Promise.all(verificationPromises);
+
+            setChannels(prev => {
+                const newChannels = prev.map(c => {
+                    const result = batchResults.find(r => r.id === c.id);
+                    if (result) {
+                        return { ...c, status: result.status };
+                    }
+                    return c;
                 });
-            }
+                finalChannels = newChannels;
+                return newChannels;
+            });
+
             verifiedCount += batch.length;
             setVerificationProgress(Math.round((verifiedCount / channelsToVerify.length) * 100));
         }

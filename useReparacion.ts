@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { Channel, AttributeKey, QualityLevel, ChannelStatus } from './index';
 import { useSmartSearch, SearchMatch } from './useSmartSearch';
 
@@ -6,6 +6,12 @@ interface ChannelVerificationInfo {
     status: ChannelStatus;
     quality: QualityLevel;
     resolution?: string;
+}
+
+interface VerificationProgress {
+    total: number;
+    completed: number;
+    isRunning: boolean;
 }
 
 export const useReparacion = (
@@ -19,10 +25,22 @@ export const useReparacion = (
     const [attributesToCopy, setAttributesToCopy] = useState<Set<AttributeKey>>(new Set());
     const [destinationChannelId, setDestinationChannelId] = useState<string | null>(null);
     const [verificationInfo, setVerificationInfo] = useState<Record<string, ChannelVerificationInfo>>({});
+    const [verificationProgress, setVerificationProgress] = useState<VerificationProgress>({
+        total: 0,
+        completed: 0,
+        isRunning: false
+    });
     const [reparacionUrl, setReparacionUrl] = useState('');
     const [isCurationLoading, setIsCurationLoading] = useState(false);
     const [curationError, setCurationError] = useState<string | null>(null);
     const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
+    
+    // Ref para controlar la cancelación
+    const verificationCancelRef = useRef(false);
+    
+    // Configuración de límites
+    const MAX_CONCURRENT_VERIFICATIONS = 5;  // Máximo 5 verificaciones simultáneas
+    const VERIFICATION_WARNING_THRESHOLD = 50; // Advertir si hay más de 50 canales
 
     const [mainListFilter, setMainListFilter] = useState('All');
     const [reparacionListFilter, setReparacionListFilter] = useState('All');
@@ -40,6 +58,86 @@ export const useReparacion = (
     // Extraer funciones para evitar problemas de dependencias
     const { searchChannels, normalizeChannelName } = smartSearch;
 
+    /**
+     * Verificación SIMPLE (local) - Solo comprueba si el canal está online
+     * Usado para botones de grupo (Editor, Asignar EPG)
+     * No consume peticiones AWS Lambda
+     */
+    const verifyChannelSimple = async (channelId: string, url: string) => {
+        setVerificationInfo(prev => ({ 
+            ...prev, 
+            [channelId]: { status: 'verifying', quality: 'unknown' }
+        }));
+        
+        try {
+            // Solo hacer una petición HEAD con timeout generoso para dar tiempo al servidor
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos de timeout
+            
+            const response = await fetch(url, {
+                method: 'HEAD',
+                signal: controller.signal,
+                cache: 'no-store',
+            });
+            
+            clearTimeout(timeoutId);
+            
+            const isOnline = response.ok || response.status === 403; // 403 a veces significa que está online pero requiere headers
+            
+            setVerificationInfo(prev => ({ 
+                ...prev, 
+                [channelId]: {
+                    status: isOnline ? 'ok' : 'failed',
+                    quality: 'unknown', // No detectamos calidad en verificación simple
+                }
+            }));
+
+            // Actualizar estado del canal
+            const newStatus: ChannelStatus = isOnline ? 'ok' : 'failed';
+            setReparacionChannels(prevChannels => 
+                prevChannels.map(ch => 
+                    ch.id === channelId 
+                        ? { ...ch, status: newStatus }
+                        : ch
+                )
+            );
+            setMainChannels(prevChannels => 
+                prevChannels.map(ch => 
+                    ch.id === channelId 
+                        ? { ...ch, status: newStatus }
+                        : ch
+                )
+            );
+        } catch (error) {
+            console.error('Simple verification failed', error);
+            setVerificationInfo(prev => ({ 
+                ...prev, 
+                [channelId]: { status: 'failed', quality: 'unknown' }
+            }));
+            
+            // Marcar como failed
+            setReparacionChannels(prevChannels => 
+                prevChannels.map(ch => 
+                    ch.id === channelId 
+                        ? { ...ch, status: 'failed' }
+                        : ch
+                )
+            );
+            setMainChannels(prevChannels => 
+                prevChannels.map(ch => 
+                    ch.id === channelId 
+                        ? { ...ch, status: 'failed' }
+                        : ch
+                )
+            );
+        }
+    };
+
+    /**
+     * Verificación COMPLETA (AWS Lambda) - Detecta calidad con FFprobe
+     * Usado para botones individuales de canales en Reparación
+     * Consume peticiones AWS Lambda
+     */
     const verifyChannel = async (channelId: string, url: string) => {
         setVerificationInfo(prev => ({ 
             ...prev, 
@@ -83,23 +181,158 @@ export const useReparacion = (
             }));
         }
     };
+    
+    /**
+     * Verifica canales con control de concurrencia y progreso
+     * VERSIÓN SIMPLE (local, solo online/offline)
+     */
+    const verifyChannelsSimpleWithLimit = async (channels: Channel[]) => {
+        if (channels.length === 0) return;
+        
+        // Resetear estado de cancelación
+        verificationCancelRef.current = false;
+        
+        // Inicializar progreso
+        setVerificationProgress({
+            total: channels.length,
+            completed: 0,
+            isRunning: true
+        });
+        
+        let completed = 0;
+        const queue = [...channels];
+        const processing: Promise<void>[] = [];
+        
+        // Función para procesar un canal
+        const processNext = async (): Promise<void> => {
+            while (queue.length > 0 && !verificationCancelRef.current) {
+                const channel = queue.shift();
+                if (!channel) break;
+                
+                await verifyChannelSimple(channel.id, channel.url);
+                
+                completed++;
+                setVerificationProgress(prev => ({
+                    ...prev,
+                    completed
+                }));
+            }
+        };
+        
+        // Iniciar workers concurrentes
+        for (let i = 0; i < MAX_CONCURRENT_VERIFICATIONS; i++) {
+            processing.push(processNext());
+        }
+        
+        // Esperar a que terminen todos
+        await Promise.all(processing);
+        
+        // Finalizar
+        setVerificationProgress(prev => ({
+            ...prev,
+            isRunning: false
+        }));
+        
+        if (verificationCancelRef.current) {
+            alert(`✋ Verificación cancelada. Se verificaron ${completed} de ${channels.length} canales.`);
+        } else {
+            alert(`✅ Verificación completada: ${completed} canales verificados.`);
+        }
+    };
+    
+    /**
+     * Verifica canales con control de concurrencia y progreso
+     * VERSIÓN COMPLETA (AWS Lambda con detección de calidad)
+     */
+    const verifyChannelsWithLimit = async (channels: Channel[]) => {
+        if (channels.length === 0) return;
+        
+        // Advertir si hay muchos canales
+        if (channels.length > VERIFICATION_WARNING_THRESHOLD) {
+            const confirmed = window.confirm(
+                `⚠️ Vas a verificar ${channels.length} canales.\n\n` +
+                `Esto consumirá ${channels.length} peticiones de AWS Lambda.\n` +
+                `La verificación puede tardar varios minutos.\n\n` +
+                `¿Deseas continuar?`
+            );
+            if (!confirmed) return;
+        }
+        
+        // Resetear estado de cancelación
+        verificationCancelRef.current = false;
+        
+        // Inicializar progreso
+        setVerificationProgress({
+            total: channels.length,
+            completed: 0,
+            isRunning: true
+        });
+        
+        let completed = 0;
+        const queue = [...channels];
+        const processing: Promise<void>[] = [];
+        
+        // Función para procesar un canal
+        const processNext = async (): Promise<void> => {
+            while (queue.length > 0 && !verificationCancelRef.current) {
+                const channel = queue.shift();
+                if (!channel) break;
+                
+                await verifyChannel(channel.id, channel.url);
+                
+                completed++;
+                setVerificationProgress(prev => ({
+                    ...prev,
+                    completed
+                }));
+            }
+        };
+        
+        // Iniciar workers concurrentes
+        for (let i = 0; i < MAX_CONCURRENT_VERIFICATIONS; i++) {
+            processing.push(processNext());
+        }
+        
+        // Esperar a que terminen todos
+        await Promise.all(processing);
+        
+        // Finalizar
+        setVerificationProgress(prev => ({
+            ...prev,
+            isRunning: false
+        }));
+        
+        if (verificationCancelRef.current) {
+            alert(`✋ Verificación cancelada. Se verificaron ${completed} de ${channels.length} canales.`);
+        } else {
+            alert(`✅ Verificación completada: ${completed} canales verificados.`);
+        }
+    };
+    
+    const cancelVerification = () => {
+        verificationCancelRef.current = true;
+    };
 
+    /**
+     * Verifica todos los canales de un grupo (Lista Principal en Reparación)
+     * USA VERIFICACIÓN SIMPLE (solo online/offline, sin AWS Lambda)
+     */
     const verifyAllChannelsInGroup = () => {
         const channelsToVerify = mainChannels.filter(channel => 
             mainListFilter === 'All' || channel.groupTitle === mainListFilter
         );
-        channelsToVerify.forEach(channel => {
-            verifyChannel(channel.id, channel.url);
-        });
+        verifyChannelsSimpleWithLimit(channelsToVerify);
     };
 
+    /**
+     * Verifica los canales seleccionados (Lista de Recambios)
+     * USA VERIFICACIÓN COMPLETA (AWS Lambda con detección de calidad)
+     */
     const verifySelectedReparacionChannels = () => {
-        selectedReparacionChannels.forEach(channelId => {
-            const channel = reparacionChannels.find(c => c.id === channelId);
-            if (channel) {
-                verifyChannel(channel.id, channel.url);
-            }
-        });
+        const channelsToVerify = reparacionChannels.filter(channel =>
+            selectedReparacionChannels.has(channel.id)
+        );
+        verifyChannelsWithLimit(channelsToVerify);
     };
 
     const processCurationM3U = useCallback((content: string) => {
@@ -392,7 +625,10 @@ export const useReparacion = (
         setReparacionListSearch,
         setReparacionChannels,
         verificationInfo,
+        verificationProgress,
+        cancelVerification,
         verifyChannel,
+        verifyChannelSimple,
         clearFailedChannelsUrls,
         failedChannelsByGroup,
         reparacionUrl,
