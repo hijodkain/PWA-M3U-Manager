@@ -40,7 +40,8 @@ export const useReparacion = (
     
     // Configuración de límites
     const MAX_CONCURRENT_VERIFICATIONS = 5;  // Máximo 5 verificaciones simultáneas
-    const VERIFICATION_WARNING_THRESHOLD = 50; // Advertir si hay más de 50 canales
+    const MAX_AWS_VERIFICATIONS = 20; // LÍMITE MÁXIMO de peticiones AWS Lambda
+    const VERIFICATION_WARNING_THRESHOLD = 50; // Advertir si hay más de 50 canales (solo para verificación simple)
 
     const [mainListFilter, setMainListFilter] = useState('All');
     const [reparacionListFilter, setReparacionListFilter] = useState('All');
@@ -243,19 +244,39 @@ export const useReparacion = (
     /**
      * Verifica canales con control de concurrencia y progreso
      * VERSIÓN COMPLETA (AWS Lambda con detección de calidad)
+     * LÍMITE: Máximo 20 canales para evitar exceso de peticiones AWS
      */
     const verifyChannelsWithLimit = async (channels: Channel[]) => {
         if (channels.length === 0) return;
         
-        // Advertir si hay muchos canales
-        if (channels.length > VERIFICATION_WARNING_THRESHOLD) {
+        // LÍMITE ESTRICTO: Máximo 20 canales
+        let channelsToProcess = channels;
+        if (channels.length > MAX_AWS_VERIFICATIONS) {
             const confirmed = window.confirm(
-                `⚠️ Vas a verificar ${channels.length} canales.\n\n` +
-                `Esto consumirá ${channels.length} peticiones de AWS Lambda.\n` +
-                `La verificación puede tardar varios minutos.\n\n` +
+                `⚠️ Has seleccionado ${channels.length} canales.\n\n` +
+                `Para evitar consumo excesivo de AWS Lambda,\n` +
+                `solo se verificarán los primeros ${MAX_AWS_VERIFICATIONS} canales.\n\n` +
+                `Los canales excedentes serán deseleccionados.\n\n` +
                 `¿Deseas continuar?`
             );
             if (!confirmed) return;
+            
+            // Tomar solo los primeros 20
+            channelsToProcess = channels.slice(0, MAX_AWS_VERIFICATIONS);
+            
+            // Deseleccionar los canales que exceden el límite
+            const channelIdsToKeep = new Set(channelsToProcess.map(ch => ch.id));
+            setSelectedReparacionChannels(prev => {
+                const newSelected = new Set<string>();
+                prev.forEach(id => {
+                    if (channelIdsToKeep.has(id)) {
+                        newSelected.add(id);
+                    }
+                });
+                return newSelected;
+            });
+            
+            alert(`✅ Se procesarán ${MAX_AWS_VERIFICATIONS} canales. Los demás han sido deseleccionados.`);
         }
         
         // Resetear estado de cancelación
@@ -263,13 +284,13 @@ export const useReparacion = (
         
         // Inicializar progreso
         setVerificationProgress({
-            total: channels.length,
+            total: channelsToProcess.length,
             completed: 0,
             isRunning: true
         });
         
         let completed = 0;
-        const queue = [...channels];
+        const queue = [...channelsToProcess];
         const processing: Promise<void>[] = [];
         
         // Función para procesar un canal
@@ -303,9 +324,9 @@ export const useReparacion = (
         }));
         
         if (verificationCancelRef.current) {
-            alert(`✋ Verificación cancelada. Se verificaron ${completed} de ${channels.length} canales.`);
+            alert(`✋ Verificación cancelada. Se verificaron ${completed} de ${channelsToProcess.length} canales.`);
         } else {
-            alert(`✅ Verificación completada: ${completed} canales verificados.`);
+            alert(`✅ Verificación completada: ${completed} canales verificados con AWS Lambda.`);
         }
     };
     
