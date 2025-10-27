@@ -129,7 +129,7 @@ function detectQualityFromURL(url: string): QualityLevel | null {
 
 /**
  * Verifica un canal de streaming y detecta su calidad
- * Implementación inspirada en IPTVChecker
+ * Usa AWS Lambda con IPTVChecker (FFprobe) cuando está disponible
  */
 async function verifyChannel(url: string): Promise<VerificationResponse> {
     if (!url || url === 'http://--' || url.trim() === '') {
@@ -140,8 +140,41 @@ async function verifyChannel(url: string): Promise<VerificationResponse> {
         };
     }
 
+    // 1. Intentar usar AWS Lambda con IPTVChecker (método más preciso)
+    const lambdaUrl = process.env.STREAM_ANALYZER_API;
+    
+    if (lambdaUrl) {
+        try {
+            const lambdaResponse = await fetch(
+                `${lambdaUrl}?url=${encodeURIComponent(url)}&timeout=15`,
+                {
+                    method: 'GET',
+                    signal: AbortSignal.timeout(20000), // 20s timeout total
+                }
+            );
+
+            if (lambdaResponse.ok) {
+                const lambdaData = await lambdaResponse.json();
+                
+                // Si la Lambda devolvió información válida, usarla
+                if (lambdaData.status === 'ok' && lambdaData.quality !== 'unknown') {
+                    return {
+                        status: 'ok',
+                        quality: lambdaData.quality,
+                        resolution: lambdaData.resolution,
+                        codec: lambdaData.codec,
+                        bitrate: lambdaData.bitrate,
+                    };
+                }
+            }
+        } catch (lambdaError) {
+            console.log('Lambda verification failed, falling back to manual analysis:', lambdaError);
+            // Continuar con métodos alternativos
+        }
+    }
+
     try {
-        // 1. Si es M3U8, analizar el manifest (método más preciso)
+        // 2. Si es M3U8, analizar el manifest (método de fallback)
         if (url.includes('.m3u8')) {
             const streams = await analyzeM3U8MasterPlaylist(url);
             

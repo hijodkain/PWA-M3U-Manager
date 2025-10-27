@@ -47,6 +47,55 @@ Resources:
             Path: /extract
             Method: OPTIONS
 
+  StreamAnalyzerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: stream_analyzer_lambda.lambda_handler
+      Description: Analyze IPTV streams using IPTVChecker (Rust binary with FFprobe)
+      Runtime: python3.11
+      Timeout: 30
+      MemorySize: 512
+      Environment:
+        Variables:
+          IPTV_CHECKER_PATH: "/opt/bin/iptv-checker"
+      Layers:
+        # Layer personalizado que incluirá el binario de IPTVChecker
+        # Se creará después con el binario compilado
+        - !Ref IPTVCheckerLayer
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - "logs:CreateLogGroup"
+                - "logs:CreateLogStream"
+                - "logs:PutLogEvents"
+              Resource: "*"
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /analyze
+            Method: GET
+        OptionsApi:
+          Type: Api
+          Properties:
+            Path: /analyze
+            Method: OPTIONS
+
+  IPTVCheckerLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: iptv-checker-layer
+      Description: IPTVChecker Rust binary with FFprobe dependencies
+      ContentUri: ./layer/
+      CompatibleRuntimes:
+        - python3.11
+        - python3.10
+        - python3.9
+      RetentionPolicy: Retain
+
 Outputs:
   YouTubeExtractorApi:
     Description: "API Gateway endpoint URL for YouTube Extractor function"
@@ -57,3 +106,13 @@ Outputs:
   YouTubeExtractorFunctionIamRole:
     Description: "Implicit IAM Role created for YouTube Extractor function"
     Value: !GetAtt YouTubeExtractorFunctionRole.Arn
+  
+  StreamAnalyzerApi:
+    Description: "API Gateway endpoint URL for Stream Analyzer function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/analyze"
+  StreamAnalyzerFunction:
+    Description: "Stream Analyzer Lambda Function ARN"
+    Value: !GetAtt StreamAnalyzerFunction.Arn
+  StreamAnalyzerFunctionIamRole:
+    Description: "Implicit IAM Role created for Stream Analyzer function"
+    Value: !GetAtt StreamAnalyzerFunctionRole.Arn
