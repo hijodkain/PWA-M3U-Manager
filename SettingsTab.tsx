@@ -44,6 +44,10 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
         updateChannelPrefixes,
         updateChannelSuffixes,
         resetChannelPrefixesAndSuffixes,
+        youtubeChannels,
+        deleteYoutubeChannel,
+        clearYoutubeChannels,
+        downloadYoutubeM3U,
     } = settingsHook;
 
     const [appKey, setAppKey] = useState(dropboxAppKey);
@@ -436,6 +440,94 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
                             </div>
                         ))}
                     </div>
+                </div>
+            </div>
+
+            {/* Gestión de Youtube.m3u */}
+            <div>
+                <h2 className="text-xl font-bold mb-4">Gestión de Youtube.m3u</h2>
+                <div className="bg-gray-700 p-4 rounded-lg">
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <p className="text-sm text-gray-300">
+                                Canales guardados: <span className="font-bold text-white">{youtubeChannels.length}</span>
+                            </p>
+                            <p className="text-xs text-gray-400 mt-1">
+                                Los canales de YouTube se guardan localmente en tu navegador
+                            </p>
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={downloadYoutubeM3U}
+                                disabled={youtubeChannels.length === 0}
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md flex items-center disabled:bg-gray-600 disabled:cursor-not-allowed"
+                            >
+                                <ExternalLink size={18} className="mr-2" />
+                                Descargar Youtube.m3u
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (confirm('¿Estás seguro de que quieres eliminar TODOS los canales de YouTube? Esta acción no se puede deshacer.')) {
+                                        clearYoutubeChannels();
+                                    }
+                                }}
+                                disabled={youtubeChannels.length === 0}
+                                className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md flex items-center disabled:bg-gray-600 disabled:cursor-not-allowed"
+                            >
+                                <Trash2 size={18} className="mr-2" />
+                                Limpiar Todo
+                            </button>
+                        </div>
+                    </div>
+
+                    {youtubeChannels.length > 0 && (
+                        <div className="mt-4">
+                            <h3 className="text-sm font-semibold text-gray-300 mb-3">Canales guardados:</h3>
+                            <div className="space-y-2 max-h-96 overflow-y-auto">
+                                {youtubeChannels.map((channel) => (
+                                    <div
+                                        key={channel.id}
+                                        className="bg-gray-600 p-3 rounded-md flex items-center justify-between"
+                                    >
+                                        <div className="flex items-center gap-3 flex-1">
+                                            {channel.tvgLogo && (
+                                                <img
+                                                    src={channel.tvgLogo}
+                                                    alt={channel.name}
+                                                    className="w-12 h-12 rounded object-cover"
+                                                    onError={(e) => {
+                                                        e.currentTarget.style.display = 'none';
+                                                    }}
+                                                />
+                                            )}
+                                            <div className="flex-1">
+                                                <p className="font-semibold text-white">{channel.name}</p>
+                                                <p className="text-xs text-gray-400">Grupo: {channel.groupTitle}</p>
+                                                <p className="text-xs text-gray-500 truncate max-w-md">{channel.url}</p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                if (confirm(`¿Eliminar el canal "${channel.name}"?`)) {
+                                                    deleteYoutubeChannel(channel.id);
+                                                }
+                                            }}
+                                            className="text-red-400 hover:text-red-600 ml-2"
+                                        >
+                                            <Trash2 size={18} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {youtubeChannels.length === 0 && (
+                        <div className="text-center py-8 text-gray-400">
+                            <p>No hay canales guardados</p>
+                            <p className="text-sm mt-2">Ve a la pestaña "YouTube Live" para añadir canales</p>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

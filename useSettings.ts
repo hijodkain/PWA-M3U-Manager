@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Channel } from './index';
 
 export interface SavedUrl {
     id: string;
@@ -12,6 +13,7 @@ const SAVED_URLS_KEY = 'saved_urls';
 const SAVED_EPG_URLS_KEY = 'saved_epg_urls';
 const CHANNEL_PREFIXES_KEY = 'channel_prefixes';
 const CHANNEL_SUFFIXES_KEY = 'channel_suffixes';
+const YOUTUBE_CHANNELS_KEY = 'youtube_channels';
 
 // Prefijos y sufijos por defecto
 const DEFAULT_PREFIXES = ['HD ', 'FHD ', 'UHD ', '4K ', 'SD '];
@@ -28,6 +30,7 @@ export const useSettings = () => {
     const [savedEpgUrls, setSavedEpgUrls] = useState<SavedUrl[]>([]);
     const [channelPrefixes, setChannelPrefixes] = useState<string[]>(DEFAULT_PREFIXES);
     const [channelSuffixes, setChannelSuffixes] = useState<string[]>(DEFAULT_SUFFIXES);
+    const [youtubeChannels, setYoutubeChannels] = useState<Channel[]>([]);
 
     useEffect(() => {
         try {
@@ -52,6 +55,11 @@ export const useSettings = () => {
             const savedSuffixesJson = localStorage.getItem(CHANNEL_SUFFIXES_KEY);
             if (savedSuffixesJson) {
                 setChannelSuffixes(JSON.parse(savedSuffixesJson));
+            }
+
+            const youtubeChannelsJson = localStorage.getItem(YOUTUBE_CHANNELS_KEY);
+            if (youtubeChannelsJson) {
+                setYoutubeChannels(JSON.parse(youtubeChannelsJson));
             }
         } catch (error) {
             console.error("Error loading settings from localStorage", error);
@@ -178,6 +186,83 @@ export const useSettings = () => {
         }
     }, [savedEpgUrls]);
 
+    // Gestión de canales de YouTube
+    const addYoutubeChannel = useCallback((channel: Channel) => {
+        const updatedChannels = [...youtubeChannels, channel];
+        try {
+            localStorage.setItem(YOUTUBE_CHANNELS_KEY, JSON.stringify(updatedChannels));
+            setYoutubeChannels(updatedChannels);
+        } catch (error) {
+            console.error("Error saving YouTube channel to localStorage", error);
+        }
+    }, [youtubeChannels]);
+
+    const addYoutubeChannels = useCallback((channels: Channel[]) => {
+        const updatedChannels = [...youtubeChannels, ...channels];
+        try {
+            localStorage.setItem(YOUTUBE_CHANNELS_KEY, JSON.stringify(updatedChannels));
+            setYoutubeChannels(updatedChannels);
+        } catch (error) {
+            console.error("Error saving YouTube channels to localStorage", error);
+        }
+    }, [youtubeChannels]);
+
+    const deleteYoutubeChannel = useCallback((id: string) => {
+        const updatedChannels = youtubeChannels.filter(ch => ch.id !== id);
+        try {
+            localStorage.setItem(YOUTUBE_CHANNELS_KEY, JSON.stringify(updatedChannels));
+            setYoutubeChannels(updatedChannels);
+        } catch (error) {
+            console.error("Error deleting YouTube channel from localStorage", error);
+        }
+    }, [youtubeChannels]);
+
+    const clearYoutubeChannels = useCallback(() => {
+        try {
+            localStorage.setItem(YOUTUBE_CHANNELS_KEY, JSON.stringify([]));
+            setYoutubeChannels([]);
+        } catch (error) {
+            console.error("Error clearing YouTube channels from localStorage", error);
+        }
+    }, []);
+
+    const exportYoutubeM3U = useCallback(() => {
+        if (youtubeChannels.length === 0) {
+            return null;
+        }
+
+        let m3uContent = '#EXTM3U\n';
+        youtubeChannels.forEach((channel) => {
+            const tvgId = channel.tvgId || '';
+            const tvgName = channel.tvgName || channel.name;
+            const tvgLogo = channel.tvgLogo || '';
+            const groupTitle = channel.groupTitle || 'YouTube Live';
+
+            m3uContent += `#EXTINF:-1 tvg-id="${tvgId}" tvg-name="${tvgName}" tvg-logo="${tvgLogo}" group-title="${groupTitle}",${channel.name}\n`;
+            m3uContent += `${channel.url}\n`;
+        });
+
+        return m3uContent;
+    }, [youtubeChannels]);
+
+    const downloadYoutubeM3U = useCallback(() => {
+        const content = exportYoutubeM3U();
+        if (!content) {
+            alert('No hay canales de YouTube para exportar');
+            return;
+        }
+
+        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'Youtube.m3u';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }, [exportYoutubeM3U]);
+
     return {
         dropboxAppKey,
         dropboxRefreshToken,
@@ -195,5 +280,12 @@ export const useSettings = () => {
         updateChannelPrefixes,
         updateChannelSuffixes,
         resetChannelPrefixesAndSuffixes,
+        youtubeChannels,
+        addYoutubeChannel,
+        addYoutubeChannels,
+        deleteYoutubeChannel,
+        clearYoutubeChannels,
+        exportYoutubeM3U,
+        downloadYoutubeM3U,
     };
 };

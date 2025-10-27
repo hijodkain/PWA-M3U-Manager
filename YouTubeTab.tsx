@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Youtube, Plus, Trash2, Download, AlertCircle, CheckCircle, Loader } from 'lucide-react';
 import { Channel } from './index';
+import { useSettings } from './useSettings';
 import {
     YOUTUBE_API_CONFIG,
     getAPIHeaders,
@@ -13,10 +14,7 @@ import {
 } from './youtube-api-config';
 
 interface YouTubeTabProps {
-    channelsHook: {
-        channels: Channel[];
-        setChannels: React.Dispatch<React.SetStateAction<Channel[]>>;
-    };
+    settingsHook: ReturnType<typeof useSettings>;
 }
 
 interface YouTubeChannel {
@@ -31,8 +29,8 @@ interface YouTubeChannel {
     error?: string;
 }
 
-const YouTubeTab: React.FC<YouTubeTabProps> = ({ channelsHook }) => {
-    const { channels, setChannels } = channelsHook;
+const YouTubeTab: React.FC<YouTubeTabProps> = ({ settingsHook }) => {
+    const { addYoutubeChannels } = settingsHook;
     const [youtubeChannels, setYoutubeChannels] = useState<YouTubeChannel[]>([]);
     const [newYoutubeUrl, setNewYoutubeUrl] = useState('');
     const [customName, setCustomName] = useState('');
@@ -124,13 +122,13 @@ const YouTubeTab: React.FC<YouTubeTabProps> = ({ channelsHook }) => {
         setYoutubeChannels((prev) => prev.filter((ch) => ch.id !== id));
     };
 
-    // Añadir canales de YouTube a la lista principal M3U
-    const handleAddToM3UPlaylist = () => {
+    // Añadir canales de YouTube al archivo Youtube.m3u local
+    const handleAddToYoutubeM3U = () => {
         const successfulChannels = youtubeChannels.filter((ch) => ch.status === 'success' && ch.m3u8Url);
 
         const newChannels: Channel[] = successfulChannels.map((ytCh, index) => ({
-            id: `channel-${Date.now()}-${index}-${Math.random()}`,
-            order: channels.length + index + 1,
+            id: `youtube-${Date.now()}-${index}-${Math.random()}`,
+            order: index + 1,
             tvgId: '',
             tvgName: ytCh.customName || '',
             tvgLogo: ytCh.customLogo || '',
@@ -140,10 +138,14 @@ const YouTubeTab: React.FC<YouTubeTabProps> = ({ channelsHook }) => {
             status: 'pending',
         }));
 
-        setChannels((prev) => [...prev, ...newChannels]);
+        // Guardar en localStorage vía useSettings
+        addYoutubeChannels(newChannels);
+
+        // Limpiar la lista temporal de extracciones
+        setYoutubeChannels([]);
 
         // Mensaje de éxito
-        alert(`✅ ${newChannels.length} canal(es) añadido(s) a la playlist M3U`);
+        alert(`✅ ${newChannels.length} canal(es) añadido(s) al archivo Youtube.m3u\n\nPuedes descargar el archivo desde la pestaña Configuración.`);
     };
 
     // Reintentar extracción
@@ -279,11 +281,11 @@ const YouTubeTab: React.FC<YouTubeTabProps> = ({ channelsHook }) => {
                             Canales de YouTube ({youtubeChannels.length})
                         </h3>
                         <button
-                            onClick={handleAddToM3UPlaylist}
+                            onClick={handleAddToYoutubeM3U}
                             disabled={!youtubeChannels.some((ch) => ch.status === 'success')}
                             className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md flex items-center disabled:bg-gray-600 disabled:cursor-not-allowed"
                         >
-                            <Download size={18} className="mr-2" /> Añadir a Playlist M3U
+                            <Download size={18} className="mr-2" /> Guardar en Youtube.m3u
                         </button>
                     </div>
 
