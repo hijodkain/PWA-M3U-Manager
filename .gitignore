@@ -1,34 +1,17 @@
-# Dependencies
-/node_modules
-/.pnp
-.pnp.js
+# Binarios de Lambda
+aws-lambda/layer/
+aws-lambda/iptv-checker-rs/
 
-# Next.js build output
-/.next/
-/out/
+# Node
+node_modules/
+.next/
 
-# Miscellaneous
-.DS_Store
-*.pem
-.env*.local
+# Vercel
 .vercel
-*.tsbuildinfo
-next-env.d.ts
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 
-# Custom
-.vscode/
-archivos_aportados/
+# Env
+.env
+.env.local
 
-# AWS SAM build artifacts  
-.aws-sam/
-*.pkg
-
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-*.log
+# OS
+.DS_Store

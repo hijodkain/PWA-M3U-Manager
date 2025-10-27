@@ -1,6 +1,6 @@
 """
-AWS Lambda function que usa IPTVChecker (Rust binary) para analizar streams
-Basado en: https://github.com/zhimin-dev/iptv-checker-rs
+AWS Lambda function que usa FFprobe para analizar streams
+Basado en el enfoque de IPTVChecker
 """
 import json
 import subprocess
@@ -8,9 +8,9 @@ import os
 import urllib.parse
 from typing import Dict, Any, Optional
 
-def extract_quality_info(iptv_output: str) -> Dict[str, Any]:
+def extract_quality_info(ffprobe_output: str) -> Dict[str, Any]:
     """
-    Extrae información de calidad del output de IPTVChecker
+    Extrae información de calidad del output de FFprobe
     """
     result = {
         'status': 'unknown',
@@ -23,14 +23,23 @@ def extract_quality_info(iptv_output: str) -> Dict[str, Any]:
     }
     
     try:
-        # IPTVChecker devuelve JSON con la información del stream
-        data = json.loads(iptv_output)
+        # FFprobe devuelve JSON con la información del stream
+        data = json.loads(ffprobe_output)
+        
+        # Buscar stream de video
+        video_stream = None
+        audio_stream = None
+        
+        for stream in data.get('streams', []):
+            if stream.get('codec_type') == 'video' and not video_stream:
+                video_stream = stream
+            elif stream.get('codec_type') == 'audio' and not audio_stream:
+                audio_stream = stream
         
         # Extraer información de video
-        if 'video' in data:
-            video = data['video']
-            width = video.get('width')
-            height = video.get('height')
+        if video_stream:
+            width = video_stream.get('width')
+            height = video_stream.get('height')
             
             if width and height:
                 result['resolution'] = f"{width}x{height}"
@@ -47,49 +56,25 @@ def extract_quality_info(iptv_output: str) -> Dict[str, Any]:
                 else:
                     result['quality'] = 'SD'
             
-            result['codec'] = video.get('codec_name')
-            result['bitrate'] = video.get('bit_rate')
+            result['codec'] = video_stream.get('codec_name')
+            
+            # Bitrate del video
+            bit_rate = video_stream.get('bit_rate')
+            if bit_rate:
+                result['bitrate'] = int(bit_rate)
         
         # Extraer información de audio
-        if 'audio' in data:
-            audio = data['audio']
-            result['audio_channels'] = audio.get('channels')
+        if audio_stream:
+            result['audio_channels'] = audio_stream.get('channels')
         
-        result['status'] = 'ok'
-        
-    except json.JSONDecodeError:
-        # Si no es JSON, intentar parsear output de texto
-        if 'resolution' in iptv_output.lower():
-            # Parsear output de texto plano
-            for line in iptv_output.split('\n'):
-                if 'resolution:' in line.lower():
-                    res_part = line.split(':', 1)[1].strip()
-                    result['resolution'] = res_part
-                    
-                    # Extraer altura para determinar calidad
-                    if 'x' in res_part:
-                        try:
-                            height = int(res_part.split('x')[1])
-                            if height >= 2160:
-                                result['quality'] = '4K'
-                            elif height >= 1080:
-                                result['quality'] = 'FHD'
-                            elif height >= 720:
-                                result['quality'] = 'HD'
-                            else:
-                                result['quality'] = 'SD'
-                        except:
-                            pass
-                
-                elif 'codec:' in line.lower():
-                    result['codec'] = line.split(':', 1)[1].strip()
-                
-                elif 'bitrate:' in line.lower():
-                    result['bitrate'] = line.split(':', 1)[1].strip()
-            
+        # Si encontramos info de video, marcar como exitoso
+        if video_stream:
             result['status'] = 'ok'
-        else:
-            result['error'] = 'Could not parse IPTVChecker output'
+        
+    except json.JSONDecodeError as e:
+        result['error'] = f'Could not parse FFprobe output: {str(e)}'
+    except Exception as e:
+        result['error'] = f'Error extracting quality info: {str(e)}'
     
     return result
 
@@ -127,15 +112,14 @@ def lambda_handler(event, context):
     # Decodificar URL si viene encoded
     url = urllib.parse.unquote(url)
     
-    # Ruta al binario de IPTVChecker
-    # El binario debe estar en /opt/bin/iptv-checker o en el mismo directorio
-    iptv_checker_path = os.environ.get('IPTV_CHECKER_PATH', '/opt/bin/iptv-checker')
+    # Ruta al binario de FFprobe
+    ffprobe_path = os.environ.get('FFPROBE_PATH', '/opt/bin/ffprobe')
     
     # Si no existe en /opt, buscar en el directorio actual
-    if not os.path.exists(iptv_checker_path):
-        iptv_checker_path = os.path.join(os.path.dirname(__file__), 'iptv-checker')
+    if not os.path.exists(ffprobe_path):
+        ffprobe_path = os.path.join(os.path.dirname(__file__), 'ffprobe')
     
-    if not os.path.exists(iptv_checker_path):
+    if not os.path.exists(ffprobe_path):
         return {
             'statusCode': 500,
             'headers': {
@@ -145,18 +129,20 @@ def lambda_handler(event, context):
             'body': json.dumps({
                 'status': 'failed',
                 'quality': 'unknown',
-                'error': 'IPTVChecker binary not found'
+                'error': 'FFprobe binary not found'
             })
         }
     
     try:
-        # Ejecutar IPTVChecker
-        # Comando: iptv-checker --url "URL" --json --timeout 15
+        # Ejecutar FFprobe directamente
+        # Comando: ffprobe -v quiet -print_format json -show_streams -show_format -i URL
         cmd = [
-            iptv_checker_path,
-            '--url', url,
-            '--json',  # Output en formato JSON
-            '--timeout', str(timeout)
+            ffprobe_path,
+            '-v', 'quiet',
+            '-print_format', 'json',
+            '-show_streams',
+            '-show_format',
+            '-i', url
         ]
         
         print(f"Executing: {' '.join(cmd)}")
@@ -188,7 +174,7 @@ def lambda_handler(event, context):
                 })
             }
         
-        # Parsear output de IPTVChecker
+        # Parsear output de FFprobe
         quality_info = extract_quality_info(result.stdout)
         
         return {

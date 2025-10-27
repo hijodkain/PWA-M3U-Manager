@@ -52,17 +52,16 @@ Resources:
     Properties:
       CodeUri: .
       Handler: stream_analyzer_lambda.lambda_handler
-      Description: Analyze IPTV streams using IPTVChecker (Rust binary with FFprobe)
+      Description: Analyze IPTV streams using FFprobe
       Runtime: python3.11
       Timeout: 30
       MemorySize: 512
       Environment:
         Variables:
-          IPTV_CHECKER_PATH: "/opt/bin/iptv-checker"
+          FFPROBE_PATH: "/opt/bin/ffprobe"
       Layers:
-        # Layer personalizado que incluirá el binario de IPTVChecker
-        # Se creará después con el binario compilado
-        - !Ref IPTVCheckerLayer
+        # Layer personalizado que incluye FFprobe
+        - !Ref FFprobeLayer
       Policies:
         - Version: "2012-10-17"
           Statement:
@@ -84,11 +83,11 @@ Resources:
             Path: /analyze
             Method: OPTIONS
 
-  IPTVCheckerLayer:
+  FFprobeLayer:
     Type: AWS::Serverless::LayerVersion
     Properties:
-      LayerName: iptv-checker-layer
-      Description: IPTVChecker Rust binary with FFprobe dependencies
+      LayerName: ffprobe-layer
+      Description: FFprobe binary for stream analysis
       ContentUri: ./layer/
       CompatibleRuntimes:
         - python3.11
