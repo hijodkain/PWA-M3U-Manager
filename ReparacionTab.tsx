@@ -71,14 +71,14 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
     const mainListRowVirtualizer = useVirtualizer({
         count: filteredMainChannels.length,
         getScrollElement: () => mainListParentRef.current,
-        estimateSize: () => 68,
+        estimateSize: () => 60,
         overscan: 10,
     });
 
     const reparacionListRowVirtualizer = useVirtualizer({
         count: filteredReparacionChannels.length,
         getScrollElement: () => reparacionListParentRef.current,
-        estimateSize: () => 68,
+        estimateSize: () => 60,
         overscan: 10,
     });
 
@@ -218,8 +218,10 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                         <Link size={16} />
                     </button>
                 </div>
-                {(settingsHook.savedUrls.length > 0 || settingsHook.youtubeChannels.length > 0) && (
-                    <div className="mb-2">
+                
+                {/* Desplegable de listas guardadas + Botón subir archivo */}
+                <div className="mb-2 flex gap-2">
+                    {(settingsHook.savedUrls.length > 0 || settingsHook.youtubeChannels.length > 0) && (
                         <select
                             value=""
                             onChange={(e) => {
@@ -237,7 +239,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     }
                                 }
                             }}
-                            className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-1.5 text-white focus:ring-blue-500 focus:border-blue-500 text-sm"
+                            className="flex-1 bg-gray-700 border border-gray-600 rounded-md px-3 py-1.5 text-white focus:ring-blue-500 focus:border-blue-500 text-sm"
                         >
                             <option value="">o selecciona una lista guardada...</option>
                             {settingsHook.youtubeChannels.length > 0 && (
@@ -251,8 +253,22 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                 </option>
                             ))}
                         </select>
-                    </div>
-                )}
+                    )}
+                    <label
+                        htmlFor="reparacion-file-upload"
+                        className="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1.5 px-4 rounded-md flex items-center gap-2 whitespace-nowrap"
+                    >
+                        <Upload size={16} /> Subir Archivo
+                    </label>
+                    <input
+                        id="reparacion-file-upload"
+                        type="file"
+                        className="hidden"
+                        onChange={handleReparacionFileUpload}
+                        accept=".m3u,.m3u8"
+                    />
+                </div>
+                
                 {isCurationLoading && <p className="text-center text-blue-400 mt-2">Cargando lista de recambios...</p>}
                 {curationError && <p className="text-center text-red-400 bg-red-900/50 p-2 rounded mt-2">{curationError}</p>}
                 <SmartSearchInput
@@ -311,25 +327,12 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 )}
                 
                 <button
-                    onClick={verifySelectedReparacionChannels}
+                    onClick={() => verifySelectedReparacionChannels()}
                     disabled={selectedReparacionChannels.size === 0 || verificationProgress.isRunning}
                     className="w-full text-xs py-2 px-1 rounded-md flex items-center justify-center gap-1 transition-colors bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 mb-2"
                 >
                     <Check size={14} /> Verificar Seleccionados
                 </button>
-                <label
-                    htmlFor="reparacion-file-upload"
-                    className="cursor-pointer text-sm w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md flex items-center justify-center mb-2"
-                >
-                    <Upload size={16} className="mr-2" /> Subir Archivo
-                </label>
-                <input
-                    id="reparacion-file-upload"
-                    type="file"
-                    className="hidden"
-                    onChange={handleReparacionFileUpload}
-                    accept=".m3u,.m3u8"
-                />
                 <div ref={reparacionListParentRef} className="overflow-auto max-h-[60vh] pr-2">
                     <div style={{ height: `${reparacionListRowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
                         {reparacionListVirtualItems.map((virtualItem) => {
