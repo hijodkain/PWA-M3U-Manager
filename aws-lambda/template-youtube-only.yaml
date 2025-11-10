@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: YouTube Extractor Lambda Function with CORS
+Description: YouTube Extractor Lambda Function with CORS (simplified)
 
 Globals:
   Function:
@@ -15,54 +15,6 @@ Globals:
       MaxAge: "'600'"
 
 Resources:
-  StreamAnalyzerFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: .
-      Handler: stream_analyzer_lambda.lambda_handler
-      Description: Analyze IPTV streams using FFprobe
-      Runtime: python3.8
-      Timeout: 30
-      MemorySize: 512
-      Environment:
-        Variables:
-          FFPROBE_PATH: "/opt/bin/ffprobe"
-      Layers:
-        # Layer personalizado que incluye FFprobe
-        - !Ref FFprobeLayer
-      Policies:
-        - Version: "2012-10-17"
-          Statement:
-            - Effect: Allow
-              Action:
-                - "logs:CreateLogGroup"
-                - "logs:CreateLogStream"
-                - "logs:PutLogEvents"
-              Resource: "*"
-      Events:
-        Api:
-          Type: Api
-          Properties:
-            Path: /analyze
-            Method: GET
-        OptionsApi:
-          Type: Api
-          Properties:
-            Path: /analyze
-            Method: OPTIONS
-
-  FFprobeLayer:
-    Type: AWS::Serverless::LayerVersion
-    Properties:
-      LayerName: ffprobe-layer
-      Description: FFprobe binary for stream analysis
-      ContentUri: ./layer/
-      CompatibleRuntimes:
-        - python3.11
-        - python3.10
-        - python3.9
-      RetentionPolicy: Retain
-
   # YouTube Live Extractor Function
   YouTubeExtractorFunction:
     Type: AWS::Serverless::Function
@@ -90,60 +42,65 @@ Resources:
               Resource: !GetAtt YouTubeChannelsTable.Arn
             - Effect: Allow
               Action:
+                - "secretsmanager:GetSecretValue"
+              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:youtube-cookies*"
+            - Effect: Allow
+              Action:
                 - "logs:CreateLogGroup"
                 - "logs:CreateLogStream"
                 - "logs:PutLogEvents"
               Resource: "*"
       Events:
-        Api:
+        GetYouTube:
           Type: Api
           Properties:
             Path: /youtube
             Method: GET
-        OptionsApi:
+        OptionsYouTube:
           Type: Api
           Properties:
             Path: /youtube
             Method: OPTIONS
-        # Cron: Cada 3 horas
-        CronSchedule:
-          Type: Schedule
-          Properties:
-            Schedule: "rate(3 hours)"
-            Description: "Update YouTube M3U8 URLs every 3 hours"
-            Enabled: true
 
-  # DynamoDB Table for YouTube Channels
+  # DynamoDB Table para canales de YouTube
   YouTubeChannelsTable:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: YouTubeChannels
-      BillingMode: PAY_PER_REQUEST  # On-demand pricing (free tier eligible)
+      BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: channel_id
           AttributeType: S
       KeySchema:
         - AttributeName: channel_id
           KeyType: HASH
-      StreamSpecification:
-        StreamViewType: NEW_AND_OLD_IMAGES
       Tags:
         - Key: Application
           Value: PWA-M3U-Manager
         - Key: Component
           Value: YouTube-Extractor
 
+  # EventBridge Rule para actualización automática cada 3 horas
+  YouTubeUpdateSchedule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: "Actualizar URLs M3U8 de YouTube cada 3 horas"
+      ScheduleExpression: "rate(3 hours)"
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt YouTubeExtractorFunction.Arn
+          Id: "YouTubeExtractorTarget"
+
+  # Permiso para que EventBridge invoque la Lambda
+  PermissionForEventsToInvokeLambda:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref YouTubeExtractorFunction
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn: !GetAtt YouTubeUpdateSchedule.Arn
+
 Outputs:
-  StreamAnalyzerApi:
-    Description: "API Gateway endpoint URL for Stream Analyzer function"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/analyze"
-  StreamAnalyzerFunction:
-    Description: "Stream Analyzer Lambda Function ARN"
-    Value: !GetAtt StreamAnalyzerFunction.Arn
-  StreamAnalyzerFunctionIamRole:
-    Description: "Implicit IAM Role created for Stream Analyzer function"
-    Value: !GetAtt StreamAnalyzerFunctionRole.Arn
-  
   YouTubeExtractorApi:
     Description: "API Gateway endpoint URL for YouTube Extractor function"
     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/youtube"

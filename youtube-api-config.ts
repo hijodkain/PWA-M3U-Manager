@@ -9,9 +9,9 @@ export const YOUTUBE_API_CONFIG = {
   /**
    * URL base del API Gateway de AWS
    * Región: eu-west-1
-   * Endpoint: /youtube/extract
+   * Endpoint: /youtube
    */
-  API_GATEWAY_URL: 'https://4h0qgf6co9.execute-api.eu-west-1.amazonaws.com/Prod/youtube/extract',
+  API_GATEWAY_URL: 'https://dogbfd7tw4.execute-api.eu-west-1.amazonaws.com/Prod/youtube',
 
   /**
    * API Key para autenticación

@@ -261,8 +261,11 @@ def lambda_handler(event, context):
                     'Access-Control-Allow-Origin': '*'
                 },
                 'body': json.dumps({
+                    'success': True,
                     'm3u8_url': stream_url,
                     'youtube_url': youtube_url,
+                    'quality': 'best',
+                    'cached': False,
                     'extracted_at': datetime.utcnow().isoformat(),
                     'debug': debug_info
                 })
@@ -275,6 +278,7 @@ def lambda_handler(event, context):
                     'Access-Control-Allow-Origin': '*'
                 },
                 'body': json.dumps({
+                    'success': False,
                     'error': 'Could not extract M3U8 URL from YouTube',
                     'debug': debug_info
                 })
