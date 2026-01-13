@@ -163,19 +163,26 @@ def analyze_with_ffprobe(url: str) -> Optional[Dict[str, Any]]:
     
     try:
         # Comando FFprobe para obtener información del stream
-        # -v error: solo errores
+        # -v quiet: menos verbose
+        # -print_format json: output en JSON
+        # -show_streams: mostrar info de streams
         # -select_streams v:0: solo el primer stream de video
-        # -show_entries stream=width,height,codec_name,bit_rate: info que queremos
-        # -of json: output en JSON
+        # -read_intervals %+#1: leer solo 1 segundo de datos (más rápido)
+        # -probesize 5000000: leer hasta 5MB para detectar
+        # -analyzeduration 5000000: analizar hasta 5 segundos
         cmd = [
             FFPROBE_PATH,
-            '-v', 'error',
+            '-v', 'quiet',
+            '-print_format', 'json',
+            '-show_streams',
             '-select_streams', 'v:0',
-            '-show_entries', 'stream=width,height,codec_name,bit_rate',
-            '-of', 'json',
+            '-probesize', '10000000',
+            '-analyzeduration', '10000000',
             '-timeout', str(TIMEOUT_SECONDS * 1000000),  # microsegundos
             url
         ]
+        
+        print(f"Running FFprobe: {' '.join(cmd)}")
         
         # Ejecutar FFprobe con timeout
         result = subprocess.run(
@@ -186,18 +193,31 @@ def analyze_with_ffprobe(url: str) -> Optional[Dict[str, Any]]:
             check=False
         )
         
+        print(f"FFprobe return code: {result.returncode}")
+        if result.stderr:
+            print(f"FFprobe stderr: {result.stderr}")
+        
         if result.returncode != 0:
-            print(f"FFprobe error: {result.stderr}")
+            print(f"FFprobe failed with return code: {result.returncode}")
             return None
         
         # Parsear output JSON
-        data = json.loads(result.stdout)
+        try:
+            data = json.loads(result.stdout)
+            print(f"FFprobe output: {json.dumps(data, indent=2)}")
+        except json.JSONDecodeError as e:
+            print(f"Failed to parse FFprobe output: {e}")
+            print(f"Raw output: {result.stdout[:500]}")
+            return None
+        
         streams = data.get('streams', [])
         
         if not streams:
+            print("No video streams found in FFprobe output")
             return None
         
         stream = streams[0]
+        print(f"Video stream info: {stream}")
         
         # Extraer información
         width = stream.get('width')
