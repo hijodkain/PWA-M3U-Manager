@@ -45,7 +45,7 @@ if [ ! -f "ffprobe-layer/bin/ffprobe" ]; then
     
     # Descargar FFmpeg estático de John Van Sickle
     echo "Descargando desde johnvansickle.com..."
-    wget -q --show-progress https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz
+    curl -L -o ffmpeg-release-amd64-static.tar.xz https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz
     
     echo "Extrayendo..."
     tar -xf ffmpeg-release-amd64-static.tar.xz
