@@ -60,9 +60,9 @@ export const useReparacion = (
     const { searchChannels, normalizeChannelName } = smartSearch;
 
     /**
-     * Verificación SIMPLE (local) - Solo comprueba si el canal está online
-     * Usado para botones de grupo (Editor, Asignar EPG)
-     * No consume peticiones AWS Lambda
+     * Verificación SIMPLE (AWS Lambda) - Solo comprueba si el canal está online
+     * Usado para lista PRINCIPAL de canales en Reparación
+     * Usa AWS Lambda para evitar bloqueo de IP local
      */
     const verifyChannelSimple = async (channelId: string, url: string) => {
         setVerificationInfo(prev => ({ 
@@ -71,19 +71,23 @@ export const useReparacion = (
         }));
         
         try {
-            // Solo hacer una petición HEAD con timeout generoso para dar tiempo al servidor
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos de timeout
+            // Llamar a AWS Lambda verify-simple
+            const AWS_API_URL = process.env.NEXT_PUBLIC_AWS_VERIFY_API_URL || '';
+            const apiUrl = `${AWS_API_URL}verify-simple?url=${encodeURIComponent(url)}`;
             
-            const response = await fetch(url, {
-                method: 'HEAD',
-                signal: controller.signal,
-                cache: 'no-store',
+            const response = await fetch(apiUrl, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                },
             });
             
-            clearTimeout(timeoutId);
+            if (!response.ok) {
+                throw new Error(`AWS Lambda error: ${response.status}`);
+            }
             
-            const isOnline = response.ok || response.status === 403; // 403 a veces significa que está online pero requiere headers
+            const data = await response.json();
+            const isOnline = data.status === 'ok';
             
             setVerificationInfo(prev => ({ 
                 ...prev, 
@@ -136,8 +140,8 @@ export const useReparacion = (
 
     /**
      * Verificación COMPLETA (AWS Lambda) - Detecta calidad con FFprobe
-     * Usado para botones individuales de canales en Reparación
-     * Consume peticiones AWS Lambda
+     * Usado para lista de REEMPLAZO de canales en Reparación
+     * Consume peticiones AWS Lambda con análisis de calidad
      */
     const verifyChannel = async (channelId: string, url: string) => {
         setVerificationInfo(prev => ({ 
@@ -146,8 +150,20 @@ export const useReparacion = (
         }));
         
         try {
-            const apiUrl = `/api/verify_channel?url=${encodeURIComponent(url)}`;
-            const response = await fetch(apiUrl);
+            // Llamar a AWS Lambda verify-quality (con FFprobe)
+            const AWS_API_URL = process.env.NEXT_PUBLIC_AWS_VERIFY_API_URL || '';
+            const apiUrl = `${AWS_API_URL}verify-quality?url=${encodeURIComponent(url)}`;
+            
+            const response = await fetch(apiUrl, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                },
+            });
+            
+            if (!response.ok) {
+                throw new Error(`AWS Lambda error: ${response.status}`);
+            }
             const data = await response.json();
             
             setVerificationInfo(prev => ({ 

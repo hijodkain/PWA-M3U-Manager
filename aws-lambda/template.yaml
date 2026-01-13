@@ -1,0 +1,82 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  PWA M3U Manager - Stream Verification Lambda Functions
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: python3.12
+    Architectures:
+      - x86_64
+  Api:
+    Cors:
+      AllowMethods: "'GET,POST,OPTIONS'"
+      AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+      AllowOrigin: "'*'"
+
+Resources:
+  # Lambda para verificación SIMPLE (solo online/offline)
+  StreamVerifierFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: stream_verifier_lambda.lambda_handler
+      Description: Verifica si un canal está online o offline (verificación simple)
+      Timeout: 15
+      Environment:
+        Variables:
+          TIMEOUT_SECONDS: 10
+      Events:
+        VerifySimple:
+          Type: Api
+          Properties:
+            Path: /verify-simple
+            Method: get
+
+  # Lambda para verificación CON CALIDAD (usando FFprobe)
+  StreamQualityFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: stream_quality_lambda.lambda_handler
+      Description: Verifica canal y detecta calidad/resolución con FFprobe
+      Timeout: 30
+      MemorySize: 1024
+      Layers:
+        - !Ref FFprobeLayer
+      Environment:
+        Variables:
+          FFPROBE_PATH: /opt/bin/ffprobe
+          TIMEOUT_SECONDS: 25
+      Events:
+        VerifyQuality:
+          Type: Api
+          Properties:
+            Path: /verify-quality
+            Method: get
+
+  # Layer con FFprobe binario
+  FFprobeLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: ffprobe-layer
+      Description: FFprobe binary for stream analysis
+      ContentUri: ./ffprobe-layer/
+      CompatibleRuntimes:
+        - python3.12
+      RetentionPolicy: Retain
+
+Outputs:
+  StreamVerificationApi:
+    Description: "API Gateway endpoint URL for Stream Verification"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+  
+  StreamVerifierFunction:
+    Description: "Stream Verifier Lambda Function ARN"
+    Value: !GetAtt StreamVerifierFunction.Arn
+  
+  StreamQualityFunction:
+    Description: "Stream Quality Lambda Function ARN"
+    Value: !GetAtt StreamQualityFunction.Arn
