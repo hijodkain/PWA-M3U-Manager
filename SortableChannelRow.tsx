@@ -62,7 +62,7 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
 
     return (
         <tr ref={combinedRef} style={style} className={`transition-colors ${selectedChannels.includes(channel.id) ? 'bg-blue-900/50' : 'bg-gray-800'} ${!isOverlay ? 'hover:bg-gray-700' : ''}`}>
-            <td style={{ width: `${columnWidths.select}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-300 text-center">
+            <td style={{ width: `${columnWidths.select}px`, minWidth: `${columnWidths.select}px`, maxWidth: `${columnWidths.select}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-300 text-center">
                 <div className="flex items-center justify-center space-x-2">
                     <div {...attributes} {...rowListeners} className={`${isOverlay ? '' : 'cursor-grab touch-none'} p-1`}>
                          <GripVertical size={16} />
@@ -76,24 +76,22 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
                     />
                 </div>
             </td>
-            <td style={{ width: `${columnWidths.order}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-300 text-center">
-                <div style={{ width: `${columnWidths.order}px` }}>
-                    <EditableCell value={channel.order.toString()} onSave={(val) => onOrderChange(channel.id, val)} />
-                </div>
+            <td style={{ width: `${columnWidths.order}px`, minWidth: `${columnWidths.order}px`, maxWidth: `${columnWidths.order}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-300 text-center">
+                <EditableCell value={channel.order.toString()} onSave={(val) => onOrderChange(channel.id, val)} />
             </td>
             {statusIndicator}
-            <td className="px-2 py-2 whitespace-nowrap text-sm text-gray-300">
-                <div style={{ width: `${columnWidths.tvgId}px` }} className="truncate">
+            <td style={{ width: `${columnWidths.tvgId}px`, minWidth: `${columnWidths.tvgId}px`, maxWidth: `${columnWidths.tvgId}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-300">
+                <div className="truncate">
                     <EditableCell value={channel.tvgId} onSave={(val) => onUpdate(channel.id, 'tvgId', val)} />
                 </div>
             </td>
-            <td className="px-2 py-2 whitespace-nowrap text-sm text-gray-300">
-                <div style={{ width: `${columnWidths.tvgName}px` }} className="truncate">
+            <td style={{ width: `${columnWidths.tvgName}px`, minWidth: `${columnWidths.tvgName}px`, maxWidth: `${columnWidths.tvgName}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-300">
+                <div className="truncate">
                     <EditableCell value={channel.tvgName} onSave={(val) => onUpdate(channel.id, 'tvgName', val)} />
                 </div>
             </td>
-            <td style={{ width: `${columnWidths.tvgLogo}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-300 text-center">
-                <div style={{ width: `${columnWidths.tvgLogo}px` }} className="flex items-center justify-center">
+            <td style={{ width: `${columnWidths.tvgLogo}px`, minWidth: `${columnWidths.tvgLogo}px`, maxWidth: `${columnWidths.tvgLogo}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-300 text-center">
+                <div className="flex items-center justify-center">
                     <img
                         src={channel.tvgLogo || 'https://placehold.co/40x40/2d3748/e2e8f0?text=?'}
                         alt="logo"
@@ -104,18 +102,18 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
                     />
                 </div>
             </td>
-            <td className="px-2 py-2 whitespace-nowrap text-sm text-gray-300">
-                <div style={{ width: `${columnWidths.groupTitle}px` }} className="truncate">
+            <td style={{ width: `${columnWidths.groupTitle}px`, minWidth: `${columnWidths.groupTitle}px`, maxWidth: `${columnWidths.groupTitle}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-300">
+                <div className="truncate">
                     <EditableCell value={channel.groupTitle} onSave={(val) => onUpdate(channel.id, 'groupTitle', val)} />
                 </div>
             </td>
-            <td className="px-2 py-2 text-sm text-white font-medium">
-                <div style={{ width: `${columnWidths.name}px` }} className="truncate">
+            <td style={{ width: `${columnWidths.name}px`, minWidth: `${columnWidths.name}px`, maxWidth: `${columnWidths.name}px` }} className="px-2 py-2 text-sm text-white font-medium">
+                <div className="truncate">
                     <EditableCell value={channel.name} onSave={(val) => onUpdate(channel.id, 'name', val)} />
                 </div>
             </td>
-            <td className="px-2 py-2 whitespace-nowrap text-sm text-gray-400">
-                <div style={{ width: `${columnWidths.url}px` }} className="truncate">
+            <td style={{ width: `${columnWidths.url}px`, minWidth: `${columnWidths.url}px`, maxWidth: `${columnWidths.url}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-400">
+                <div className="truncate">
                     <EditableCell value={channel.url} onSave={(val) => onUpdate(channel.id, 'url', val)} />
                 </div>
             </td>

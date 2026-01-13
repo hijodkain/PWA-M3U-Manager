@@ -98,7 +98,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-11 gap-4">
-            <div className="lg:col-span-5 bg-gray-800 p-4 rounded-lg flex flex-col">
+            <div className="lg:col-span-4 bg-gray-800 p-4 rounded-lg flex flex-col">
                 <h3 className="font-bold text-lg mb-2">Lista Principal</h3>
                 <SmartSearchInput
                     searchTerm={mainListSearch}
@@ -204,8 +204,8 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                     </button>
                 </div>
             </div>
-            <div className="lg:col-span-5 bg-gray-800 p-4 rounded-lg flex flex-col">
-                <h3 className="font-bold text-lg mb-2">Lista de recambios</h3>
+            <div className="lg:col-span-6 bg-gray-800 p-4 rounded-lg flex flex-col">
+                <h3 className="font-bold text-lg mb-2">Lista de Recambio</h3>
                 <div className="flex gap-2 mb-2">
                     <input
                         type="text"

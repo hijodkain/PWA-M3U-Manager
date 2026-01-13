@@ -5,6 +5,8 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { Upload, Download, Plus, Trash2, GripVertical, Zap, ShieldCheck, ShieldX, Hourglass, ShieldQuestion } from 'lucide-react';
 import { useChannels } from './useChannels';
 import { useSettings } from './useSettings';
+import { useColumnResizing } from './useColumnResizing';
+import ResizableHeader from './ResizableHeader';
 import SortableChannelRow from './SortableChannelRow';
 import { Channel } from './index';
 
@@ -47,17 +49,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
     } = channelsHook;
 
     const { savedUrls } = settingsHook;
-    const columnWidths = {
-        select: 80,
-        order: 80,
-        status: 80,
-        tvgId: 150,
-        tvgName: 200,
-        tvgLogo: 120, // Ancho aumentado para los logos
-        groupTitle: 180,
-        name: 250,
-        url: 300,
-    };
+    const { columnWidths, handleResize } = useColumnResizing();
     const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
     const parentRef = tableContainerRef; // Reutilizamos la ref existente
 
@@ -217,10 +209,10 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
 
             <div ref={tableContainerRef} className="overflow-auto rounded-lg shadow-lg max-h-[60vh]">
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-                    <table className="min-w-full divide-y divide-gray-700 table-fixed">
+                    <table className="min-w-full divide-y divide-gray-700" style={{ tableLayout: 'fixed' }}>
                         <thead className="bg-gray-800 sticky top-0 z-10">
                             <tr>
-                                <th scope="col" style={{ width: `${columnWidths.select}px` }} className="px-2 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
+                                <th scope="col" style={{ width: `${columnWidths.select}px`, minWidth: `${columnWidths.select}px`, maxWidth: `${columnWidths.select}px` }} className="px-2 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
                                     <input
                                         type="checkbox"
                                         ref={selectAllCheckboxRef}
@@ -229,30 +221,30 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                         className="form-checkbox h-4 w-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
                                     />
                                 </th>
-                                <th scope="col" style={{ width: `${columnWidths.order}px` }} className="px-2 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
+                                <ResizableHeader width={columnWidths.order} onResize={(w) => handleResize('order', w)} align="center">
                                     Orden
-                                </th>
-                                <th scope="col" style={{ width: `${columnWidths.status}px` }} className="px-2 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
+                                </ResizableHeader>
+                                <ResizableHeader width={columnWidths.status} onResize={(w) => handleResize('status', w)} align="center">
                                     Estado
-                                </th>
-                                <th scope="col" style={{ width: `${columnWidths.tvgId}px` }} className="px-2 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                                </ResizableHeader>
+                                <ResizableHeader width={columnWidths.tvgId} onResize={(w) => handleResize('tvgId', w)} align="left">
                                     tvg-id
-                                </th>
-                                <th scope="col" style={{ width: `${columnWidths.tvgName}px` }} className="px-2 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                                </ResizableHeader>
+                                <ResizableHeader width={columnWidths.tvgName} onResize={(w) => handleResize('tvgName', w)} align="left">
                                     tvg-name
-                                </th>
-                                <th scope="col" style={{ width: `${columnWidths.tvgLogo}px` }} className="px-2 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
+                                </ResizableHeader>
+                                <ResizableHeader width={columnWidths.tvgLogo} onResize={(w) => handleResize('tvgLogo', w)} align="center">
                                     Logo
-                                </th>
-                                <th scope="col" style={{ width: `${columnWidths.groupTitle}px` }} className="px-2 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                                </ResizableHeader>
+                                <ResizableHeader width={columnWidths.groupTitle} onResize={(w) => handleResize('groupTitle', w)} align="left">
                                     Grupo
-                                </th>
-                                <th scope="col" style={{ width: `${columnWidths.name}px` }} className="px-2 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                                </ResizableHeader>
+                                <ResizableHeader width={columnWidths.name} onResize={(w) => handleResize('name', w)} align="left">
                                     Nombre del Canal
-                                </th>
-                                <th scope="col" style={{ width: `${columnWidths.url}px` }} className="px-2 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                                </ResizableHeader>
+                                <ResizableHeader width={columnWidths.url} onResize={(w) => handleResize('url', w)} align="left">
                                     URL del Stream
-                                </th>
+                                </ResizableHeader>
                             </tr>
                         </thead>
                         <SortableContext items={filteredChannels.map(c => c.id)} strategy={verticalListSortingStrategy}>
@@ -271,7 +263,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                             selectedChannels={selectedChannels}
                                             toggleChannelSelection={toggleChannelSelection}
                                             statusIndicator={
-                                                <td style={{ width: `${columnWidths.status}px` }} className="px-2 py-2 text-center"><StatusIndicator status={channel.status} /></td>
+                                                <td style={{ width: `${columnWidths.status}px`, minWidth: `${columnWidths.status}px`, maxWidth: `${columnWidths.status}px` }} className="px-2 py-2 text-center"><StatusIndicator status={channel.status} /></td>
                                             }
                                             columnWidths={columnWidths}
                                             measureRef={rowVirtualizer.measureElement}
@@ -290,7 +282,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                     </table>
                     <DragOverlay>
                         {activeChannel ? (
-                            <table className="w-full table-fixed">
+                            <table className="w-full" style={{ tableLayout: 'fixed' }}>
                                 <tbody className="bg-gray-700 shadow-2xl">
                                     <SortableChannelRow
                                         id={activeChannel.id}
@@ -301,7 +293,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                         selectedChannels={[]}
                                         toggleChannelSelection={() => {}}
                                         statusIndicator={
-                                            <td style={{ width: `${columnWidths.status}px` }} className="px-2 py-2 text-center"><StatusIndicator status={activeChannel.status} /></td>
+                                            <td style={{ width: `${columnWidths.status}px`, minWidth: `${columnWidths.status}px`, maxWidth: `${columnWidths.status}px` }} className="px-2 py-2 text-center"><StatusIndicator status={activeChannel.status} /></td>
                                         }
                                         columnWidths={columnWidths}
                                     />
