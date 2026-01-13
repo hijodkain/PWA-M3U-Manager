@@ -72,9 +72,15 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
         };
 
         const qualityText = quality === 'unknown' ? '?' : quality;
+        const tooltipText = quality === 'unknown' 
+            ? 'No se pudo detectar la resolución. Si esto ocurre en todos los canales de este dominio, es probable que el servidor no proporcione estos metadatos.'
+            : `Calidad: ${quality}`;
 
         return (
-            <div className={`${qualityColors[quality]} px-1.5 py-0.5 rounded text-[10px] font-bold leading-tight`}>
+            <div 
+                className={`${qualityColors[quality]} px-1.5 py-0.5 rounded text-[10px] font-bold leading-tight cursor-help`}
+                title={tooltipText}
+            >
                 {qualityText}
                 {resolution && quality !== 'unknown' && <div className="text-[8px] opacity-90 leading-tight">{resolution}</div>}
             </div>
