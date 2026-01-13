@@ -2,6 +2,7 @@
 aws-lambda/layer/
 aws-lambda/iptv-checker-rs/
 aws-lambda/.aws-sam/
+aws-lambda/ffprobe-layer/
 
 # Node
 node_modules/
