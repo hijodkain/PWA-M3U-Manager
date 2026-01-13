@@ -16,6 +16,7 @@ from typing import Dict, Any, Optional
 # Configuración
 FFPROBE_PATH = os.environ.get('FFPROBE_PATH', '/opt/bin/ffprobe')
 TIMEOUT_SECONDS = int(os.environ.get('TIMEOUT_SECONDS', '25'))
+FFPROBE_TIMEOUT = 15  # Timeout específico para FFprobe (más corto)
 
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
@@ -162,62 +163,51 @@ def analyze_with_ffprobe(url: str) -> Optional[Dict[str, Any]]:
     """
     
     try:
-        # Comando FFprobe para obtener información del stream
-        # -v quiet: menos verbose
-        # -print_format json: output en JSON
-        # -show_streams: mostrar info de streams
-        # -select_streams v:0: solo el primer stream de video
-        # -read_intervals %+#1: leer solo 1 segundo de datos (más rápido)
-        # -probesize 5000000: leer hasta 5MB para detectar
-        # -analyzeduration 5000000: analizar hasta 5 segundos
+        # Comando FFprobe optimizado para IPTV streams
+        # Intentamos obtener info rápidamente sin analizar demasiado
         cmd = [
             FFPROBE_PATH,
             '-v', 'quiet',
             '-print_format', 'json',
             '-show_streams',
             '-select_streams', 'v:0',
-            '-probesize', '10000000',
-            '-analyzeduration', '10000000',
-            '-timeout', str(TIMEOUT_SECONDS * 1000000),  # microsegundos
+            '-probesize', '5000000',      # Reducido a 5MB para ser más rápido
+            '-analyzeduration', '5000000', # Reducido a 5 segundos
             url
         ]
         
-        print(f"Running FFprobe: {' '.join(cmd)}")
+        print(f"Running FFprobe with {FFPROBE_TIMEOUT}s timeout")
         
-        # Ejecutar FFprobe con timeout
+        # Ejecutar FFprobe con timeout más corto
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
-            timeout=TIMEOUT_SECONDS,
+            timeout=FFPROBE_TIMEOUT,  # Usar timeout más corto
             check=False
         )
         
         print(f"FFprobe return code: {result.returncode}")
-        if result.stderr:
-            print(f"FFprobe stderr: {result.stderr}")
         
         if result.returncode != 0:
-            print(f"FFprobe failed with return code: {result.returncode}")
+            if result.stderr:
+                print(f"FFprobe stderr: {result.stderr[:200]}")
             return None
         
         # Parsear output JSON
         try:
             data = json.loads(result.stdout)
-            print(f"FFprobe output: {json.dumps(data, indent=2)}")
         except json.JSONDecodeError as e:
-            print(f"Failed to parse FFprobe output: {e}")
-            print(f"Raw output: {result.stdout[:500]}")
+            print(f"Failed to parse FFprobe JSON: {e}")
             return None
         
         streams = data.get('streams', [])
         
         if not streams:
-            print("No video streams found in FFprobe output")
+            print("No video streams found")
             return None
         
         stream = streams[0]
-        print(f"Video stream info: {stream}")
         
         # Extraer información
         width = stream.get('width')
@@ -251,11 +241,11 @@ def analyze_with_ffprobe(url: str) -> Optional[Dict[str, Any]]:
         }
     
     except subprocess.TimeoutExpired:
-        print(f"FFprobe timeout after {TIMEOUT_SECONDS}s")
+        print(f"FFprobe timeout after {FFPROBE_TIMEOUT}s")
         return None
     
     except Exception as e:
-        print(f"FFprobe analysis error: {str(e)}")
+        print(f"FFprobe error: {str(e)}")
         return None
 
 
