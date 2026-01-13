@@ -7,11 +7,10 @@ import { useSettings } from './useSettings';
 import EditorTab from './EditorTab';
 import ReparacionTab from './ReparacionTab';
 import AsignarEpgTab from './AsignarEpgTab';
-import YouTubeTab from './YouTubeTab';
 import SaveTab from './SaveTab';
 import SettingsTab from './SettingsTab';
 import HelpTab from './HelpTab';
-import { Edit, Wrench, List, Youtube, Settings, Save, HelpCircle } from 'lucide-react';
+import { Edit, Wrench, List, Settings, Save, HelpCircle } from 'lucide-react';
 
 export default function PWAM3UManager() {
     const [activeTab, setActiveTab] = useState<Tab>('editor');
@@ -29,8 +28,6 @@ export default function PWAM3UManager() {
                 return <ReparacionTab reparacionHook={reparacionHook} channelsHook={channelsHook} settingsHook={settingsHook} />;
             case 'asignar-epg':
                 return <AsignarEpgTab epgHook={epgHook} channelsHook={channelsHook} settingsHook={settingsHook} />;
-            case 'youtube':
-                return <YouTubeTab settingsHook={settingsHook} />;
             case 'save':
                 return <SaveTab channelsHook={channelsHook} settingsHook={settingsHook} />;
             case 'settings':
@@ -50,7 +47,6 @@ export default function PWAM3UManager() {
         { id: 'editor', name: 'Editor de Playlist', icon: Edit },
         { id: 'reparacion', name: 'Reparación', icon: Wrench },
         { id: 'asignar-epg', name: 'Asignar EPG', icon: List },
-        { id: 'youtube', name: 'YouTube Live', icon: Youtube },
         { id: 'save', name: 'Guardar y Exportar', icon: Save },
         { id: 'settings', name: 'Configuración', icon: Settings },
         { id: 'ayuda', name: 'Ayuda', icon: HelpCircle },

@@ -23,5 +23,5 @@ export interface EpgChannel {
     logo: string;
 }
 
-export type Tab = 'editor' | 'reparacion' | 'asignar-epg' | 'youtube' | 'save' | 'settings' | 'ayuda';
+export type Tab = 'editor' | 'reparacion' | 'asignar-epg' | 'save' | 'settings' | 'ayuda';
 export type AttributeKey = 'tvgId' | 'tvgName' | 'tvgLogo' | 'groupTitle' | 'name' | 'url';

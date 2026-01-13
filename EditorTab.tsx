@@ -46,7 +46,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         processM3UContent,
     } = channelsHook;
 
-    const { savedUrls, youtubeChannels, exportYoutubeM3U } = settingsHook;
+    const { savedUrls } = settingsHook;
     const columnWidths = {
         select: 80,
         order: 80,
@@ -112,34 +112,19 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                 <Download size={18} className="mr-2" /> Descargar
                             </button>
                         </div>
-                        {(savedUrls.length > 0 || youtubeChannels.length > 0) && (
+                        {savedUrls.length > 0 && (
                             <div className="mt-2">
                                 <select
                                     id="saved-urls-select"
                                     value=""
                                     onChange={(e) => {
                                         if (e.target.value) {
-                                            if (e.target.value === 'YOUTUBE_M3U_LOCAL') {
-                                                // Cargar canales de YouTube desde localStorage
-                                                const m3uContent = exportYoutubeM3U();
-                                                if (m3uContent) {
-                                                    processM3UContent(m3uContent);
-                                                } else {
-                                                    alert('No hay canales de YouTube guardados. Ve a la pestaña YouTube Live para añadir canales.');
-                                                }
-                                            } else {
-                                                setUrl(e.target.value);
-                                            }
+                                            setUrl(e.target.value);
                                         }
                                     }}
                                     className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-blue-500 focus:border-blue-500 text-sm"
                                 >
                                     <option value="">o selecciona una lista guardada...</option>
-                                    {youtubeChannels.length > 0 && (
-                                        <option value="YOUTUBE_M3U_LOCAL">
-                                            📺 Youtube.m3u ({youtubeChannels.length} canales)
-                                        </option>
-                                    )}
                                     {savedUrls.map(item => (
                                         <option key={item.id} value={item.url}>
                                             {item.name}

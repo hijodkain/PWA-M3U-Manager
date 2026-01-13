@@ -1,5 +1,5 @@
 import React from 'react';
-import { HelpCircle, BookOpen, Key, Tv, Wand, ListMusic, Save, Settings, Download, Upload, Youtube } from 'lucide-react';
+import { HelpCircle, BookOpen, Key, Tv, Wand, ListMusic, Save, Settings, Download, Upload } from 'lucide-react';
 
 const HelpTab: React.FC = () => {
     const Section: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode }> = ({ title, icon, children }) => (
@@ -27,7 +27,6 @@ const HelpTab: React.FC = () => {
                     <li><strong><ListMusic size={16} className="inline-block mr-1"/> Editor de Playlist:</strong> Es la vista principal. Aquí puedes ver todos tus canales, cambiar su orden, editar sus nombres, URLs, logos, etc. También puedes añadir nuevos canales o eliminar los que no quieras.</li>
                     <li><strong><Wand size={16} className="inline-block mr-1"/> Reparación:</strong> Esta pestaña te ofrece herramientas para una limpieza automática y masiva de tu lista. Puedes cargar listas de respaldo para reparar canales fallidos y transferir atributos entre canales.</li>
                     <li><strong><Tv size={16} className="inline-block mr-1"/> Asignar EPG:</strong> Te permite cargar un archivo XMLTV (el formato estándar para guías de programación) y asignarlo a tus canales. La aplicación intentará encontrar la correspondencia automáticamente, pero también puedes asignarla manualmente.</li>
-                    <li><strong><Youtube size={16} className="inline-block mr-1"/> YouTube Live:</strong> Añade canales de YouTube que transmiten en vivo a tu playlist. El sistema crea URLs proxy estables que se actualizan automáticamente cuando YouTube cambia la URL del stream.</li>
                     <li><strong><Save size={16} className="inline-block mr-1"/> Guardar y Exportar:</strong> Una vez que has terminado de editar, aquí puedes <Download size={16} className="inline-block mx-1"/>descargar el archivo .m3u resultante a tu ordenador o <Upload size={16} className="inline-block mx-1"/>subirlo directamente a tu Dropbox.</li>
                     <li><strong><Settings size={16} className="inline-block mr-1"/> Configuración:</strong> Aquí puedes guardar tus credenciales de Dropbox para no tener que introducirlas cada vez, y también puedes guardar tus URLs de playlists más usadas para cargarlas rápidamente desde el Editor.</li>
                 </ul>
@@ -78,47 +77,6 @@ const HelpTab: React.FC = () => {
                     </li>
                 </ol>
                 <p className="mt-4 font-bold">Ahora podrás subir tus listas a Dropbox desde la pestaña "Guardar y Exportar" con un solo clic.</p>
-            </Section>
-
-            <Section title="Gestión de Canales de YouTube Live" icon={<Youtube className="text-red-500" />}>
-                <p>
-                    La funcionalidad de YouTube Live te permite añadir canales que transmiten en vivo directamente a un archivo separado <strong>Youtube.m3u</strong> que se guarda localmente en tu navegador. El sistema extrae las URLs M3U8 directamente desde YouTube usando una Lambda en AWS.
-                </p>
-                <h4 className="font-semibold mt-4 mb-2">¿Cómo funciona?</h4>
-                <ol>
-                    <li><strong>Extracción automática:</strong> El sistema usa yt-dlp en AWS Lambda para extraer la URL del stream M3U8 en tiempo real desde YouTube.</li>
-                    <li><strong>URLs directas M3U8:</strong> Se obtienen las URLs directas de Google Video que apuntan al stream en vivo en la mejor calidad disponible.</li>
-                    <li><strong>Caché inteligente:</strong> Las URLs se cachean en DynamoDB durante 2 horas para evitar llamadas innecesarias a YouTube.</li>
-                    <li><strong>Archivo separado:</strong> Los canales de YouTube se guardan en un archivo <code>Youtube.m3u</code> independiente que puedes descargar desde la pestaña de Configuración.</li>
-                    <li><strong>Compatibilidad total:</strong> Las URLs M3U8 son completamente compatibles con cualquier reproductor (VLC, Kodi, TiviMate, etc.).</li>
-                </ol>
-                <h4 className="font-semibold mt-4 mb-2">Pasos para añadir un canal:</h4>
-                <ol>
-                    <li>Ve a la pestaña <strong>"YouTube Live"</strong></li>
-                    <li>Pega la URL del canal de YouTube que esté transmitiendo en vivo</li>
-                    <li>Opcionalmente personaliza el nombre del canal, logo y el grupo</li>
-                    <li>Haz clic en <strong>"Añadir Canal"</strong></li>
-                    <li>El sistema extraerá automáticamente el stream M3U8</li>
-                    <li>Una vez listo, haz clic en <strong>"Guardar en Youtube.m3u"</strong> para añadirlos al archivo local</li>
-                    <li>Ve a <strong>"Configuración"</strong> para gestionar, ver y descargar tu archivo <code>Youtube.m3u</code></li>
-                </ol>
-                <h4 className="font-semibold mt-4 mb-2">Tipos de URLs soportadas:</h4>
-                <ul>
-                    <li><code>https://www.youtube.com/@USERNAME/live</code> - Usuario en vivo (⭐ Recomendado)</li>
-                    <li><code>https://www.youtube.com/watch?v=VIDEO_ID</code> - Videos/streams específicos</li>
-                    <li><code>https://www.youtube.com/channel/CHANNEL_ID/live</code> - Canal en vivo</li>
-                </ul>
-                <h4 className="font-semibold mt-4 mb-2">Gestión del archivo Youtube.m3u:</h4>
-                <ul>
-                    <li>Todos los canales se guardan automáticamente en localStorage de tu navegador</li>
-                    <li>Puedes ver la lista completa de canales en la pestaña <strong>"Configuración"</strong></li>
-                    <li>Puedes eliminar canales individuales o limpiar toda la lista</li>
-                    <li>Descarga el archivo <code>Youtube.m3u</code> actualizado en cualquier momento</li>
-                    <li>El archivo se actualiza automáticamente cada vez que añades nuevos canales</li>
-                </ul>
-                <p className="mt-4 text-yellow-400">
-                    <strong>⚠️ Importante:</strong> El canal debe estar transmitiendo en vivo en el momento de añadirlo. Las URLs M3U8 de YouTube son válidas por aproximadamente 6 horas y luego caducan. Para streams permanentes, necesitarás extraer nuevamente las URLs periódicamente desde la pestaña YouTube Live.
-                </p>
             </Section>
         </div>
     );
