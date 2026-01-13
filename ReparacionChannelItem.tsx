@@ -51,7 +51,7 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
             case 'ok':
                 return <span className="text-green-500 text-xs">✓ OK</span>;
             case 'failed':
-                return <span className="text-red-500 text-xs">✗ Failed</span>;
+                return <span className="text-red-500 text-xs">✗ Offline</span>;
             case 'verifying':
                 return <span className="text-yellow-500 text-xs animate-pulse">⟳ Verifying...</span>;
             default:
