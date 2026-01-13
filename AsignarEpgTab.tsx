@@ -60,6 +60,11 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
     const [mainListSearch, setMainListSearch] = useState('');
     const [selectedGroup, setSelectedGroup] = useState('all');
     const [isGeneratorVisible, setIsGeneratorVisible] = useState(false);
+    
+    // Estados para los botones toggle
+    const [assignIdActive, setAssignIdActive] = useState(false);
+    const [assignIdLogoActive, setAssignIdLogoActive] = useState(false);
+    const [ottModeActive, setOttModeActive] = useState(false);
 
     const channelGroups = useMemo(() => {
         const groups = new Set(channels.map(c => c.groupTitle).filter(Boolean));
@@ -106,7 +111,47 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
 
     const handleMainChannelClick = (channel: Channel) => {
         setDestinationChannelId(channel.id);
-                                setEpgSearchTerm(epgNormalizeChannelName(channel.name));
+        setEpgSearchTerm(epgNormalizeChannelName(channel.name));
+    };
+
+    // Manejadores para los botones toggle
+    const handleAssignIdClick = () => {
+        const newState = !assignIdActive;
+        setAssignIdActive(newState);
+        setAssignIdLogoActive(false);
+        setOttModeActive(false);
+        
+        if (newState) {
+            setAttributesToCopy(new Set(['tvgId']));
+        } else {
+            setAttributesToCopy(new Set());
+        }
+    };
+
+    const handleAssignIdLogoClick = () => {
+        const newState = !assignIdLogoActive;
+        setAssignIdLogoActive(newState);
+        setAssignIdActive(false);
+        setOttModeActive(false);
+        
+        if (newState) {
+            setAttributesToCopy(new Set(['tvgId', 'tvgLogo']));
+        } else {
+            setAttributesToCopy(new Set());
+        }
+    };
+
+    const handleOttModeClick = () => {
+        const newState = !ottModeActive;
+        setOttModeActive(newState);
+        setAssignIdActive(false);
+        setAssignIdLogoActive(false);
+        
+        if (newState) {
+            setAttributesToCopy(new Set(['tvgId', 'tvgName']));
+        } else {
+            setAttributesToCopy(new Set());
+        }
     };
 
     return (
@@ -161,16 +206,34 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                 <h4 className="font-bold text-center mb-2">Asignar EPG</h4>
                 <ArrowLeftCircle size={32} className="text-blue-400 mb-4" />
                 <button
-                    onClick={() => setAttributesToCopy(new Set<AttributeKey>(['tvgId']))}
-                    className="w-full text-xs py-2 px-1 rounded-md flex items-center justify-center gap-1 transition-colors bg-blue-600 text-white"
+                    onClick={handleAssignIdClick}
+                    className={`w-full text-xs py-2 px-1 rounded-md flex items-center justify-center gap-1 transition-colors ${
+                        assignIdActive 
+                            ? 'bg-green-600 text-white' 
+                            : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                    }`}
                 >
                     <Copy size={14} /> Asignar ID
                 </button>
                 <button
-                    onClick={() => setAttributesToCopy(new Set<AttributeKey>(['tvgId', 'tvgLogo']))}
-                    className="w-full text-xs py-2 px-1 rounded-md flex items-center justify-center gap-1 transition-colors bg-blue-600 text-white"
+                    onClick={handleAssignIdLogoClick}
+                    className={`w-full text-xs py-2 px-1 rounded-md flex items-center justify-center gap-1 transition-colors ${
+                        assignIdLogoActive 
+                            ? 'bg-green-600 text-white' 
+                            : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                    }`}
                 >
                     <Copy size={14} /> ID y Logo
+                </button>
+                <button
+                    onClick={handleOttModeClick}
+                    className={`w-full text-xs py-2 px-1 rounded-md flex items-center justify-center gap-1 transition-colors ${
+                        ottModeActive 
+                            ? 'bg-purple-600 text-white' 
+                            : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                    }`}
+                >
+                    <Zap size={14} /> OTT
                 </button>
             </div>
             <div className="lg:col-span-5 bg-gray-800 p-4 rounded-lg flex flex-col">

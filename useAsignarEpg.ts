@@ -156,11 +156,20 @@ export const useAsignarEpg = (
                 if (dest.id === destinationChannelId) {
                     const updated = { ...dest };
                     
-                    // Asignar según el modo seleccionado
-                    if (assignmentMode === 'tvg-id') {
+                    // Verificar si es modo OTT (ambos tvgId y tvgName en attributesToCopy)
+                    const isOttMode = attributesToCopy.has('tvgId') && attributesToCopy.has('tvgName');
+                    
+                    if (isOttMode) {
+                        // Modo OTT: asignar el channel ID a ambos tvgId y tvgName
                         updated.tvgId = sourceEpg.id;
+                        updated.tvgName = sourceEpg.id;
                     } else {
-                        updated.tvgName = sourceEpg.name;
+                        // Modo normal: asignar según el modo seleccionado
+                        if (assignmentMode === 'tvg-id') {
+                            updated.tvgId = sourceEpg.id;
+                        } else {
+                            updated.tvgName = sourceEpg.name;
+                        }
                     }
                     
                     // Copiar logo si está seleccionado
