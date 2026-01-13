@@ -122,9 +122,9 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
         setOttModeActive(false);
         
         if (newState) {
-            setAttributesToCopy(new Set(['tvgId']));
+            setAttributesToCopy(new Set<AttributeKey>(['tvgId']));
         } else {
-            setAttributesToCopy(new Set());
+            setAttributesToCopy(new Set<AttributeKey>());
         }
     };
 
@@ -135,9 +135,9 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
         setOttModeActive(false);
         
         if (newState) {
-            setAttributesToCopy(new Set(['tvgId', 'tvgLogo']));
+            setAttributesToCopy(new Set<AttributeKey>(['tvgId', 'tvgLogo']));
         } else {
-            setAttributesToCopy(new Set());
+            setAttributesToCopy(new Set<AttributeKey>());
         }
     };
 
@@ -148,9 +148,9 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
         setAssignIdLogoActive(false);
         
         if (newState) {
-            setAttributesToCopy(new Set(['tvgId', 'tvgName']));
+            setAttributesToCopy(new Set<AttributeKey>(['tvgId', 'tvgName']));
         } else {
-            setAttributesToCopy(new Set());
+            setAttributesToCopy(new Set<AttributeKey>());
         }
     };
 
