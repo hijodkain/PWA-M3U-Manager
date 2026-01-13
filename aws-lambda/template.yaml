@@ -7,7 +7,7 @@ Globals:
   Function:
     Timeout: 30
     MemorySize: 512
-    Runtime: python3.12
+    Runtime: python3.11
     Architectures:
       - x86_64
   Api:
@@ -65,7 +65,7 @@ Resources:
       Description: FFprobe binary for stream analysis
       ContentUri: ./ffprobe-layer/
       CompatibleRuntimes:
-        - python3.12
+        - python3.11
       RetentionPolicy: Retain
 
 Outputs:
