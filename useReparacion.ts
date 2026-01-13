@@ -199,6 +199,7 @@ export const useReparacion = (
                 throw new Error(`AWS Lambda error: ${response.status}`);
             }
             const data = await response.json();
+            console.log('Lambda quality response:', data);
             
             setVerificationInfo(prev => ({ 
                 ...prev, 
