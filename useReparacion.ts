@@ -49,6 +49,8 @@ export const useReparacion = (
     const [reparacionListSearch, setReparacionListSearch] = useState('');
     const [smartSearchResults, setSmartSearchResults] = useState<SearchMatch<Channel>[]>([]);
     const [isSmartSearchEnabled, setIsSmartSearchEnabled] = useState(true);
+    const [showOnlyUnverified, setShowOnlyUnverified] = useState(false);
+    const [showOnlyUnverified, setShowOnlyUnverified] = useState(false);
 
     // Inicializar búsqueda inteligente
     const smartSearch = useSmartSearch({
@@ -571,14 +573,22 @@ export const useReparacion = (
             if (isSmartSearchEnabled) {
                 // Usar búsqueda inteligente
                 const searchResults = searchChannels(channels, mainListSearch, 0.4);
-                return searchResults.map(result => result.item);
+                channels = searchResults.map(result => result.item);
             } else {
                 // Búsqueda tradicional exacta
                 channels = channels.filter(c => c.name.toLowerCase().includes(mainListSearch.toLowerCase()));
             }
         }
+        // Aplicar filtro de no verificados (solo oculta, no elimina)
+        if (showOnlyUnverified) {
+            channels = channels.filter(c => {
+                const info = verificationInfo[c.id];
+                // Mostrar solo si no está verificado O si está verificado pero no es 'ok'
+                return !info || info.status !== 'ok';
+            });
+        }
         return channels;
-    }, [mainChannels, mainListFilter, mainListSearch, isSmartSearchEnabled, searchChannels]);
+    }, [mainChannels, mainListFilter, mainListSearch, isSmartSearchEnabled, searchChannels, showOnlyUnverified, verificationInfo]);
 
     const filteredReparacionChannels = useMemo(() => {
         let channels = reparacionChannels;
@@ -665,6 +675,11 @@ export const useReparacion = (
         setSmartSearchResults([]);
     }, []);
 
+    // Función para alternar filtro de no verificados
+    const toggleShowOnlyUnverified = useCallback(() => {
+        setShowOnlyUnverified(prev => !prev);
+    }, []);
+
     // Función para obtener el score de similitud de un canal
     const getChannelSimilarityScore = useCallback((channelId: string): number => {
         const result = smartSearchResults.find(result => result.item.id === channelId);
@@ -717,5 +732,7 @@ export const useReparacion = (
         findSimilarChannels,
         getChannelSimilarityScore,
         smartSearch,
+        showOnlyUnverified,
+        toggleShowOnlyUnverified,
     };
 };

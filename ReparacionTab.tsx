@@ -60,6 +60,8 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         toggleSmartSearch,
         getChannelSimilarityScore,
         smartSearch,
+        showOnlyUnverified,
+        toggleShowOnlyUnverified,
     } = reparacionHook;
     
     // Extraer funciones para evitar problemas de dependencias
@@ -112,6 +114,29 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                     resultCount={filteredMainChannels.length}
                     className="mb-2"
                 />
+                
+                {/* Botón filtro de no verificados */}
+                <div className="flex items-center gap-2 mb-2 bg-gray-700 p-2 rounded-md">
+                    <button
+                        onClick={toggleShowOnlyUnverified}
+                        className={`flex items-center gap-2 transition-colors ${
+                            showOnlyUnverified 
+                                ? 'text-yellow-400' 
+                                : 'text-gray-400'
+                        }`}
+                        title={showOnlyUnverified ? 'Mostrando solo canales no verificados' : 'Mostrando todos los canales'}
+                    >
+                        {showOnlyUnverified ? (
+                            <Check size={18} className="text-yellow-400" />
+                        ) : (
+                            <Check size={18} className="text-gray-400" />
+                        )}
+                        <span className="text-xs font-medium">
+                            {showOnlyUnverified ? 'Solo no verificados' : 'Mostrar no verificados'}
+                        </span>
+                    </button>
+                </div>
+                
                 <select
                     value={mainListFilter}
                     onChange={(e) => setMainListFilter(e.target.value)}
