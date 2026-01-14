@@ -48,15 +48,14 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
         }
     };
 
-    const dndKitTransform = CSS.Transform.toString(transform);
+    const dndKitTransform = transform ? CSS.Transform.toString(transform) : undefined;
 
-    const style = {
+    const style: React.CSSProperties = {
         ...virtualizerStyle,
-        // Combina la transformación de dnd-kit (si existe) con la de la virtualización
-        transform: dndKitTransform ? `${virtualizerStyle?.transform || ''} ${dndKitTransform}` : virtualizerStyle?.transform,
-        transition,
+        transform: dndKitTransform && !isOverlay ? dndKitTransform : virtualizerStyle?.transform,
+        transition: isDragging ? transition : undefined,
         opacity: isDragging && !isOverlay ? 0.5 : 1,
-        zIndex: isDragging ? 1 : 0, // Asegura que el elemento arrastrado esté por encima
+        zIndex: isDragging && !isOverlay ? 1 : 0,
     };
 
     // Cuando es un overlay, no queremos los listeners de drag, solo los atributos.

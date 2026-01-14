@@ -248,10 +248,19 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
         const { active, over } = event;
         if (over && active.id !== over.id) {
             setChannels((items) => {
+                // Encontrar índices en el array completo de canales
                 const oldIndex = items.findIndex((item) => item.id === active.id);
                 const newIndex = items.findIndex((item) => item.id === over.id);
-                return arrayMove(items, oldIndex, newIndex).map((c, i) => ({ ...c, order: i + 1 }));
+                
+                if (oldIndex === -1 || newIndex === -1) return items;
+                
+                // Usar arrayMove para reordenar
+                const reordered = arrayMove(items, oldIndex, newIndex);
+                
+                // Recalcular todos los números de orden
+                return reordered.map((c, i) => ({ ...c, order: i + 1 }));
             });
+            saveStateToHistory();
         }
         setActiveId(null);
     };

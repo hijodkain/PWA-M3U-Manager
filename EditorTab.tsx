@@ -66,7 +66,16 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
 
     const { savedUrls } = settingsHook;
     const { columnWidths, handleResize } = useColumnResizing();
-    const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
+    
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 8, // Requiere mover 8px antes de activar el drag
+            },
+        }),
+        useSensor(KeyboardSensor)
+    );
+    
     const parentRef = tableContainerRef; // Reutilizamos la ref existente
 
     const rowVirtualizer = useVirtualizer({
@@ -394,7 +403,9 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                         selectedChannels={[]}
                                         toggleChannelSelection={() => {}}
                                         statusIndicator={
-                                            <td style={{ width: `${columnWidths.status}px`, minWidth: `${columnWidths.status}px`, maxWidth: `${columnWidths.status}px` }} className="px-2 py-2 text-center"><StatusIndicator status={activeChannel.status} /></td>
+                                            !isSencillo ? (
+                                                <td style={{ width: `${columnWidths.status}px`, minWidth: `${columnWidths.status}px`, maxWidth: `${columnWidths.status}px` }} className="px-2 py-2 text-center"><StatusIndicator status={activeChannel.status} /></td>
+                                            ) : null
                                         }
                                         columnWidths={columnWidths}
                                     />
