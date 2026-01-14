@@ -88,12 +88,12 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
     const reparacionListVirtualItems = reparacionListRowVirtualizer.getVirtualItems();
 
     const attributeLabels: { key: AttributeKey; label: string }[] = [
+        { key: 'url', label: 'Stream' },
+        { key: 'tvgLogo', label: 'Logo' },
+        { key: 'name', label: 'Nombre' },
+        { key: 'groupTitle', label: 'Grupo' },
         { key: 'tvgId', label: 'tvg-id' },
         { key: 'tvgName', label: 'tvg-name' },
-        { key: 'tvgLogo', label: 'Logo' },
-        { key: 'groupTitle', label: 'Grupo' },
-        { key: 'name', label: 'Nombre' },
-        { key: 'url', label: 'URL' },
     ];
 
     const isAllInGroupSelected = filteredReparacionChannels.length > 0 && filteredReparacionChannels.every(c => selectedReparacionChannels.has(c.id));
@@ -173,7 +173,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
             </div>
             <div className="lg:col-span-1 flex flex-col items-center justify-start gap-2 bg-gray-800 p-4 rounded-lg">
                 <div className="flex-grow">
-                    <h4 className="font-bold text-center mb-2">Transferir Datos</h4>
+                    <h4 className="font-bold text-center mb-2">Partes del canal a reparar</h4>
                     <ArrowLeftCircle size={32} className="text-blue-400 mb-4 mx-auto" />
                     {attributeLabels
                         .filter(({ key }) => isSencillo ? (key !== 'tvgId' && key !== 'tvgName') : true)
