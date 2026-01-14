@@ -255,7 +255,6 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                         URL del Stream
                                     </ResizableHeader>
                                 )}
-                                </ResizableHeader>
                             </tr>
                         </thead>
                         <SortableContext items={filteredChannels.map(c => c.id)} strategy={verticalListSortingStrategy}>
