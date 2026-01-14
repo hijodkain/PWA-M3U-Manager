@@ -32,7 +32,7 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
     const [fileName, setFileName] = useState('my_playlist.m3u');
     const [activeId, setActiveId] = useState<string | null>(null);
     const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
-    const [filterGroup, setFilterGroup] = useState<string>('All');
+    const [filterGroup, setFilterGroup] = useState<string>('Todos los canales');
     const [lastSelectedId, setLastSelectedId] = useState<string | null>(null);
     const selectAllCheckboxRef = useRef<HTMLInputElement>(null);
     const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -148,7 +148,7 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
             tvgId: '',
             tvgName: '',
             tvgLogo: '',
-            groupTitle: filterGroup === 'All' ? 'Nuevo Grupo' : filterGroup,
+            groupTitle: filterGroup === 'Todos los canales' ? 'Nuevo Grupo' : filterGroup,
             name: 'Nuevo Canal',
             url: '',
             status: 'pending',
@@ -257,12 +257,12 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
     };
 
     const uniqueGroups = useMemo(
-        () => ['All', ...Array.from(new Set(channels.map((c) => c.groupTitle).filter(Boolean)))],
+        () => ['Todos los canales', ...Array.from(new Set(channels.map((c) => c.groupTitle).filter(Boolean)))],
         [channels]
     );
 
     const filteredChannels = useMemo(
-        () => (filterGroup === 'All' ? channels : channels.filter((c) => c.groupTitle === filterGroup)),
+        () => (filterGroup === 'Todos los canales' ? channels : channels.filter((c) => c.groupTitle === filterGroup)),
         [channels, filterGroup]
     );
 

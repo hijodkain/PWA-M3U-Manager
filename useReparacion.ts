@@ -43,8 +43,8 @@ export const useReparacion = (
     const MAX_AWS_VERIFICATIONS = 20; // LÍMITE MÁXIMO de peticiones AWS Lambda
     const VERIFICATION_WARNING_THRESHOLD = 50; // Advertir si hay más de 50 canales (solo para verificación simple)
 
-    const [mainListFilter, setMainListFilter] = useState('All');
-    const [reparacionListFilter, setReparacionListFilter] = useState('All');
+    const [mainListFilter, setMainListFilter] = useState('Todos los canales');
+    const [reparacionListFilter, setReparacionListFilter] = useState('Todos los canales');
     const [mainListSearch, setMainListSearch] = useState('');
     const [reparacionListSearch, setReparacionListSearch] = useState('');
     const [smartSearchResults, setSmartSearchResults] = useState<SearchMatch<Channel>[]>([]);
@@ -390,8 +390,8 @@ export const useReparacion = (
      * USA VERIFICACIÓN SIMPLE (solo online/offline, sin AWS Lambda)
      */
     const verifyAllChannelsInGroup = () => {
-        const channelsToVerify = mainChannels.filter(channel => 
-            mainListFilter === 'All' || channel.groupTitle === mainListFilter
+        const channelsToVerify = mainChannels.filter(channel =>
+            mainListFilter === 'Todos los canales' || channel.groupTitle === mainListFilter
         );
         verifyChannelsSimpleWithLimit(channelsToVerify);
     };
@@ -553,18 +553,18 @@ export const useReparacion = (
     };
 
     const mainListUniqueGroups = useMemo(
-        () => ['All', ...Array.from(new Set(mainChannels.map((c) => c.groupTitle).filter(Boolean)))],
+        () => ['Todos los canales', ...Array.from(new Set(mainChannels.map((c) => c.groupTitle).filter(Boolean)))],
         [mainChannels]
     );
 
     const reparacionListUniqueGroups = useMemo(
-        () => ['All', ...Array.from(new Set(reparacionChannels.map((c) => c.groupTitle).filter(Boolean)))],
+        () => ['Todos los canales', ...Array.from(new Set(reparacionChannels.map((c) => c.groupTitle).filter(Boolean)))],
         [reparacionChannels]
     );
 
     const filteredMainChannels = useMemo(() => {
         let channels = mainChannels;
-        if (mainListFilter !== 'All') {
+        if (mainListFilter !== 'Todos los canales') {
             channels = channels.filter(c => c.groupTitle === mainListFilter);
         }
         if (mainListSearch) {
@@ -582,7 +582,7 @@ export const useReparacion = (
 
     const filteredReparacionChannels = useMemo(() => {
         let channels = reparacionChannels;
-        if (reparacionListFilter !== 'All') {
+        if (reparacionListFilter !== 'Todos los canales') {
             channels = channels.filter(c => c.groupTitle === reparacionListFilter);
         }
         if (reparacionListSearch) {

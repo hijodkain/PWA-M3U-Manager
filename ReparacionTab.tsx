@@ -176,7 +176,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                     <h4 className="font-bold text-center mb-2">Transferir Datos</h4>
                     <ArrowLeftCircle size={32} className="text-blue-400 mb-4 mx-auto" />
                     {attributeLabels
-                        .filter(({ key }) => isSencillo ? key === 'url' : true)
+                        .filter(({ key }) => isSencillo ? (key !== 'tvgId' && key !== 'tvgName') : true)
                         .map(({ key, label }) => (
                         <button
                             key={key}
@@ -209,43 +209,21 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 </div>
             </div>
             <div className="lg:col-span-6 bg-gray-800 p-4 rounded-lg flex flex-col">
-                <h3 className="font-bold text-lg mb-2">Lista de Recambio</h3>
+                <h3 className="font-bold text-lg mb-3">Selecciona la lista de la que vas a extraer la medicina</h3>
                 <div className="flex gap-2 mb-2">
                     <input
                         type="text"
-                        placeholder="Cargar desde URL..."
+                        placeholder="Pega aquí la URL de la lista"
                         value={reparacionUrl}
                         onChange={(e) => setReparacionUrl(e.target.value)}
-                        className="bg-gray-700 border border-gray-600 rounded-md px-3 py-1.5 text-white focus:ring-blue-500 focus:border-blue-500 w-full"
+                        className="bg-gray-700 border border-gray-600 rounded-md px-3 py-1.5 text-white focus:ring-blue-500 focus:border-blue-500 flex-grow"
                     />
-                    <button onClick={handleReparacionUrlLoad} className="bg-blue-600 hover:bg-blue-700 text-white px-4 rounded-md">
-                        <Link size={16} />
+                    <button onClick={handleReparacionUrlLoad} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md font-semibold whitespace-nowrap">
+                        Cargar
                     </button>
-                </div>
-                
-                {/* Desplegable de listas guardadas + Botón subir archivo */}
-                <div className="mb-2 flex gap-2">
-                    {settingsHook.savedUrls.length > 0 && (
-                        <select
-                            value=""
-                            onChange={(e) => {
-                                if (e.target.value) {
-                                    setReparacionUrl(e.target.value);
-                                }
-                            }}
-                            className="flex-1 bg-gray-700 border border-gray-600 rounded-md px-3 py-1.5 text-white focus:ring-blue-500 focus:border-blue-500 text-sm"
-                        >
-                            <option value="">o selecciona una lista guardada...</option>
-                            {settingsHook.savedUrls.map(item => (
-                                <option key={item.id} value={item.url}>
-                                    {item.name}
-                                </option>
-                            ))}
-                        </select>
-                    )}
                     <label
                         htmlFor="reparacion-file-upload"
-                        className="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1.5 px-4 rounded-md flex items-center gap-2 whitespace-nowrap"
+                        className="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1.5 px-4 rounded-md flex items-center gap-2 whitespace-nowrap"
                     >
                         <Upload size={16} /> Subir Archivo
                     </label>
@@ -260,16 +238,8 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 
                 {isCurationLoading && <p className="text-center text-blue-400 mt-2">Cargando lista de recambios...</p>}
                 {curationError && <p className="text-center text-red-400 bg-red-900/50 p-2 rounded mt-2">{curationError}</p>}
-                <SmartSearchInput
-                    searchTerm={reparacionListSearch}
-                    onSearchChange={setReparacionListSearch}
-                    isSmartSearchEnabled={isSmartSearchEnabled}
-                    onToggleSmartSearch={toggleSmartSearch}
-                    placeholder="Buscar canal en lista de reparación..."
-                    showResults={true}
-                    resultCount={filteredReparacionChannels.length}
-                    className="mb-2"
-                />
+                
+                <p className="text-sm text-gray-300 mt-3 mb-1 font-medium">Selecciona el grupo en el que está el canal</p>
                 <select
                     value={reparacionListFilter}
                     onChange={(e) => setReparacionListFilter(e.target.value)}
@@ -322,6 +292,8 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 >
                     <Check size={14} /> Verificar Seleccionados
                 </button>
+                
+                <p className="text-sm text-gray-300 mb-2 font-medium">Selecciona el canal con el que quieres curar</p>
                 <div ref={reparacionListParentRef} className="overflow-auto max-h-[60vh] pr-2">
                     <div style={{ height: `${reparacionListRowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
                         {reparacionListVirtualItems.map((virtualItem) => {
