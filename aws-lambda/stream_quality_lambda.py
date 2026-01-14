@@ -126,6 +126,7 @@ def verify_stream_with_quality(url: str) -> Dict[str, Any]:
 def quick_online_check(url: str) -> Dict[str, Any]:
     """
     Verificación rápida HEAD para saber si el stream está online
+    Si HEAD falla con 405, intentar con GET
     
     Returns:
         Dict con 'is_online' (bool) y 'message' (str)
@@ -140,15 +141,33 @@ def quick_online_check(url: str) -> Dict[str, Any]:
             'Accept': '*/*',
         }
         
+        # Intentar primero con HEAD
         request = urllib.request.Request(url, headers=headers, method='HEAD')
         
-        with urllib.request.urlopen(request, timeout=10, context=ssl_context) as response:
-            status_code = response.getcode()
-            
-            if status_code in [200, 201, 202, 204, 206, 403]:
-                return {'is_online': True, 'message': f'Online (HTTP {status_code})'}
+        try:
+            with urllib.request.urlopen(request, timeout=10, context=ssl_context) as response:
+                status_code = response.getcode()
+                
+                if status_code in [200, 201, 202, 204, 206, 403]:
+                    return {'is_online': True, 'message': f'Online (HTTP {status_code})'}
+                else:
+                    return {'is_online': False, 'message': f'Unexpected status: {status_code}'}
+        
+        except urllib.error.HTTPError as e:
+            # Si HEAD devuelve 405, intentar con GET
+            if e.code == 405:
+                request = urllib.request.Request(url, headers=headers, method='GET')
+                with urllib.request.urlopen(request, timeout=10, context=ssl_context) as response:
+                    status_code = response.getcode()
+                    # Leer solo un poco para confirmar
+                    response.read(4096)
+                    
+                    if status_code in [200, 201, 202, 204, 206, 403]:
+                        return {'is_online': True, 'message': f'Online (HTTP {status_code} via GET)'}
+                    else:
+                        return {'is_online': False, 'message': f'Unexpected status: {status_code}'}
             else:
-                return {'is_online': False, 'message': f'Unexpected status: {status_code}'}
+                raise  # Re-lanzar otros errores HTTP
     
     except Exception as e:
         return {'is_online': False, 'message': f'Connection failed: {str(e)}'}

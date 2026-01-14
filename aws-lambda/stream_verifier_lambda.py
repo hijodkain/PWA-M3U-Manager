@@ -63,6 +63,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 def verify_stream_simple(url: str) -> Dict[str, Any]:
     """
     Verifica si un stream está online usando una petición HTTP HEAD
+    Si HEAD falla con 405, intenta con GET
     
     Args:
         url: URL del stream a verificar
@@ -85,49 +86,75 @@ def verify_stream_simple(url: str) -> Dict[str, Any]:
             'Connection': 'keep-alive',
         }
         
-        # Crear request
+        # Intentar primero con HEAD
         request = urllib.request.Request(url, headers=headers, method='HEAD')
         
-        # Hacer la petición con timeout
-        with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS, context=ssl_context) as response:
-            status_code = response.getcode()
-            
-            # Códigos de éxito
-            if status_code in [200, 201, 202, 204, 206]:
+        try:
+            # Hacer la petición con timeout
+            with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS, context=ssl_context) as response:
+                status_code = response.getcode()
+                
+                # Códigos de éxito
+                if status_code in [200, 201, 202, 204, 206]:
+                    return {
+                        'status': 'ok',
+                        'message': f'Stream is online (HTTP {status_code})',
+                        'url': url,
+                        'statusCode': status_code,
+                    }
+                # 403 a veces significa que el stream está online pero requiere headers específicos
+                elif status_code == 403:
+                    return {
+                        'status': 'ok',
+                        'message': 'Stream is online but may require authentication',
+                        'url': url,
+                        'statusCode': status_code,
+                    }
+                else:
+                    return {
+                        'status': 'failed',
+                        'message': f'Unexpected status code: {status_code}',
+                        'url': url,
+                        'statusCode': status_code,
+                    }
+        
+        except urllib.error.HTTPError as head_error:
+            # Si HEAD devuelve 405, intentar con GET
+            if head_error.code == 405:
+                request = urllib.request.Request(url, headers=headers, method='GET')
+                with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS, context=ssl_context) as response:
+                    status_code = response.getcode()
+                    # Leer solo un poco para confirmar
+                    response.read(4096)
+                    
+                    if status_code in [200, 201, 202, 204, 206, 403]:
+                        return {
+                            'status': 'ok',
+                            'message': f'Stream is online (HTTP {status_code} via GET)',
+                            'url': url,
+                            'statusCode': status_code,
+                        }
+                    else:
+                        return {
+                            'status': 'failed',
+                            'message': f'Unexpected status code: {status_code}',
+                            'url': url,
+                            'statusCode': status_code,
+                        }
+            # 403 puede significar que está online pero requiere autenticación
+            elif head_error.code == 403:
                 return {
                     'status': 'ok',
-                    'message': f'Stream is online (HTTP {status_code})',
+                    'message': 'Stream is online but requires authentication',
                     'url': url,
-                    'statusCode': status_code,
-                }
-            # 403 a veces significa que el stream está online pero requiere headers específicos
-            elif status_code == 403:
-                return {
-                    'status': 'ok',
-                    'message': 'Stream is online but may require authentication',
-                    'url': url,
-                    'statusCode': status_code,
+                    'statusCode': 403,
                 }
             else:
-                return {
-                    'status': 'failed',
-                    'message': f'Unexpected status code: {status_code}',
-                    'url': url,
-                    'statusCode': status_code,
-                }
+                raise  # Re-lanzar otros errores HTTP
     
     except urllib.error.HTTPError as e:
-        # Errores HTTP específicos
-        if e.code == 403:
-            # 403 puede significar que está online pero requiere autenticación
-            return {
-                'status': 'ok',
-                'message': 'Stream is online but requires authentication',
-                'url': url,
-                'statusCode': 403,
-            }
-        else:
-            return {
+        # Errores HTTP específicos (que no sean 405 o 403)
+        return {
                 'status': 'failed',
                 'message': f'HTTP Error {e.code}: {e.reason}',
                 'url': url,
