@@ -5,16 +5,17 @@ import { useReparacion } from './useReparacion';
 import { useAsignarEpg } from './useAsignarEpg';
 import { useSettings } from './useSettings';
 import { useAppMode } from './AppModeContext';
+import InicioTab from './InicioTab';
 import EditorTab from './EditorTab';
 import ReparacionTab from './ReparacionTab';
 import AsignarEpgTab from './AsignarEpgTab';
 import SaveTab from './SaveTab';
 import SettingsTab from './SettingsTab';
 import HelpTab from './HelpTab';
-import { Edit, Wrench, List, Settings, Save, HelpCircle } from 'lucide-react';
+import { Home, Edit, Wrench, List, Settings, Save, HelpCircle } from 'lucide-react';
 
 export default function PWAM3UManager() {
-    const [activeTab, setActiveTab] = useState<Tab>('editor');
+    const [activeTab, setActiveTab] = useState<Tab>('inicio');
     const [failedChannels, setFailedChannels] = useState<Channel[]>([]);
     const { mode, toggleMode } = useAppMode();
     const channelsHook = useChannels(setFailedChannels);
@@ -24,6 +25,8 @@ export default function PWAM3UManager() {
 
     const renderTabContent = () => {
         switch (activeTab) {
+            case 'inicio':
+                return <InicioTab channelsHook={channelsHook} settingsHook={settingsHook} />;
             case 'editor':
                 return <EditorTab channelsHook={channelsHook} settingsHook={settingsHook} />;
             case 'reparacion':
@@ -46,6 +49,7 @@ export default function PWAM3UManager() {
     };
 
     const tabs: { id: Tab; name: string; icon: React.ElementType }[] = [
+        { id: 'inicio', name: 'Inicio', icon: Home },
         { id: 'editor', name: 'Editor de Playlist', icon: Edit },
         { id: 'reparacion', name: 'Reparación', icon: Wrench },
         { id: 'asignar-epg', name: 'Asignar EPG', icon: List },

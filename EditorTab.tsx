@@ -5,6 +5,7 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { Upload, Download, Plus, Trash2, GripVertical, Zap, ShieldCheck, ShieldX, Hourglass, ShieldQuestion } from 'lucide-react';
 import { useChannels } from './useChannels';
 import { useSettings } from './useSettings';
+import { useAppMode } from './AppModeContext';
 import { useColumnResizing } from './useColumnResizing';
 import ResizableHeader from './ResizableHeader';
 import SortableChannelRow from './SortableChannelRow';
@@ -16,6 +17,7 @@ interface EditorTabProps {
 }
 
 const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => {
+    const { isSencillo } = useAppMode();
     const {
         channels,
         url,
@@ -81,70 +83,72 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
 
     return (
         <>
-            <div className="bg-gray-800 p-4 rounded-lg mb-6 shadow-lg">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-                    <div>
-                        <label htmlFor="url-input" className="block text-sm font-medium text-gray-300 mb-1">
-                            Cargar desde URL
-                        </label>
-                        <div className="flex">
-                            <input
-                                id="url-input"
-                                type="text"
-                                value={url}
-                                onChange={(e) => setUrl(e.target.value)}
-                                placeholder="https://.../playlist.m3u"
-                                className="flex-grow bg-gray-700 border border-gray-600 rounded-l-md px-3 py-2 text-white focus:ring-blue-500 focus:border-blue-500"
-                            />
-                            <button
-                                onClick={handleFetchUrl}
-                                disabled={isLoading}
-                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-r-md flex items-center disabled:bg-blue-800 disabled:cursor-not-allowed"
-                            >
-                                <Download size={18} className="mr-2" /> Descargar
-                            </button>
-                        </div>
-                        {savedUrls.length > 0 && (
-                            <div className="mt-2">
-                                <select
-                                    id="saved-urls-select"
-                                    value=""
-                                    onChange={(e) => {
-                                        if (e.target.value) {
-                                            setUrl(e.target.value);
-                                        }
-                                    }}
-                                    className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-blue-500 focus:border-blue-500 text-sm"
+            {!isSencillo && (
+                <div className="bg-gray-800 p-4 rounded-lg mb-6 shadow-lg">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                        <div>
+                            <label htmlFor="url-input" className="block text-sm font-medium text-gray-300 mb-1">
+                                Cargar desde URL
+                            </label>
+                            <div className="flex">
+                                <input
+                                    id="url-input"
+                                    type="text"
+                                    value={url}
+                                    onChange={(e) => setUrl(e.target.value)}
+                                    placeholder="https://.../playlist.m3u"
+                                    className="flex-grow bg-gray-700 border border-gray-600 rounded-l-md px-3 py-2 text-white focus:ring-blue-500 focus:border-blue-500"
+                                />
+                                <button
+                                    onClick={handleFetchUrl}
+                                    disabled={isLoading}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-r-md flex items-center disabled:bg-blue-800 disabled:cursor-not-allowed"
                                 >
-                                    <option value="">o selecciona una lista guardada...</option>
-                                    {savedUrls.map(item => (
-                                        <option key={item.id} value={item.url}>
-                                            {item.name}
-                                        </option>
-                                    ))}
-                                </select>
+                                    <Download size={18} className="mr-2" /> Descargar
+                                </button>
                             </div>
-                        )}
+                            {savedUrls.length > 0 && (
+                                <div className="mt-2">
+                                    <select
+                                        id="saved-urls-select"
+                                        value=""
+                                        onChange={(e) => {
+                                            if (e.target.value) {
+                                                setUrl(e.target.value);
+                                            }
+                                        }}
+                                        className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                    >
+                                        <option value="">o selecciona una lista guardada...</option>
+                                        {savedUrls.map(item => (
+                                            <option key={item.id} value={item.url}>
+                                                {item.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex justify-center md:justify-end">
+                            <label
+                                htmlFor="file-upload"
+                                className="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md flex items-center"
+                            >
+                                <Upload size={18} className="mr-2" /> Subir Archivo M3U
+                            </label>
+                            <input
+                                id="file-upload"
+                                type="file"
+                                className="hidden"
+                                onChange={handleFileUpload}
+                                accept=".m3u,.m3u8"
+                            />
+                        </div>
                     </div>
-                    <div className="flex justify-center md:justify-end">
-                        <label
-                            htmlFor="file-upload"
-                            className="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md flex items-center"
-                        >
-                            <Upload size={18} className="mr-2" /> Subir Archivo M3U
-                        </label>
-                        <input
-                            id="file-upload"
-                            type="file"
-                            className="hidden"
-                            onChange={handleFileUpload}
-                            accept=".m3u,.m3u8"
-                        />
-                    </div>
+                    {isLoading && <p className="text-center mt-4 text-blue-400">Cargando...</p>}
+                    {error && <p className="text-center mt-4 text-red-400 bg-red-900/50 p-2 rounded">{error}</p>}
                 </div>
-                {isLoading && <p className="text-center mt-4 text-blue-400">Cargando...</p>}
-                {error && <p className="text-center mt-4 text-red-400 bg-red-900/50 p-2 rounded">{error}</p>}
-            </div>
+            )}
 
             {channels.length > 0 && (
                 <div className="bg-gray-800 p-4 rounded-lg mb-6 shadow-lg flex flex-wrap items-center justify-between gap-4">
@@ -227,12 +231,16 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                 <ResizableHeader width={columnWidths.status} onResize={(w) => handleResize('status', w)} align="center">
                                     Estado
                                 </ResizableHeader>
-                                <ResizableHeader width={columnWidths.tvgId} onResize={(w) => handleResize('tvgId', w)} align="left">
-                                    tvg-id
-                                </ResizableHeader>
-                                <ResizableHeader width={columnWidths.tvgName} onResize={(w) => handleResize('tvgName', w)} align="left">
-                                    tvg-name
-                                </ResizableHeader>
+                                {!isSencillo && (
+                                    <ResizableHeader width={columnWidths.tvgId} onResize={(w) => handleResize('tvgId', w)} align="left">
+                                        tvg-id
+                                    </ResizableHeader>
+                                )}
+                                {!isSencillo && (
+                                    <ResizableHeader width={columnWidths.tvgName} onResize={(w) => handleResize('tvgName', w)} align="left">
+                                        tvg-name
+                                    </ResizableHeader>
+                                )}
                                 <ResizableHeader width={columnWidths.tvgLogo} onResize={(w) => handleResize('tvgLogo', w)} align="center">
                                     Logo
                                 </ResizableHeader>
@@ -242,8 +250,11 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                 <ResizableHeader width={columnWidths.name} onResize={(w) => handleResize('name', w)} align="left">
                                     Nombre del Canal
                                 </ResizableHeader>
-                                <ResizableHeader width={columnWidths.url} onResize={(w) => handleResize('url', w)} align="left">
-                                    URL del Stream
+                                {!isSencillo && (
+                                    <ResizableHeader width={columnWidths.url} onResize={(w) => handleResize('url', w)} align="left">
+                                        URL del Stream
+                                    </ResizableHeader>
+                                )}
                                 </ResizableHeader>
                             </tr>
                         </thead>

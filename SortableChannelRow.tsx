@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import { useSortable, defaultAnimateLayoutChanges } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical } from 'lucide-react';
+import { useAppMode } from './AppModeContext';
 import EditableCell from './EditableCell';
 import { Channel } from './index';
 
@@ -31,6 +32,7 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
     measureRef,
     isOverlay,
 }) => {
+    const { isSencillo } = useAppMode();
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
         id: channel.id,
         disabled: isOverlay,
@@ -80,16 +82,20 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
                 <EditableCell value={channel.order.toString()} onSave={(val) => onOrderChange(channel.id, val)} />
             </td>
             {statusIndicator}
-            <td style={{ width: `${columnWidths.tvgId}px`, minWidth: `${columnWidths.tvgId}px`, maxWidth: `${columnWidths.tvgId}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-300">
-                <div className="truncate">
-                    <EditableCell value={channel.tvgId} onSave={(val) => onUpdate(channel.id, 'tvgId', val)} />
-                </div>
-            </td>
-            <td style={{ width: `${columnWidths.tvgName}px`, minWidth: `${columnWidths.tvgName}px`, maxWidth: `${columnWidths.tvgName}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-300">
-                <div className="truncate">
-                    <EditableCell value={channel.tvgName} onSave={(val) => onUpdate(channel.id, 'tvgName', val)} />
-                </div>
-            </td>
+            {!isSencillo && (
+                <td style={{ width: `${columnWidths.tvgId}px`, minWidth: `${columnWidths.tvgId}px`, maxWidth: `${columnWidths.tvgId}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-300">
+                    <div className="truncate">
+                        <EditableCell value={channel.tvgId} onSave={(val) => onUpdate(channel.id, 'tvgId', val)} />
+                    </div>
+                </td>
+            )}
+            {!isSencillo && (
+                <td style={{ width: `${columnWidths.tvgName}px`, minWidth: `${columnWidths.tvgName}px`, maxWidth: `${columnWidths.tvgName}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-300">
+                    <div className="truncate">
+                        <EditableCell value={channel.tvgName} onSave={(val) => onUpdate(channel.id, 'tvgName', val)} />
+                    </div>
+                </td>
+            )}
             <td style={{ width: `${columnWidths.tvgLogo}px`, minWidth: `${columnWidths.tvgLogo}px`, maxWidth: `${columnWidths.tvgLogo}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-300 text-center">
                 <div className="flex items-center justify-center">
                     <img
@@ -112,11 +118,13 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
                     <EditableCell value={channel.name} onSave={(val) => onUpdate(channel.id, 'name', val)} />
                 </div>
             </td>
-            <td style={{ width: `${columnWidths.url}px`, minWidth: `${columnWidths.url}px`, maxWidth: `${columnWidths.url}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-400">
-                <div className="truncate">
-                    <EditableCell value={channel.url} onSave={(val) => onUpdate(channel.id, 'url', val)} />
-                </div>
-            </td>
+            {!isSencillo && (
+                <td style={{ width: `${columnWidths.url}px`, minWidth: `${columnWidths.url}px`, maxWidth: `${columnWidths.url}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-400">
+                    <div className="truncate">
+                        <EditableCell value={channel.url} onSave={(val) => onUpdate(channel.id, 'url', val)} />
+                    </div>
+                </td>
+            )}
         </tr>
     );
 };
