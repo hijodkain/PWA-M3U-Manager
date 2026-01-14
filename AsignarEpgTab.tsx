@@ -62,9 +62,10 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
     const [isGeneratorVisible, setIsGeneratorVisible] = useState(false);
     
     // Estados para los botones toggle
-    const [assignIdActive, setAssignIdActive] = useState(false);
-    const [assignIdLogoActive, setAssignIdLogoActive] = useState(false);
     const [ottModeActive, setOttModeActive] = useState(false);
+    const [tivimateModeActive, setTivimateModeActive] = useState(false);
+    const [transferLogoActive, setTransferLogoActive] = useState(false);
+    const [keepLogoActive, setKeepLogoActive] = useState(false);
 
     const channelGroups = useMemo(() => {
         const groups = new Set(channels.map(c => c.groupTitle).filter(Boolean));
@@ -115,10 +116,21 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
     };
 
     // Manejadores para los botones toggle
-    const handleAssignIdClick = () => {
-        const newState = !assignIdActive;
-        setAssignIdActive(newState);
-        setAssignIdLogoActive(false);
+    const handleOttModeClick = () => {
+        const newState = !ottModeActive;
+        setOttModeActive(newState);
+        setTivimateModeActive(false);
+        
+        if (newState) {
+            setAttributesToCopy(new Set<AttributeKey>(['tvgId', 'tvgName']));
+        } else {
+            setAttributesToCopy(new Set<AttributeKey>());
+        }
+    };
+
+    const handleTivimateModeClick = () => {
+        const newState = !tivimateModeActive;
+        setTivimateModeActive(newState);
         setOttModeActive(false);
         
         if (newState) {
@@ -128,30 +140,34 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
         }
     };
 
-    const handleAssignIdLogoClick = () => {
-        const newState = !assignIdLogoActive;
-        setAssignIdLogoActive(newState);
-        setAssignIdActive(false);
-        setOttModeActive(false);
+    const handleTransferLogoClick = () => {
+        const newState = !transferLogoActive;
+        setTransferLogoActive(newState);
+        setKeepLogoActive(false);
         
-        if (newState) {
-            setAttributesToCopy(new Set<AttributeKey>(['tvgId', 'tvgLogo']));
-        } else {
-            setAttributesToCopy(new Set<AttributeKey>());
-        }
+        // Actualizar attributesToCopy añadiendo o quitando tvgLogo
+        setAttributesToCopy(prev => {
+            const newSet = new Set(prev);
+            if (newState) {
+                newSet.add('tvgLogo');
+            } else {
+                newSet.delete('tvgLogo');
+            }
+            return newSet;
+        });
     };
 
-    const handleOttModeClick = () => {
-        const newState = !ottModeActive;
-        setOttModeActive(newState);
-        setAssignIdActive(false);
-        setAssignIdLogoActive(false);
+    const handleKeepLogoClick = () => {
+        const newState = !keepLogoActive;
+        setKeepLogoActive(newState);
+        setTransferLogoActive(false);
         
-        if (newState) {
-            setAttributesToCopy(new Set<AttributeKey>(['tvgId', 'tvgName']));
-        } else {
-            setAttributesToCopy(new Set<AttributeKey>());
-        }
+        // Cuando está activo "Mantener Logo", removemos tvgLogo de attributesToCopy
+        setAttributesToCopy(prev => {
+            const newSet = new Set(prev);
+            newSet.delete('tvgLogo');
+            return newSet;
+        });
     };
 
     return (
@@ -202,39 +218,74 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                     </div>
                 </div>
             </div>
-            <div className="lg:col-span-1 flex flex-col items-center justify-start gap-2 bg-gray-800 p-4 rounded-lg">
-                <h4 className="font-bold text-center mb-2">Asignar EPG</h4>
-                <ArrowLeftCircle size={32} className="text-blue-400 mb-4" />
-                <button
-                    onClick={handleAssignIdClick}
-                    className={`w-full text-xs py-2 px-1 rounded-md flex items-center justify-center gap-1 transition-colors ${
-                        assignIdActive 
-                            ? 'bg-green-600 text-white' 
-                            : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
-                    }`}
-                >
-                    <Copy size={14} /> Asignar ID
-                </button>
-                <button
-                    onClick={handleAssignIdLogoClick}
-                    className={`w-full text-xs py-2 px-1 rounded-md flex items-center justify-center gap-1 transition-colors ${
-                        assignIdLogoActive 
-                            ? 'bg-green-600 text-white' 
-                            : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
-                    }`}
-                >
-                    <Copy size={14} /> ID y Logo
-                </button>
-                <button
-                    onClick={handleOttModeClick}
-                    className={`w-full text-xs py-2 px-1 rounded-md flex items-center justify-center gap-1 transition-colors ${
-                        ottModeActive 
-                            ? 'bg-purple-600 text-white' 
-                            : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
-                    }`}
-                >
-                    <Zap size={14} /> OTT
-                </button>
+            <div className="lg:col-span-1 flex flex-col items-center justify-start gap-3 bg-gray-800 p-4 rounded-lg">
+                <h4 className="font-bold text-center mb-1">Preparar para:</h4>
+                
+                {/* Botones de modo: OTT y TiviMate */}
+                <div className="w-full space-y-2">
+                    <button
+                        onClick={handleOttModeClick}
+                        className={`w-full p-2 rounded-md border-2 transition-all ${
+                            ottModeActive 
+                                ? 'border-purple-500 bg-purple-900/30' 
+                                : 'border-gray-600 hover:border-gray-500 bg-gray-700/30'
+                        }`}
+                        title="Modo OTT: Asigna channel ID a tvg-id y tvg-name"
+                    >
+                        <div className="flex items-center justify-center">
+                            {/* Placeholder para logo OTT - reemplazar con imagen */}
+                            <div className="w-16 h-16 bg-gray-600 rounded flex items-center justify-center">
+                                <span className="text-xs font-bold text-white">OTT</span>
+                            </div>
+                        </div>
+                        <p className="text-xs mt-1 text-gray-300">OTT</p>
+                    </button>
+                    
+                    <button
+                        onClick={handleTivimateModeClick}
+                        className={`w-full p-2 rounded-md border-2 transition-all ${
+                            tivimateModeActive 
+                                ? 'border-blue-500 bg-blue-900/30' 
+                                : 'border-gray-600 hover:border-gray-500 bg-gray-700/30'
+                        }`}
+                        title="Modo TiviMate: Asigna channel ID solo a tvg-id"
+                    >
+                        <div className="flex items-center justify-center">
+                            {/* Placeholder para logo TiviMate - reemplazar con imagen */}
+                            <div className="w-16 h-16 bg-gray-600 rounded flex items-center justify-center">
+                                <span className="text-xs font-bold text-white">TiviMate</span>
+                            </div>
+                        </div>
+                        <p className="text-xs mt-1 text-gray-300">TiviMate</p>
+                    </button>
+                </div>
+                
+                <div className="w-full border-t border-gray-700 my-1"></div>
+                
+                {/* Botones de logo */}
+                <div className="w-full space-y-2">
+                    <button
+                        onClick={handleTransferLogoClick}
+                        className={`w-full text-xs py-2 px-2 rounded-md flex items-center justify-center gap-2 transition-colors ${
+                            transferLogoActive 
+                                ? 'bg-green-600 text-white' 
+                                : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                        }`}
+                    >
+                        <Copy size={14} /> Transferir Logo
+                    </button>
+                    
+                    <button
+                        onClick={handleKeepLogoClick}
+                        className={`w-full text-xs py-2 px-2 rounded-md flex items-center justify-center gap-2 transition-colors ${
+                            keepLogoActive 
+                                ? 'bg-blue-600 text-white' 
+                                : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                        }`}
+                    >
+                        <ArrowLeftCircle size={14} /> Mantener Logo
+                    </button>
+                </div>
             </div>
             <div className="lg:col-span-5 bg-gray-800 p-4 rounded-lg flex flex-col">
                 <h3 className="font-bold text-lg mb-2">Fuente EPG</h3>
