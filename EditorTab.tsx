@@ -20,6 +20,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
     const { isSencillo } = useAppMode();
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [showTutorialModal, setShowTutorialModal] = useState(false);
     const [newChannelData, setNewChannelData] = useState({
         order: '',
         name: '',
@@ -288,6 +289,12 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                             >
                                 <Trash2 size={18} className="mr-2" /> Eliminar Seleccionados
                             </button>
+                            <button
+                                onClick={() => setShowTutorialModal(true)}
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md flex items-center"
+                            >
+                                ¿Cómo ordenar los canales de mi lista?
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -298,7 +305,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                     <table className="min-w-full divide-y divide-gray-700" style={{ tableLayout: 'fixed' }}>
                         <thead className="bg-gray-800 sticky top-0 z-10">
                             <tr>
-                                <th scope="col" style={{ width: `${columnWidths.select}px`, minWidth: `${columnWidths.select}px`, maxWidth: `${columnWidths.select}px` }} className="px-2 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
+                                <th scope="col" style={{ width: `${columnWidths.select}px`, minWidth: `${columnWidths.select}px`, maxWidth: `${columnWidths.select}px` }} className="px-2 py-2 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
                                     <input
                                         type="checkbox"
                                         ref={selectAllCheckboxRef}
@@ -575,6 +582,48 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                     Cancelar
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Tutorial de Ordenamiento */}
+            {showTutorialModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-gray-800 rounded-lg p-8 max-w-2xl mx-4 border border-blue-500">
+                        <h2 className="text-2xl font-bold text-white mb-6">¿Cómo ordenar los canales de mi lista?</h2>
+                        
+                        <div className="space-y-6 text-gray-300">
+                            <div className="bg-gray-700 p-4 rounded-lg">
+                                <h3 className="text-lg font-semibold text-blue-400 mb-2">1. Cambiar posición mediante número de orden</h3>
+                                <p className="text-sm leading-relaxed">
+                                    Haz doble clic en el número de orden asignado al canal y asígnale una nueva posición. 
+                                    Si tienes varios canales seleccionados, los demás tomarán las siguientes posiciones a la nueva posición asignada.
+                                </p>
+                            </div>
+
+                            <div className="bg-gray-700 p-4 rounded-lg">
+                                <h3 className="text-lg font-semibold text-blue-400 mb-2">2. Arrastrar y soltar <span className="text-yellow-400 text-xs">(en pruebas)</span></h3>
+                                <p className="text-sm leading-relaxed">
+                                    Pulsa en los 6 puntitos a la izquierda del canal que quieres mover y arrástralo arriba o abajo hasta su nueva posición.
+                                </p>
+                            </div>
+
+                            <div className="bg-gray-700 p-4 rounded-lg">
+                                <h3 className="text-lg font-semibold text-blue-400 mb-2">3. Editar campos del canal</h3>
+                                <p className="text-sm leading-relaxed">
+                                    Puedes editar cada campo de un canal si haces doble clic sobre él (excepto el logo).
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="mt-8">
+                            <button
+                                onClick={() => setShowTutorialModal(false)}
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md transition-colors"
+                            >
+                                Entendido
+                            </button>
                         </div>
                     </div>
                 </div>

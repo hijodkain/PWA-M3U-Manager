@@ -32,7 +32,7 @@ const ResizableHeader: React.FC<ResizableHeaderProps> = ({ children, width, onRe
         <th
             scope="col"
             style={{ width: `${width}px`, minWidth: `${width}px`, maxWidth: `${width}px` }}
-            className={`relative px-2 py-3 ${alignmentClass} text-xs font-medium text-gray-300 uppercase tracking-wider`}
+            className={`relative px-2 py-2 ${alignmentClass} text-xs font-medium text-gray-300 uppercase tracking-wider`}
         >
             {children}
             <div

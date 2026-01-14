@@ -96,16 +96,24 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
                     </div>
                 </td>
             )}
-            <td style={{ width: `${columnWidths.tvgLogo}px`, minWidth: `${columnWidths.tvgLogo}px`, maxWidth: `${columnWidths.tvgLogo}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-300 text-center">
+            <td style={{ width: `${columnWidths.tvgLogo}px`, minWidth: `${columnWidths.tvgLogo}px`, maxWidth: `${columnWidths.tvgLogo}px` }} className="px-2 py-2 text-center">
                 <div className="flex items-center justify-center">
-                    <img
-                        src={channel.tvgLogo || 'https://placehold.co/40x40/2d3748/e2e8f0?text=?'}
-                        alt="logo"
-                        className="h-10 w-auto object-contain rounded-sm"
-                        onError={(e) => {
-                            e.currentTarget.src = 'https://placehold.co/40x40/2d3748/e2e8f0?text=Error';
-                        }}
-                    />
+                    {channel.tvgLogo ? (
+                        <img
+                            src={channel.tvgLogo}
+                            alt="logo"
+                            className="h-10 w-auto object-contain rounded-sm"
+                            onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                const parent = e.currentTarget.parentElement;
+                                if (parent) {
+                                    parent.innerHTML = '<span class="text-gray-500 text-xs">Sin Logo</span>';
+                                }
+                            }}
+                        />
+                    ) : (
+                        <span className="text-gray-500 text-xs">Sin Logo</span>
+                    )}
                 </div>
             </td>
             <td style={{ width: `${columnWidths.groupTitle}px`, minWidth: `${columnWidths.groupTitle}px`, maxWidth: `${columnWidths.groupTitle}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-300">
