@@ -81,7 +81,7 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
             <td style={{ width: `${columnWidths.order}px`, minWidth: `${columnWidths.order}px`, maxWidth: `${columnWidths.order}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-300 text-center">
                 <EditableCell value={channel.order.toString()} onSave={(val) => onOrderChange(channel.id, val)} />
             </td>
-            {statusIndicator}
+            {!isSencillo && statusIndicator}
             {!isSencillo && (
                 <td style={{ width: `${columnWidths.tvgId}px`, minWidth: `${columnWidths.tvgId}px`, maxWidth: `${columnWidths.tvgId}px` }} className="px-2 py-2 whitespace-nowrap text-sm text-gray-300">
                     <div className="truncate">

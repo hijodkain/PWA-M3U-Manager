@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -18,6 +18,19 @@ interface EditorTabProps {
 
 const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => {
     const { isSencillo } = useAppMode();
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [newChannelData, setNewChannelData] = useState({
+        order: '',
+        name: '',
+        groupTitle: '',
+        url: '',
+        tvgId: '',
+        tvgName: '',
+        tvgLogo: '',
+    });
+    const [filteredGroups, setFilteredGroups] = useState<string[]>([]);
+    
     const {
         channels,
         url,
@@ -79,6 +92,71 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             default:
                 return <span title="Pendiente"><ShieldQuestion size={16} className="text-gray-500 mx-auto" /></span>;
         }
+    };
+
+    const handleOpenCreateModal = () => {
+        setNewChannelData({
+            order: (channels.length + 1).toString(),
+            name: '',
+            groupTitle: '',
+            url: '',
+            tvgId: '',
+            tvgName: '',
+            tvgLogo: '',
+        });
+        setShowCreateModal(true);
+    };
+
+    const handleGroupInputChange = (value: string) => {
+        setNewChannelData({ ...newChannelData, groupTitle: value });
+        if (value) {
+            const filtered = uniqueGroups.filter(g => 
+                g !== 'Todos los canales' && g.toLowerCase().startsWith(value.toLowerCase())
+            );
+            setFilteredGroups(filtered);
+        } else {
+            setFilteredGroups([]);
+        }
+    };
+
+    const handleCreateChannel = () => {
+        if (!newChannelData.name.trim()) {
+            alert('El nombre del canal es obligatorio');
+            return;
+        }
+
+        const orderNum = parseInt(newChannelData.order) || channels.length + 1;
+        
+        const newChannel: Channel = {
+            id: `channel-${Date.now()}-${Math.random()}`,
+            order: orderNum,
+            tvgId: newChannelData.tvgId,
+            tvgName: newChannelData.tvgName,
+            tvgLogo: newChannelData.tvgLogo,
+            groupTitle: newChannelData.groupTitle || 'Sin Grupo',
+            name: newChannelData.name,
+            url: newChannelData.url,
+            status: 'pending',
+        };
+
+        // Insertar en la posición correcta y reordenar
+        const updatedChannels = [...channels];
+        updatedChannels.splice(orderNum - 1, 0, newChannel);
+        const reordered = updatedChannels.map((c, i) => ({ ...c, order: i + 1 }));
+        
+        channelsHook.setChannels(reordered);
+        setShowCreateModal(false);
+    };
+
+    const handleDeleteSelectedClick = () => {
+        if (selectedChannels.length > 0) {
+            setShowDeleteModal(true);
+        }
+    };
+
+    const handleConfirmDelete = () => {
+        handleDeleteSelected();
+        setShowDeleteModal(false);
     };
 
     return (
@@ -176,31 +254,35 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                     Verificando {verificationProgress} de {channels.length}...
                                 </div>
                             )}
-                            <button
-                                onClick={handleVerifyChannels}
-                                disabled={isVerifying}
-                                className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-md flex items-center disabled:bg-gray-600 disabled:cursor-not-allowed"
-                            >
-                                <Zap size={18} className="mr-2" /> Verificar Canales
-                            </button>
-                            <button
-                                onClick={handleDeleteFailed}
-                                disabled={isVerifying || channels.every(c => c.status !== 'failed')}
-                                className="bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-md flex items-center disabled:bg-gray-600 disabled:cursor-not-allowed"
-                            >
-                                <Trash2 size={18} className="mr-2" /> Eliminar Fallidos
-                            </button>
-                            <p className="text-sm text-gray-400">
+                            {!isSencillo && (
+                                <>
+                                    <button
+                                        onClick={handleVerifyChannels}
+                                        disabled={isVerifying}
+                                        className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-md flex items-center disabled:bg-gray-600 disabled:cursor-not-allowed"
+                                    >
+                                        <Zap size={18} className="mr-2" /> Verificar Canales
+                                    </button>
+                                    <button
+                                        onClick={handleDeleteFailed}
+                                        disabled={isVerifying || channels.every(c => c.status !== 'failed')}
+                                        className="bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-md flex items-center disabled:bg-gray-600 disabled:cursor-not-allowed"
+                                    >
+                                        <Trash2 size={18} className="mr-2" /> Eliminar Fallidos
+                                    </button>
+                                </>
+                            )}
+                            <p className={`text-sm ${selectedChannels.length > 0 ? 'text-yellow-400 font-semibold' : 'text-gray-400'}`}>
                                 {selectedChannels.length} de {filteredChannels.length} canales seleccionados
                             </p>
                             <button
-                                onClick={handleAddNewChannel}
+                                onClick={handleOpenCreateModal}
                                 className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md flex items-center"
                             >
                                 <Plus size={18} className="mr-2" /> Crear Canal
                             </button>
                             <button
-                                onClick={handleDeleteSelected}
+                                onClick={handleDeleteSelectedClick}
                                 disabled={selectedChannels.length === 0}
                                 className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md flex items-center disabled:bg-gray-600 disabled:cursor-not-allowed"
                             >
@@ -228,9 +310,11 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                 <ResizableHeader width={columnWidths.order} onResize={(w) => handleResize('order', w)} align="center">
                                     Orden
                                 </ResizableHeader>
-                                <ResizableHeader width={columnWidths.status} onResize={(w) => handleResize('status', w)} align="center">
-                                    Estado
-                                </ResizableHeader>
+                                {!isSencillo && (
+                                    <ResizableHeader width={columnWidths.status} onResize={(w) => handleResize('status', w)} align="center">
+                                        Estado
+                                    </ResizableHeader>
+                                )}
                                 {!isSencillo && (
                                     <ResizableHeader width={columnWidths.tvgId} onResize={(w) => handleResize('tvgId', w)} align="left">
                                         tvg-id
@@ -327,6 +411,172 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                     <p className="mt-1 text-sm text-gray-400">
                         Pega una URL o sube un archivo .m3u para empezar a gestionar tus canales.
                     </p>
+                </div>
+            )}
+
+            {/* Modal Crear Canal */}
+            {showCreateModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-gray-800 rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-blue-500">
+                        <h2 className="text-2xl font-bold text-white mb-6">Crear Nuevo Canal</h2>
+                        
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-1">
+                                    Orden <span className="text-gray-500">(posición en la lista)</span>
+                                </label>
+                                <input
+                                    type="number"
+                                    value={newChannelData.order}
+                                    onChange={(e) => setNewChannelData({ ...newChannelData, order: e.target.value })}
+                                    className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-blue-500 focus:border-blue-500"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-1">
+                                    Nombre del Canal <span className="text-red-400">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={newChannelData.name}
+                                    onChange={(e) => setNewChannelData({ ...newChannelData, name: e.target.value })}
+                                    className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder="Nombre del canal"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-1">
+                                    Grupo <span className="text-gray-500">(opcional)</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={newChannelData.groupTitle}
+                                    onChange={(e) => handleGroupInputChange(e.target.value)}
+                                    className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder="Nombre del grupo"
+                                    list="groups-datalist"
+                                />
+                                {filteredGroups.length > 0 && (
+                                    <div className="mt-2 bg-gray-700 border border-gray-600 rounded-md max-h-32 overflow-y-auto">
+                                        {filteredGroups.map((group) => (
+                                            <div
+                                                key={group}
+                                                onClick={() => {
+                                                    setNewChannelData({ ...newChannelData, groupTitle: group });
+                                                    setFilteredGroups([]);
+                                                }}
+                                                className="px-3 py-2 hover:bg-gray-600 cursor-pointer text-white text-sm"
+                                            >
+                                                {group}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-1">
+                                    URL del Stream <span className="text-gray-500">(opcional)</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={newChannelData.url}
+                                    onChange={(e) => setNewChannelData({ ...newChannelData, url: e.target.value })}
+                                    className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder="https://..."
+                                />
+                            </div>
+
+                            {!isSencillo && (
+                                <>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-300 mb-1">
+                                            tvg-id <span className="text-gray-500">(opcional)</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={newChannelData.tvgId}
+                                            onChange={(e) => setNewChannelData({ ...newChannelData, tvgId: e.target.value })}
+                                            className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-blue-500 focus:border-blue-500"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-300 mb-1">
+                                            tvg-name <span className="text-gray-500">(opcional)</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={newChannelData.tvgName}
+                                            onChange={(e) => setNewChannelData({ ...newChannelData, tvgName: e.target.value })}
+                                            className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-blue-500 focus:border-blue-500"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-300 mb-1">
+                                            URL del Logo <span className="text-gray-500">(opcional)</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={newChannelData.tvgLogo}
+                                            onChange={(e) => setNewChannelData({ ...newChannelData, tvgLogo: e.target.value })}
+                                            className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-blue-500 focus:border-blue-500"
+                                            placeholder="https://..."
+                                        />
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
+                        <div className="flex gap-3 mt-6">
+                            <button
+                                onClick={handleCreateChannel}
+                                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-md transition-colors"
+                            >
+                                Crear Canal
+                            </button>
+                            <button
+                                onClick={() => setShowCreateModal(false)}
+                                className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-md transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Confirmar Eliminación */}
+            {showDeleteModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-gray-800 rounded-lg p-8 max-w-md mx-4 border border-red-500">
+                        <div className="text-center">
+                            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                                <Trash2 className="h-6 w-6 text-red-600" />
+                            </div>
+                            <h3 className="text-xl font-semibold text-white mb-4">
+                                Vas a eliminar {selectedChannels.length} canal{selectedChannels.length !== 1 ? 'es' : ''}.
+                            </h3>
+                            <p className="text-gray-300 mb-6">¿Estás seguro?</p>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={handleConfirmDelete}
+                                    className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-md transition-colors"
+                                >
+                                    Sí, eliminar
+                                </button>
+                                <button
+                                    onClick={() => setShowDeleteModal(false)}
+                                    className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-md transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
         </>

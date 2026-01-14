@@ -26,7 +26,7 @@ export default function PWAM3UManager() {
     const renderTabContent = () => {
         switch (activeTab) {
             case 'inicio':
-                return <InicioTab channelsHook={channelsHook} settingsHook={settingsHook} />;
+                return <InicioTab channelsHook={channelsHook} settingsHook={settingsHook} onNavigateToEditor={() => setActiveTab('editor')} />;
             case 'editor':
                 return <EditorTab channelsHook={channelsHook} settingsHook={settingsHook} />;
             case 'reparacion':

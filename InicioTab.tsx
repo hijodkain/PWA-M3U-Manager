@@ -6,6 +6,7 @@ import { useSettings } from './useSettings';
 interface InicioTabProps {
     channelsHook: ReturnType<typeof useChannels>;
     settingsHook: ReturnType<typeof useSettings>;
+    onNavigateToEditor: () => void;
 }
 
 interface BeforeInstallPromptEvent extends Event {
@@ -13,7 +14,7 @@ interface BeforeInstallPromptEvent extends Event {
     userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook }) => {
+const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNavigateToEditor }) => {
     const {
         url,
         setUrl,
@@ -31,6 +32,7 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook }) => 
     const [isMedicinaLoading, setIsMedicinaLoading] = useState(false);
     const [medicinaError, setMedicinaError] = useState('');
     const [savedMedicinaLists, setSavedMedicinaLists] = useState<Array<{ id: string; name: string; url: string }>>([]);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
 
     useEffect(() => {
         const handler = (e: Event) => {
@@ -163,6 +165,21 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook }) => 
         localStorage.setItem('medicinaLists', JSON.stringify(updated));
     };
 
+    const handleUrlLoadWrapper = async () => {
+        await handleFetchUrl();
+        setShowSuccessModal(true);
+    };
+
+    const handleFileUploadWrapper = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        await handleFileUpload(e);
+        setShowSuccessModal(true);
+    };
+
+    const handleModalOk = () => {
+        setShowSuccessModal(false);
+        onNavigateToEditor();
+    };
+
     return (
         <div className="space-y-6 max-w-6xl mx-auto">
             {/* Sección principal - Cargar lista */}
@@ -204,7 +221,7 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook }) => 
                                 className="flex-grow bg-gray-700 border border-gray-600 rounded-l-md px-4 py-3 text-white focus:ring-blue-500 focus:border-blue-500"
                             />
                             <button
-                                onClick={handleFetchUrl}
+                                onClick={handleUrlLoadWrapper}
                                 disabled={isLoading || !url}
                                 className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-r-md flex items-center disabled:bg-blue-800 disabled:cursor-not-allowed transition-colors"
                             >
@@ -256,7 +273,7 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook }) => 
                             id="inicio-file-upload"
                             type="file"
                             className="hidden"
-                            onChange={handleFileUpload}
+                            onChange={handleFileUploadWrapper}
                             accept=".m3u,.m3u8"
                         />
                     </div>
@@ -362,6 +379,28 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook }) => 
                     )}
                 </div>
             </div>
+
+            {/* Modal de éxito */}
+            {showSuccessModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-gray-800 rounded-lg p-8 max-w-md mx-4 border border-green-500">
+                        <div className="text-center">
+                            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                                <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <h3 className="text-xl font-semibold text-white mb-4">Lista cargada exitosamente</h3>
+                            <button
+                                onClick={handleModalOk}
+                                className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-md transition-colors"
+                            >
+                                OK
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
