@@ -225,7 +225,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                 <div className="w-full space-y-2">
                     <button
                         onClick={handleOttModeClick}
-                        className={`w-full p-2 rounded-md border-2 transition-all ${
+                        className={`w-full p-3 rounded-md border-2 transition-all ${
                             ottModeActive 
                                 ? 'border-purple-500 bg-purple-900/30' 
                                 : 'border-gray-600 hover:border-gray-500 bg-gray-700/30'
@@ -233,17 +233,17 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                         title="Modo OTT: Asigna channel ID a tvg-id y tvg-name"
                     >
                         <div className="flex items-center justify-center">
-                            {/* Placeholder para logo OTT - reemplazar con imagen */}
-                            <div className="w-16 h-16 bg-gray-600 rounded flex items-center justify-center">
-                                <span className="text-xs font-bold text-white">OTT</span>
-                            </div>
+                            <img 
+                                src="/ott-logo.png" 
+                                alt="OTT" 
+                                className="h-12 w-auto object-contain"
+                            />
                         </div>
-                        <p className="text-xs mt-1 text-gray-300">OTT</p>
                     </button>
                     
                     <button
                         onClick={handleTivimateModeClick}
-                        className={`w-full p-2 rounded-md border-2 transition-all ${
+                        className={`w-full p-3 rounded-md border-2 transition-all ${
                             tivimateModeActive 
                                 ? 'border-blue-500 bg-blue-900/30' 
                                 : 'border-gray-600 hover:border-gray-500 bg-gray-700/30'
@@ -251,12 +251,12 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                         title="Modo TiviMate: Asigna channel ID solo a tvg-id"
                     >
                         <div className="flex items-center justify-center">
-                            {/* Placeholder para logo TiviMate - reemplazar con imagen */}
-                            <div className="w-16 h-16 bg-gray-600 rounded flex items-center justify-center">
-                                <span className="text-xs font-bold text-white">TiviMate</span>
-                            </div>
+                            <img 
+                                src="/tivimate-logo.png" 
+                                alt="TiviMate" 
+                                className="h-12 w-auto object-contain"
+                            />
                         </div>
-                        <p className="text-xs mt-1 text-gray-300">TiviMate</p>
                     </button>
                 </div>
                 
