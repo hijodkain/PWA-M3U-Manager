@@ -234,7 +234,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                     >
                         <div className="flex items-center justify-center">
                             <img 
-                                src="/ott-logo.png" 
+                                src="/ott-logo.webp" 
                                 alt="OTT" 
                                 className="h-12 w-auto object-contain"
                             />
@@ -252,7 +252,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                     >
                         <div className="flex items-center justify-center">
                             <img 
-                                src="/tivimate-logo.png" 
+                                src="/Tivimate-logo.png" 
                                 alt="TiviMate" 
                                 className="h-12 w-auto object-contain"
                             />

@@ -5,6 +5,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { useChannels } from './useChannels';
 import ReparacionChannelItem from './ReparacionChannelItem';
 import { useSettings } from './useSettings';
+import { useAppMode } from './AppModeContext';
 import { AttributeKey } from './index';
 import { SmartSearchInput } from './SmartSearchInput';
 
@@ -15,6 +16,7 @@ interface ReparacionTabProps {
 }
 
 const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsHook, settingsHook }) => {
+    const { isSencillo } = useAppMode();
     const {
         selectedReparacionChannels,
         attributesToCopy,
@@ -173,7 +175,9 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 <div className="flex-grow">
                     <h4 className="font-bold text-center mb-2">Transferir Datos</h4>
                     <ArrowLeftCircle size={32} className="text-blue-400 mb-4 mx-auto" />
-                    {attributeLabels.map(({ key, label }) => (
+                    {attributeLabels
+                        .filter(({ key }) => isSencillo ? key === 'url' : true)
+                        .map(({ key, label }) => (
                         <button
                             key={key}
                             onClick={() => toggleAttributeToCopy(key)}

@@ -4,6 +4,7 @@ import { useChannels } from './useChannels';
 import { useReparacion } from './useReparacion';
 import { useAsignarEpg } from './useAsignarEpg';
 import { useSettings } from './useSettings';
+import { useAppMode } from './AppModeContext';
 import EditorTab from './EditorTab';
 import ReparacionTab from './ReparacionTab';
 import AsignarEpgTab from './AsignarEpgTab';
@@ -15,6 +16,7 @@ import { Edit, Wrench, List, Settings, Save, HelpCircle } from 'lucide-react';
 export default function PWAM3UManager() {
     const [activeTab, setActiveTab] = useState<Tab>('editor');
     const [failedChannels, setFailedChannels] = useState<Channel[]>([]);
+    const { mode, toggleMode } = useAppMode();
     const channelsHook = useChannels(setFailedChannels);
     const settingsHook = useSettings();
     const reparacionHook = useReparacion(channelsHook.channels, channelsHook.setChannels, channelsHook.saveStateToHistory, settingsHook);
@@ -55,9 +57,21 @@ export default function PWAM3UManager() {
     return (
         <div className="bg-gray-900 text-white min-h-screen font-sans p-4 sm:p-6 lg:p-8">
             <div className="max-w-full mx-auto">
-                <div className="flex items-center justify-center mb-4">
-                    <img src="/logo.svg" alt="Logo" className="h-10 w-10 mr-3" />
-                    <h1 className="text-3xl font-bold text-blue-400">Gestor de Listas M3U</h1>
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center">
+                        <img src="/logo.svg" alt="Logo" className="h-10 w-10 mr-3" />
+                        <h1 className="text-3xl font-bold text-blue-400">Gestor de Listas M3U</h1>
+                    </div>
+                    <button
+                        onClick={toggleMode}
+                        className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                            mode === 'pro'
+                                ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white'
+                                : 'bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white'
+                        }`}
+                    >
+                        Modo {mode === 'pro' ? 'Pro' : 'Sencillo'}
+                    </button>
                 </div>
                 <div className="mb-6 border-b border-gray-700">
                     <nav className="-mb-px flex space-x-8 justify-center" aria-label="Tabs">
