@@ -50,7 +50,6 @@ export const useReparacion = (
     const [smartSearchResults, setSmartSearchResults] = useState<SearchMatch<Channel>[]>([]);
     const [isSmartSearchEnabled, setIsSmartSearchEnabled] = useState(true);
     const [showOnlyUnverified, setShowOnlyUnverified] = useState(false);
-    const [showOnlyUnverified, setShowOnlyUnverified] = useState(false);
 
     // Inicializar búsqueda inteligente
     const smartSearch = useSmartSearch({
