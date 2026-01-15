@@ -1,4 +1,4 @@
-import React, { useRef, useState, useMemo } from 'react';
+import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -89,6 +89,23 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         
         return width;
     }, [columnWidths, isSencillo]);
+
+    // Obtener el ancho del contenedor para decidir si usar 100% o el ancho calculado
+    const [containerWidth, setContainerWidth] = useState(0);
+
+    useEffect(() => {
+        const updateWidth = () => {
+            if (parentRef.current) {
+                setContainerWidth(parentRef.current.clientWidth);
+            }
+        };
+        
+        updateWidth();
+        window.addEventListener('resize', updateWidth);
+        return () => window.removeEventListener('resize', updateWidth);
+    }, [parentRef]);
+
+    const tableWidth = Math.max(totalTableWidth, containerWidth);
 
     const rowVirtualizer = useVirtualizer({
         count: filteredChannels.length,
@@ -323,7 +340,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
 
             <div ref={tableContainerRef} className="overflow-auto rounded-lg shadow-lg max-h-[60vh]">
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-                    <table className="divide-y divide-gray-700" style={{ tableLayout: 'fixed', width: '100%', minWidth: `${totalTableWidth}px` }}>
+                    <table className="divide-y divide-gray-700" style={{ width: `${tableWidth}px` }}>
                         <thead className="bg-gray-800 sticky top-0 z-10">
                             <tr>
                                 <th scope="col" style={{ width: `${columnWidths.select}px`, minWidth: `${columnWidths.select}px`, maxWidth: `${columnWidths.select}px` }} className="px-2 py-2 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
@@ -404,7 +421,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                     </table>
                     <DragOverlay>
                         {activeChannel ? (
-                            <table style={{ tableLayout: 'fixed', width: '100%', minWidth: `${totalTableWidth}px` }}>
+                            <table style={{ width: `${tableWidth}px` }}>
                                 <tbody className="bg-gray-700 shadow-2xl">
                                     <SortableChannelRow
                                         id={activeChannel.id}
