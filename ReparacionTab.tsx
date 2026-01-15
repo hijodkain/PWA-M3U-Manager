@@ -134,7 +134,10 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                             <Check size={18} className="text-gray-400" />
                         )}
                         <span className="text-xs font-medium">
-                            {showOnlyUnverified ? 'Solo no verificados' : 'Mostrar no verificados'}
+                            {isSencillo 
+                                ? (showOnlyUnverified ? 'Mostrando solo los rotos' : 'Mostrar solo los rotos')
+                                : (showOnlyUnverified ? 'Solo no verificados' : 'Mostrar no verificados')
+                            }
                         </span>
                     </button>
                 </div>
@@ -159,12 +162,17 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 >
                     <Check size={14} /> {isSencillo ? 'Encontrar canales rotos en el grupo' : 'Verificar Canales del Grupo'}
                 </button>
-                <button
-                    onClick={clearFailedChannelsUrls}
-                    className="w-full text-xs py-2 px-1 rounded-md flex items-center justify-center gap-1 transition-colors bg-red-600 hover:bg-red-700 disabled:bg-gray-600 mb-2"
-                >
-                    <Trash2 size={14} /> Eliminar URLs de Canales Fallidos
-                </button>
+                {!isSencillo && (
+                    <button
+                        onClick={clearFailedChannelsUrls}
+                        className="w-full text-xs py-2 px-1 rounded-md flex items-center justify-center gap-1 transition-colors bg-red-600 hover:bg-red-700 disabled:bg-gray-600 mb-2"
+                    >
+                        <Trash2 size={14} /> Eliminar URLs de Canales Fallidos
+                    </button>
+                )}
+                {isSencillo && (
+                    <p className="text-sm text-gray-300 mb-2 font-medium">Selecciona el canal a reparar:</p>
+                )}
                 <div ref={mainListParentRef} className="overflow-auto max-h-[60vh] pr-2">
                     <div style={{ height: `${mainListRowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
                         {mainListVirtualItems.map((virtualItem) => {
@@ -185,6 +193,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     quality={channelInfo.quality}
                                     resolution={channelInfo.resolution}
                                     onVerifyClick={() => verifyChannel(ch.id, ch.url)}
+                                    isSencillo={isSencillo}
                                     style={{
                                         position: 'absolute',
                                         top: 0,
@@ -240,35 +249,40 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 </div>
             </div>
             <div className="lg:col-span-6 bg-gray-800 p-4 rounded-lg flex flex-col">
-                <h3 className="font-bold text-lg mb-3">{isSencillo ? 'Carga la lista de reparación' : 'Selecciona la lista de la que vas a extraer la medicina'}</h3>
-                <div className="flex gap-2 mb-2">
-                    <input
-                        type="text"
-                        placeholder="Pega aquí la URL de la lista"
-                        value={reparacionUrl}
-                        onChange={(e) => setReparacionUrl(e.target.value)}
-                        className="bg-gray-700 border border-gray-600 rounded-md px-3 py-1.5 text-white focus:ring-blue-500 focus:border-blue-500 flex-grow"
-                    />
-                    <button onClick={handleReparacionUrlLoad} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md font-semibold whitespace-nowrap">
-                        Cargar
-                    </button>
-                    <label
-                        htmlFor="reparacion-file-upload"
-                        className="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1.5 px-4 rounded-md flex items-center gap-2 whitespace-nowrap"
-                    >
-                        <Upload size={16} /> Subir Archivo
-                    </label>
-                    <input
-                        id="reparacion-file-upload"
-                        type="file"
-                        className="hidden"
-                        onChange={handleReparacionFileUpload}
-                        accept=".m3u,.m3u8"
-                    />
-                </div>
-                
-                {isCurationLoading && <p className="text-center text-blue-400 mt-2">Cargando lista de recambios...</p>}
-                {curationError && <p className="text-center text-red-400 bg-red-900/50 p-2 rounded mt-2">{curationError}</p>}
+                {/* Sección de carga - se oculta en modo sencillo cuando hay canales cargados */}
+                {!(isSencillo && filteredReparacionChannels.length > 0) && (
+                    <>
+                        <h3 className="font-bold text-lg mb-3">{isSencillo ? 'Carga la lista de reparación' : 'Selecciona la lista de la que vas a extraer la medicina'}</h3>
+                        <div className="flex gap-2 mb-2">
+                            <input
+                                type="text"
+                                placeholder="Pega aquí la URL de la lista"
+                                value={reparacionUrl}
+                                onChange={(e) => setReparacionUrl(e.target.value)}
+                                className="bg-gray-700 border border-gray-600 rounded-md px-3 py-1.5 text-white focus:ring-blue-500 focus:border-blue-500 flex-grow"
+                            />
+                            <button onClick={handleReparacionUrlLoad} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md font-semibold whitespace-nowrap">
+                                Cargar
+                            </button>
+                            <label
+                                htmlFor="reparacion-file-upload"
+                                className="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1.5 px-4 rounded-md flex items-center gap-2 whitespace-nowrap"
+                            >
+                                <Upload size={16} /> Subir Archivo
+                            </label>
+                            <input
+                                id="reparacion-file-upload"
+                                type="file"
+                                className="hidden"
+                                onChange={handleReparacionFileUpload}
+                                accept=".m3u,.m3u8"
+                            />
+                        </div>
+                        
+                        {isCurationLoading && <p className="text-center text-blue-400 mt-2">Cargando lista de recambios...</p>}
+                        {curationError && <p className="text-center text-red-400 bg-red-900/50 p-2 rounded mt-2">{curationError}</p>}
+                    </>
+                )}
                 
                 <p className="text-sm text-gray-300 mt-3 mb-1 font-medium">Selecciona el grupo en el que está el canal</p>
                 <select
@@ -348,6 +362,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     quality={channelInfo.quality}
                                     resolution={channelInfo.resolution}
                                     onVerifyClick={() => verifyChannel(ch.id, ch.url)}
+                                    isSencillo={isSencillo}
                                     style={{
                                         position: 'absolute',
                                         top: 0,

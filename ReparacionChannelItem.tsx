@@ -14,6 +14,7 @@ interface ReparacionChannelItemProps {
     resolution?: string;
     onVerifyClick?: () => void;
     style?: React.CSSProperties;
+    isSencillo?: boolean;
 }
 
 const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
@@ -29,6 +30,7 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
     resolution,
     onVerifyClick,
     style,
+    isSencillo = false,
 }) => {
     const getDomainFromUrl = (url: string) => {
         if (!url) return '---';
@@ -105,14 +107,16 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
             />
             <div className="text-xs overflow-hidden flex-grow min-w-0">
                 <p className={`font-bold truncate text-sm ${nameColor}`}>{channel.name}</p>
-                <div className="flex gap-3 text-[11px]">
-                    <p className="text-gray-400 truncate">
-                        <span className="font-semibold text-gray-300">ID:</span> {channel.tvgId || '---'}
-                    </p>
-                    <p className="text-gray-400 truncate">
-                        <span className="font-semibold text-gray-300">Name:</span> {channel.tvgName || '---'}
-                    </p>
-                </div>
+                {!isSencillo && (
+                    <div className="flex gap-3 text-[11px]">
+                        <p className="text-gray-400 truncate">
+                            <span className="font-semibold text-gray-300">ID:</span> {channel.tvgId || '---'}
+                        </p>
+                        <p className="text-gray-400 truncate">
+                            <span className="font-semibold text-gray-300">Name:</span> {channel.tvgName || '---'}
+                        </p>
+                    </div>
+                )}
                 <p className="text-gray-400 truncate text-[11px]">
                     <span className="font-semibold text-gray-300">URL:</span> {getDomainFromUrl(channel.url)}
                 </p>
