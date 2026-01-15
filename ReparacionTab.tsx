@@ -103,17 +103,19 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
     return (
         <div className="grid grid-cols-1 lg:grid-cols-11 gap-4">
             <div className="lg:col-span-4 bg-gray-800 p-4 rounded-lg flex flex-col">
-                <h3 className="font-bold text-lg mb-2">Lista Principal</h3>
-                <SmartSearchInput
-                    searchTerm={mainListSearch}
-                    onSearchChange={setMainListSearch}
-                    isSmartSearchEnabled={isSmartSearchEnabled}
-                    onToggleSmartSearch={toggleSmartSearch}
-                    placeholder="Buscar canal en lista principal..."
-                    showResults={true}
-                    resultCount={filteredMainChannels.length}
-                    className="mb-2"
-                />
+                <h3 className="font-bold text-lg mb-2">{isSencillo ? 'Mi Lista' : 'Lista Principal'}</h3>
+                {!isSencillo && (
+                    <SmartSearchInput
+                        searchTerm={mainListSearch}
+                        onSearchChange={setMainListSearch}
+                        isSmartSearchEnabled={isSmartSearchEnabled}
+                        onToggleSmartSearch={toggleSmartSearch}
+                        placeholder="Buscar canal en lista principal..."
+                        showResults={true}
+                        resultCount={filteredMainChannels.length}
+                        className="mb-2"
+                    />
+                )}
                 
                 {/* Botón filtro de no verificados */}
                 <div className="flex items-center gap-2 mb-2 bg-gray-700 p-2 rounded-md">
@@ -155,7 +157,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                     onClick={verifyAllChannelsInGroup}
                     className="w-full text-xs py-2 px-1 rounded-md flex items-center justify-center gap-1 transition-colors bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 mb-2"
                 >
-                    <Check size={14} /> Verificar Canales del Grupo
+                    <Check size={14} /> {isSencillo ? 'Encontrar canales rotos en el grupo' : 'Verificar Canales del Grupo'}
                 </button>
                 <button
                     onClick={clearFailedChannelsUrls}
@@ -212,17 +214,21 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                         </button>
                     ))}
                 </div>
-                <div className="w-full border-t border-gray-700 my-2"></div>
-                <div className="w-full">
-                    <h4 className="font-bold text-center mb-2">Añadir a Lista</h4>
-                    <button
-                        onClick={handleAddSelectedFromReparacion}
-                        disabled={selectedReparacionChannels.size === 0}
-                        className="w-full text-xs py-2 px-1 rounded-md flex items-center justify-center gap-1 transition-colors bg-green-600 hover:bg-green-700 disabled:bg-gray-600"
-                    >
-                        <ArrowLeftCircle size={14} /> Añadir Canal
-                    </button>
-                </div>
+                {!isSencillo && (
+                    <>
+                        <div className="w-full border-t border-gray-700 my-2"></div>
+                        <div className="w-full">
+                            <h4 className="font-bold text-center mb-2">Añadir a Lista</h4>
+                            <button
+                                onClick={handleAddSelectedFromReparacion}
+                                disabled={selectedReparacionChannels.size === 0}
+                                className="w-full text-xs py-2 px-1 rounded-md flex items-center justify-center gap-1 transition-colors bg-green-600 hover:bg-green-700 disabled:bg-gray-600"
+                            >
+                                <ArrowLeftCircle size={14} /> Añadir Canal
+                            </button>
+                        </div>
+                    </>
+                )}
                 <div className="mt-auto w-full pt-4">
                     <button
                         onClick={undo}
@@ -234,7 +240,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 </div>
             </div>
             <div className="lg:col-span-6 bg-gray-800 p-4 rounded-lg flex flex-col">
-                <h3 className="font-bold text-lg mb-3">Selecciona la lista de la que vas a extraer la medicina</h3>
+                <h3 className="font-bold text-lg mb-3">{isSencillo ? 'Carga la lista de reparación' : 'Selecciona la lista de la que vas a extraer la medicina'}</h3>
                 <div className="flex gap-2 mb-2">
                     <input
                         type="text"
@@ -276,16 +282,18 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                         </option>
                     ))}
                 </select>
-                <div className="flex items-center gap-2 mb-2">
-                    <input
-                        type="checkbox"
-                        id="select-all-group"
-                        checked={isAllInGroupSelected}
-                        onChange={toggleSelectAllReparacionGroup}
-                        className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                    />
-                    <label htmlFor="select-all-group" className="text-sm text-gray-300">Seleccionar todo el grupo</label>
-                </div>
+                {!isSencillo && (
+                    <div className="flex items-center gap-2 mb-2">
+                        <input
+                            type="checkbox"
+                            id="select-all-group"
+                            checked={isAllInGroupSelected}
+                            onChange={toggleSelectAllReparacionGroup}
+                            className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        />
+                        <label htmlFor="select-all-group" className="text-sm text-gray-300">Seleccionar todo el grupo</label>
+                    </div>
+                )}
                 
                 {/* Indicador de progreso de verificación */}
                 {verificationProgress.isRunning && (
@@ -310,13 +318,15 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                     </div>
                 )}
                 
-                <button
-                    onClick={() => verifySelectedReparacionChannels()}
-                    disabled={selectedReparacionChannels.size === 0 || verificationProgress.isRunning}
-                    className="w-full text-xs py-2 px-1 rounded-md flex items-center justify-center gap-1 transition-colors bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 mb-2"
-                >
-                    <Check size={14} /> Verificar Seleccionados
-                </button>
+                {!isSencillo && (
+                    <button
+                        onClick={() => verifySelectedReparacionChannels()}
+                        disabled={selectedReparacionChannels.size === 0 || verificationProgress.isRunning}
+                        className="w-full text-xs py-2 px-1 rounded-md flex items-center justify-center gap-1 transition-colors bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 mb-2"
+                    >
+                        <Check size={14} /> Verificar Seleccionados
+                    </button>
+                )}
                 
                 <p className="text-sm text-gray-300 mb-2 font-medium">Selecciona el canal con el que quieres curar</p>
                 <div ref={reparacionListParentRef} className="overflow-auto max-h-[60vh] pr-2">
