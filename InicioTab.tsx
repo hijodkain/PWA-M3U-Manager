@@ -1,13 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, Download, Smartphone, AlertCircle, Share2, Trash2 } from 'lucide-react';
+import { Upload, Download, Smartphone, AlertCircle, Share2, Trash2, Filter, CheckSquare, Square } from 'lucide-react';
 import { useChannels } from './useChannels';
 import { useSettings } from './useSettings';
+import { Channel } from './index';
 
 interface InicioTabProps {
     channelsHook: ReturnType<typeof useChannels>;
     settingsHook: ReturnType<typeof useSettings>;
     onNavigateToEditor: () => void;
     onNavigateToSettings?: () => void;
+}
+
+interface CategoryInfo {
+    name: string;
+    count: number;
+    selected: boolean;
 }
 
 interface BeforeInstallPromptEvent extends Event {
@@ -25,7 +32,7 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
         handleFileUpload,
     } = channelsHook;
 
-    const { savedUrls, addSavedUrl, dropboxRefreshToken } = settingsHook;
+    const { savedUrls, addSavedUrl, dropboxRefreshToken, dropboxAppKey } = settingsHook;
     
     const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
     const [isInstallable, setIsInstallable] = useState(false);
@@ -35,6 +42,15 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
     const [savedMedicinaLists, setSavedMedicinaLists] = useState<Array<{ id: string; name: string; url: string }>>([]);
     const [savedDropboxLists, setSavedDropboxLists] = useState<Array<{ id: string; name: string; url: string; addedAt: string }>>([]);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+    // Estados para el filtrado de listas
+    const [filterUrl, setFilterUrl] = useState('');
+    const [isFilterLoading, setIsFilterLoading] = useState(false);
+    const [filterError, setFilterError] = useState('');
+    const [filterChannels, setFilterChannels] = useState<Channel[]>([]);
+    const [categories, setCategories] = useState<CategoryInfo[]>([]);
+    const [isUploadingFiltered, setIsUploadingFiltered] = useState(false);
+    const [uploadFilteredStatus, setUploadFilteredStatus] = useState('');
 
     useEffect(() => {
         const handler = (e: Event) => {
@@ -206,6 +222,280 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
         onNavigateToEditor();
     };
 
+    // Funciones para filtrado de listas
+    const handleLoadFilterUrl = async () => {
+        if (!filterUrl) return;
+
+        setIsFilterLoading(true);
+        setFilterError('');
+        setFilterChannels([]);
+        setCategories([]);
+
+        try {
+            const proxyUrl = `/api/proxy?url=${encodeURIComponent(filterUrl)}`;
+            const response = await fetch(proxyUrl);
+            if (!response.ok) throw new Error('No se pudo descargar la lista');
+            
+            const content = await response.text();
+            
+            // Parsear M3U con Worker
+            const worker = new Worker(new URL('./m3u-parser.worker.ts', import.meta.url), {
+                type: 'module',
+            });
+
+            worker.onmessage = (event) => {
+                const { type, channels, message } = event.data;
+                if (type === 'success') {
+                    setFilterChannels(channels);
+                    
+                    // Extraer categorías únicas con contadores
+                    const categoryMap = new Map<string, number>();
+                    channels.forEach((ch: Channel) => {
+                        const group = ch.groupTitle || 'Sin Categoría';
+                        categoryMap.set(group, (categoryMap.get(group) || 0) + 1);
+                    });
+                    
+                    const categoryList: CategoryInfo[] = Array.from(categoryMap.entries())
+                        .map(([name, count]) => ({ name, count, selected: true }))
+                        .sort((a, b) => a.name.localeCompare(b.name));
+                    
+                    setCategories(categoryList);
+                } else {
+                    setFilterError(message);
+                }
+                setIsFilterLoading(false);
+                worker.terminate();
+            };
+
+            worker.onerror = (error) => {
+                setFilterError(`Error al parsear: ${error.message}`);
+                setIsFilterLoading(false);
+                worker.terminate();
+            };
+
+            worker.postMessage(content);
+        } catch (err) {
+            setFilterError('Error al descargar la lista. Verifica la URL.');
+            setIsFilterLoading(false);
+        }
+    };
+
+    const toggleCategory = (categoryName: string) => {
+        setCategories(prev =>
+            prev.map(cat =>
+                cat.name === categoryName ? { ...cat, selected: !cat.selected } : cat
+            )
+        );
+    };
+
+    const toggleAllCategories = () => {
+        const allSelected = categories.every(cat => cat.selected);
+        setCategories(prev =>
+            prev.map(cat => ({ ...cat, selected: !allSelected }))
+        );
+    };
+
+    const getFilteredChannelCount = () => {
+        const selectedCategories = new Set(
+            categories.filter(cat => cat.selected).map(cat => cat.name)
+        );
+        return filterChannels.filter(ch => 
+            selectedCategories.has(ch.groupTitle || 'Sin Categoría')
+        ).length;
+    };
+
+    const generateFilteredM3U = () => {
+        const selectedCategories = new Set(
+            categories.filter(cat => cat.selected).map(cat => cat.name)
+        );
+        const filteredChans = filterChannels.filter(ch => 
+            selectedCategories.has(ch.groupTitle || 'Sin Categoría')
+        );
+
+        let content = '#EXTM3U\n';
+        filteredChans.forEach((channel) => {
+            let attributes = '';
+            if (channel.tvgId) attributes += ` tvg-id="${channel.tvgId}"`;
+            if (channel.tvgName) attributes += ` tvg-name="${channel.tvgName}"`;
+            if (channel.tvgLogo) attributes += ` tvg-logo="${channel.tvgLogo}"`;
+            if (channel.groupTitle) attributes += ` group-title="${channel.groupTitle}"`;
+            content += `#EXTINF:-1${attributes},${channel.name}\n${channel.url}\n`;
+        });
+        return content;
+    };
+
+    const extractDomainFromUrl = (url: string): string => {
+        try {
+            const urlObj = new URL(url);
+            return urlObj.hostname.replace(/\./g, '_');
+        } catch {
+            return 'unknown';
+        }
+    };
+
+    const getCurrentDateString = (): string => {
+        const now = new Date();
+        const day = String(now.getDate()).padStart(2, '0');
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const year = now.getFullYear();
+        return `${day}_${month}_${year}`;
+    };
+
+    const getDropboxAccessToken = async () => {
+        const response = await fetch('https://api.dropboxapi.com/oauth2/token', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                grant_type: 'refresh_token',
+                refresh_token: dropboxRefreshToken,
+                client_id: dropboxAppKey,
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error('No se pudo obtener el token de acceso de Dropbox');
+        }
+
+        const data = await response.json();
+        return data.access_token;
+    };
+
+    const convertDropboxUrl = (url: string): string => {
+        return url
+            .replace('www.dropbox.com', 'dl.dropboxusercontent.com')
+            .replace('dl=0', 'dl=1');
+    };
+
+    const getSharedLink = async (accessToken: string, filePath: string): Promise<string> => {
+        try {
+            // Intentar crear enlace compartido
+            const createResponse = await fetch('https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    path: filePath,
+                    settings: {
+                        requested_visibility: 'public',
+                    }
+                }),
+            });
+
+            if (createResponse.ok) {
+                const data = await createResponse.json();
+                return convertDropboxUrl(data.url);
+            }
+
+            // Si falla, obtener enlaces existentes
+            const listResponse = await fetch('https://api.dropboxapi.com/2/sharing/list_shared_links', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    path: filePath,
+                }),
+            });
+
+            if (listResponse.ok) {
+                const data = await listResponse.json();
+                if (data.links && data.links.length > 0) {
+                    return convertDropboxUrl(data.links[0].url);
+                }
+            }
+
+            throw new Error('No se pudo crear el enlace compartido');
+        } catch (error) {
+            console.error('Error getting shared link:', error);
+            throw error;
+        }
+    };
+
+    const handleUploadFilteredToDropbox = async () => {
+        if (!dropboxAppKey || !dropboxRefreshToken) {
+            setUploadFilteredStatus('Por favor, conecta tu cuenta de Dropbox en Configuración');
+            return;
+        }
+
+        const selectedCount = getFilteredChannelCount();
+        if (selectedCount === 0) {
+            setUploadFilteredStatus('Selecciona al menos una categoría');
+            return;
+        }
+
+        setIsUploadingFiltered(true);
+        setUploadFilteredStatus('Generando lista filtrada...');
+
+        try {
+            const domain = extractDomainFromUrl(filterUrl);
+            const dateStr = getCurrentDateString();
+            const fileName = `Repara_${domain}_${dateStr}.m3u`;
+            const fileContent = generateFilteredM3U();
+
+            setUploadFilteredStatus('Obteniendo token de Dropbox...');
+            const accessToken = await getDropboxAccessToken();
+
+            setUploadFilteredStatus('Subiendo a Dropbox...');
+            const filePath = `/${fileName}`;
+            const dropboxApiArg = {
+                path: filePath,
+                mode: 'overwrite',
+                autorename: false,
+                mute: true,
+            };
+
+            const uploadResponse = await fetch('https://content.dropboxapi.com/2/files/upload', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Dropbox-API-Arg': JSON.stringify(dropboxApiArg),
+                    'Content-Type': 'application/octet-stream',
+                },
+                body: fileContent,
+            });
+
+            if (!uploadResponse.ok) {
+                const errorData = await uploadResponse.json();
+                throw new Error(errorData.error_summary || 'Fallo al subir el archivo');
+            }
+
+            setUploadFilteredStatus('Creando enlace compartido...');
+            const shareUrl = await getSharedLink(accessToken, filePath);
+
+            // Añadir a lista de medicina guardadas
+            const newList = {
+                id: Date.now().toString(),
+                name: fileName.replace('.m3u', ''),
+                url: shareUrl,
+            };
+
+            const updatedMedicina = [...savedMedicinaLists, newList];
+            setSavedMedicinaLists(updatedMedicina);
+            localStorage.setItem('medicinaLists', JSON.stringify(updatedMedicina));
+
+            setUploadFilteredStatus(`✅ ${fileName} subido y añadido a Listas Reparadoras`);
+            
+            // Limpiar después de 3 segundos
+            setTimeout(() => {
+                setUploadFilteredStatus('');
+                setFilterUrl('');
+                setFilterChannels([]);
+                setCategories([]);
+            }, 3000);
+
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+            setUploadFilteredStatus(`❌ Error: ${errorMessage}`);
+        } finally {
+            setIsUploadingFiltered(false);
+        }
+    };
+
     return (
         <div className="space-y-6 max-w-6xl mx-auto">
             {/* Estado de conexión a Dropbox */}
@@ -329,6 +619,129 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                         </div>
                     )}
                 </div>
+            </div>
+
+            {/* Sección Filtrar Lista por Categorías */}
+            <div className="bg-gray-800 p-6 rounded-lg shadow-lg border-2 border-purple-500">
+                <div className="flex items-center gap-3 mb-4">
+                    <Filter className="text-purple-400" size={24} />
+                    <h3 className="text-xl font-bold text-purple-400">Filtrar Lista por Categorías</h3>
+                </div>
+                <p className="text-gray-300 text-sm mb-4">
+                    Carga una lista, selecciona las categorías que quieres mantener y súbela directamente a tu Dropbox como lista reparadora.
+                </p>
+
+                {/* Paso 1: Cargar URL */}
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Paso 1: Pega la URL de la lista a filtrar
+                    </label>
+                    <div className="flex gap-2">
+                        <input
+                            type="text"
+                            value={filterUrl}
+                            onChange={(e) => setFilterUrl(e.target.value)}
+                            placeholder="https://..."
+                            className="flex-grow bg-gray-700 border border-gray-600 rounded-md px-4 py-2 text-white focus:ring-purple-500 focus:border-purple-500"
+                        />
+                        <button
+                            onClick={handleLoadFilterUrl}
+                            disabled={isFilterLoading || !filterUrl}
+                            className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-6 rounded-md disabled:bg-gray-600 disabled:cursor-not-allowed whitespace-nowrap"
+                        >
+                            {isFilterLoading ? 'Cargando...' : 'Analizar'}
+                        </button>
+                    </div>
+                </div>
+
+                {isFilterLoading && (
+                    <div className="text-center text-purple-400 text-sm mb-4">
+                        <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-purple-400 mb-2"></div>
+                        <p>Analizando lista M3U...</p>
+                    </div>
+                )}
+
+                {filterError && (
+                    <div className="flex items-center gap-2 text-red-400 text-sm bg-red-900/30 p-3 rounded mb-4">
+                        <AlertCircle size={16} />
+                        {filterError}
+                    </div>
+                )}
+
+                {/* Paso 2: Seleccionar Categorías */}
+                {categories.length > 0 && (
+                    <div className="mb-4">
+                        <div className="flex items-center justify-between mb-2">
+                            <label className="block text-sm font-medium text-gray-300">
+                                Paso 2: Selecciona las categorías a mantener ({getFilteredChannelCount()} de {filterChannels.length} canales)
+                            </label>
+                            <button
+                                onClick={toggleAllCategories}
+                                className="text-purple-400 hover:text-purple-300 text-sm flex items-center gap-1"
+                            >
+                                {categories.every(cat => cat.selected) ? (
+                                    <>
+                                        <Square size={16} /> Deseleccionar todas
+                                    </>
+                                ) : (
+                                    <>
+                                        <CheckSquare size={16} /> Seleccionar todas
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                        <div className="bg-gray-700 rounded-md p-4 max-h-64 overflow-y-auto">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                                {categories.map((cat) => (
+                                    <label
+                                        key={cat.name}
+                                        className="flex items-center gap-2 cursor-pointer hover:bg-gray-600 p-2 rounded transition-colors"
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={cat.selected}
+                                            onChange={() => toggleCategory(cat.name)}
+                                            className="w-4 h-4 text-purple-600 bg-gray-700 border-gray-600 rounded focus:ring-purple-500"
+                                        />
+                                        <span className="text-white text-sm flex-grow truncate">
+                                            {cat.name}
+                                        </span>
+                                        <span className="text-gray-400 text-xs">
+                                            ({cat.count})
+                                        </span>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Paso 3: Subir a Dropbox */}
+                {categories.length > 0 && (
+                    <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Paso 3: Subir lista filtrada a Dropbox
+                        </label>
+                        <button
+                            onClick={handleUploadFilteredToDropbox}
+                            disabled={isUploadingFiltered || !dropboxRefreshToken || getFilteredChannelCount() === 0}
+                            className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-md flex items-center justify-center gap-2 disabled:bg-gray-600 disabled:cursor-not-allowed"
+                        >
+                            <UploadCloud size={20} />
+                            {isUploadingFiltered ? 'Subiendo...' : `Subir ${getFilteredChannelCount()} canales a Dropbox`}
+                        </button>
+                        {!dropboxRefreshToken && (
+                            <p className="text-xs text-yellow-400 mt-2">
+                                Conéctate a Dropbox en Configuración para poder subir listas
+                            </p>
+                        )}
+                        {uploadFilteredStatus && (
+                            <p className={`mt-3 text-sm ${uploadFilteredStatus.includes('✅') ? 'text-green-400' : uploadFilteredStatus.includes('❌') ? 'text-red-400' : 'text-yellow-300'}`}>
+                                {uploadFilteredStatus}
+                            </p>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Sección Añadir Lista Reparadora */}
