@@ -11,7 +11,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, channelName, onClose }) 
     const videoRef = useRef<HTMLVideoElement>(null);
     const hlsRef = useRef<any>(null);
     const [isPlaying, setIsPlaying] = useState(false);
-    const [isMuted, setIsMuted] = useState(false);
+    const [isMuted, setIsMuted] = useState(true); // Iniciar en muted para permitir autoplay
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -31,7 +31,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, channelName, onClose }) 
                 video.addEventListener('loadedmetadata', handleLoadedMetadata);
                 video.addEventListener('error', handleVideoError);
                 setIsLoading(false);
-                video.play().then(() => setIsPlaying(true)).catch(handlePlayError);
+                video.play().then(() => setIsPlaying(true)).catch(() => {
+                    // Autoplay bloqueado, no hacer nada, usuario puede dar play manualmente
+                    setIsPlaying(false);
+                });
             } else {
                 // Cargar HLS.js dinámicamente
                 try {
@@ -40,8 +43,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, channelName, onClose }) 
                     if (Hls.isSupported()) {
                         const hls = new Hls({
                             enableWorker: true,
-                            lowLatencyMode: true,
+                            lowLatencyMode: false,
                             backBufferLength: 90,
+                            maxBufferLength: 30,
+                            maxMaxBufferLength: 60,
+                            xhrSetup: function (xhr: XMLHttpRequest, url: string) {
+                                // No agregar headers personalizados para evitar CORS preflight
+                                xhr.withCredentials = false;
+                            },
                         });
                         hlsRef.current = hls;
 
@@ -50,7 +59,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, channelName, onClose }) 
 
                         hls.on(Hls.Events.MANIFEST_PARSED, () => {
                             setIsLoading(false);
-                            video.play().then(() => setIsPlaying(true)).catch(handlePlayError);
+                            video.play().then(() => setIsPlaying(true)).catch(() => {
+                                // Autoplay bloqueado, no hacer nada
+                                setIsPlaying(false);
+                            });
                         });
 
                         hls.on(Hls.Events.ERROR, (event: any, data: any) => {
@@ -59,14 +71,15 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, channelName, onClose }) 
                                 switch (data.type) {
                                     case Hls.ErrorTypes.NETWORK_ERROR:
                                         setError('Error de red: No se puede cargar el stream. Puede estar offline o bloqueado por CORS.');
-                                        hls.startLoad();
+                                        setIsLoading(false);
                                         break;
                                     case Hls.ErrorTypes.MEDIA_ERROR:
-                                        setError('Error de medios: El formato del stream no es compatible.');
+                                        console.log('Intentando recuperar error de medios...');
                                         hls.recoverMediaError();
                                         break;
                                     default:
                                         setError('Error fatal: No se puede reproducir el stream.');
+                                        setIsLoading(false);
                                         break;
                                 }
                             }
@@ -123,19 +136,17 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, channelName, onClose }) 
         setIsLoading(false);
     };
 
-    const handlePlayError = (err: Error) => {
-        console.error('Play error:', err);
-        // No establecer error para que se muestren los controles
-        setIsLoading(false);
-        setIsPlaying(false);
-    };
-
     const togglePlay = () => {
         const video = videoRef.current;
         if (!video) return;
 
         if (video.paused) {
-            video.play().then(() => setIsPlaying(true)).catch(handlePlayError);
+            video.play()
+                .then(() => setIsPlaying(true))
+                .catch((err) => {
+                    console.error('Play error:', err);
+                    setError('No se pudo reproducir el video. Posible problema de CORS o formato.');
+                });
         } else {
             video.pause();
             setIsPlaying(false);
@@ -188,7 +199,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, channelName, onClose }) 
                         className="w-full h-full"
                         controls={false}
                         autoPlay
+                        muted
                         playsInline
+                        crossOrigin="anonymous"
                     />
 
                     {/* Loading Overlay */}
