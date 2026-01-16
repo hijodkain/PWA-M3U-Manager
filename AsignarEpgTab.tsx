@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { Upload, Download, Copy, Zap, ArrowLeftCircle, ChevronsUpDown } from 'lucide-react';
+import { Upload, Download, Copy, Zap, ArrowLeftCircle, ChevronsUpDown, Settings as SettingsIcon } from 'lucide-react';
 import { useAsignarEpg } from './useAsignarEpg';
 import { useChannels } from './useChannels';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import ReparacionChannelItem from './ReparacionChannelItem';
 import { useSettings } from './useSettings';
+import { useAppMode } from './AppModeContext';
 import EpgChannelItem from './EpgChannelItem';
 import { AttributeKey, Channel } from './index';
 import { SmartSearchInput } from './SmartSearchInput';
@@ -14,9 +15,11 @@ interface AsignarEpgTabProps {
     epgHook: ReturnType<typeof useAsignarEpg>;
     channelsHook: ReturnType<typeof useChannels>;
     settingsHook: ReturnType<typeof useSettings>;
+    onNavigateToSettings?: () => void;
 }
 
-const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, settingsHook }) => {
+const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, settingsHook, onNavigateToSettings }) => {
+    const { mode, isSencillo } = useAppMode();
     const {
         epgChannels,
         filteredEpgChannels,
@@ -170,6 +173,122 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
         });
     };
 
+    // Renderizado para modo sencillo
+    if (isSencillo) {
+        return (
+            <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
+                <h2 className="text-xl font-bold mb-6 text-white">Asignar EPG</h2>
+                
+                {/* Sección: Pega la URL de tu fuente EPG */}
+                <div className="mb-6">
+                    <h3 className="text-lg font-semibold text-white mb-3">Pega la URL de tu fuente EPG</h3>
+                    <div className="flex gap-2">
+                        <input
+                            type="text"
+                            value={epgUrl}
+                            onChange={(e) => setEpgUrl(e.target.value)}
+                            placeholder="https://...archivo.xml"
+                            className="flex-grow bg-gray-700 border border-gray-600 rounded-l-md px-4 py-3 text-white focus:ring-blue-500 focus:border-blue-500"
+                        />
+                        <button
+                            onClick={handleFetchEpgUrl}
+                            disabled={!epgUrl || isEpgLoading}
+                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-r-md flex items-center disabled:bg-gray-600 disabled:cursor-not-allowed"
+                        >
+                            <Download size={20} className="mr-2" />
+                            {isEpgLoading ? 'Cargando...' : 'Cargar'}
+                        </button>
+                    </div>
+                    {savedEpgUrls.length > 0 && (
+                        <div className="mt-3">
+                            <select
+                                value=""
+                                onChange={(e) => { if (e.target.value) setEpgUrl(e.target.value); }}
+                                className="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-3 text-white focus:ring-blue-500 focus:border-blue-500"
+                            >
+                                <option value="">o selecciona una fuente guardada</option>
+                                {savedEpgUrls.map(item => (
+                                    <option key={item.id} value={item.url}>{item.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+                    {epgError && <p className="text-red-400 bg-red-900/50 p-3 rounded mt-3">{epgError}</p>}
+                </div>
+
+                {/* Sección: Buscador en la fuente EPG */}
+                {epgChannels.length > 0 && (
+                    <div>
+                        <h3 className="text-lg font-semibold text-white mb-3">Buscador en la fuente EPG</h3>
+                        <div className="flex items-center gap-3">
+                            <div className="flex-grow">
+                                <SmartSearchInput
+                                    value={epgSearchTerm}
+                                    onChange={setEpgSearchTerm}
+                                    isSmartSearchEnabled={isSmartSearchEnabled}
+                                    onToggleSmartSearch={toggleSmartSearch}
+                                    placeholder="Busca un canal en la fuente EPG..."
+                                />
+                            </div>
+                            <button
+                                onClick={() => {
+                                    if (onNavigateToSettings) {
+                                        onNavigateToSettings();
+                                        // Scroll a la sección después de un pequeño delay
+                                        setTimeout(() => {
+                                            const element = document.getElementById('smart-search-settings');
+                                            if (element) {
+                                                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                            }
+                                        }, 100);
+                                    }
+                                }}
+                                className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1 whitespace-nowrap"
+                                title="Ir a Ajustes de la búsqueda inteligente"
+                            >
+                                <SettingsIcon size={16} />
+                                Ajustes búsqueda
+                            </button>
+                        </div>
+                        
+                        {/* Lista de resultados */}
+                        <div className="mt-4 space-y-2 max-h-[60vh] overflow-y-auto">
+                            {filteredEpgChannels.length > 0 ? (
+                                filteredEpgChannels.slice(0, 20).map(ch => (
+                                    <div
+                                        key={ch.id}
+                                        onClick={() => handleEpgSourceClick(ch)}
+                                        className="bg-gray-700 p-3 rounded-md hover:bg-gray-600 cursor-pointer transition-colors"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            {ch.logo && (
+                                                <img src={ch.logo} alt="" className="w-12 h-12 object-contain rounded" />
+                                            )}
+                                            <div className="flex-grow">
+                                                <p className="font-semibold text-white">{ch.name}</p>
+                                                <p className="text-xs text-gray-400">{ch.id}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : epgSearchTerm ? (
+                                <p className="text-gray-400 text-center py-8">No se encontraron resultados para "{epgSearchTerm}"</p>
+                            ) : (
+                                <p className="text-gray-400 text-center py-8">Introduce un término de búsqueda</p>
+                            )}
+                            {filteredEpgChannels.length > 20 && (
+                                <p className="text-gray-400 text-center text-sm py-2">
+                                    Mostrando 20 de {filteredEpgChannels.length} resultados. Refina tu búsqueda.
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    // Renderizado para modo pro (layout completo original)
     return (
         <div className="grid grid-cols-1 lg:grid-cols-11 gap-4">
             <div className="lg:col-span-5 bg-gray-800 p-4 rounded-lg flex flex-col">

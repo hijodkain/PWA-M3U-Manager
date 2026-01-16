@@ -201,23 +201,18 @@ const SaveTab: React.FC<SaveTabProps> = ({ channelsHook, settingsHook }) => {
                     id="filename-input"
                     type="text"
                     value={fileName}
-                    onChange={(e) => setFileName(e.target.value)}
+                    onChange={(e) => {
+                        const newValue = e.target.value.replace(/\s+/g, '_');
+                        setFileName(newValue);
+                    }}
                     className="w-full md:w-1/2 bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="mi_playlist.m3u"
                 />
-            </div>
-            <div className="flex flex-wrap gap-4">
-                <button
-                    onClick={handleDownload}
-                    disabled={channels.length === 0}
-                    className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md flex items-center disabled:bg-gray-600 disabled:cursor-not-allowed"
-                >
-                    <FileDown size={18} className="mr-2" /> Descargar .m3u
-                </button>
+                <p className="text-xs text-gray-400 mt-1">Los espacios se convertirán automáticamente en guiones bajos (_)</p>
             </div>
 
-            <hr className="my-8 border-gray-600" />
-
-            <div>
+            {/* Sección Subir a Dropbox primero */}
+            <div className="mb-8">
                 <h3 className="text-lg font-bold text-white mb-2">Subir a Dropbox</h3>
                 <p className="text-sm text-gray-400 mb-4">
                     El archivo se guardará como <strong>{fileName}</strong> en la carpeta de la aplicación de tu Dropbox.
@@ -248,6 +243,22 @@ const SaveTab: React.FC<SaveTabProps> = ({ channelsHook, settingsHook }) => {
                 {uploadStatus && (
                     <p className="mt-4 text-sm text-yellow-300">{uploadStatus}</p>
                 )}
+            </div>
+
+            <hr className="my-8 border-gray-600" />
+
+            {/* Sección Guardar y Exportar Playlist */}
+            <div>
+                <h3 className="text-lg font-bold text-white mb-4">Guardar y Exportar Playlist</h3>
+                <div className="flex flex-wrap gap-4">
+                    <button
+                        onClick={handleDownload}
+                        disabled={channels.length === 0}
+                        className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md flex items-center disabled:bg-gray-600 disabled:cursor-not-allowed"
+                    >
+                        <FileDown size={18} className="mr-2" /> Descargar .m3u
+                    </button>
+                </div>
             </div>
 
             {channels.length === 0 && (

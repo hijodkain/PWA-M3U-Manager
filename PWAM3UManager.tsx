@@ -32,7 +32,7 @@ export default function PWAM3UManager() {
             case 'reparacion':
                 return <ReparacionTab reparacionHook={reparacionHook} channelsHook={channelsHook} settingsHook={settingsHook} />;
             case 'asignar-epg':
-                return <AsignarEpgTab epgHook={epgHook} channelsHook={channelsHook} settingsHook={settingsHook} />;
+                return <AsignarEpgTab epgHook={epgHook} channelsHook={channelsHook} settingsHook={settingsHook} onNavigateToSettings={() => setActiveTab('settings')} />;
             case 'save':
                 return <SaveTab channelsHook={channelsHook} settingsHook={settingsHook} />;
             case 'settings':

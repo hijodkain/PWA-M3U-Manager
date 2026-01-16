@@ -410,10 +410,10 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
                 </div>
             </div>
 
-            {/* Sección de Prefijos y Sufijos de Canales */}
-            <div>
+            {/* Sección de Ajustes de Búsqueda Inteligente */}
+            <div id="smart-search-settings">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-bold">Filtros de Nombres de Canales</h2>
+                    <h2 className="text-xl font-bold">Ajustes de la Búsqueda Inteligente</h2>
                     <button
                         onClick={resetChannelPrefixesAndSuffixes}
                         className="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-md text-sm"
