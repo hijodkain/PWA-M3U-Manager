@@ -101,6 +101,12 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
 
     const isAllInGroupSelected = filteredReparacionChannels.length > 0 && filteredReparacionChannels.every(c => selectedReparacionChannels.has(c.id));
 
+    // Detectar si es Windows
+    const isWindows = typeof window !== 'undefined' && /Windows/i.test(navigator.userAgent);
+    
+    // Mostrar botón Play en: modo Pro siempre, o modo Sencillo solo en Windows
+    const shouldShowPlayButton = !isSencillo || (isSencillo && isWindows);
+
     // Función para abrir canal en VLC
     const openInVLC = (url: string) => {
         // Intentar protocolo VLC
@@ -382,7 +388,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     quality={channelInfo.quality}
                                     resolution={channelInfo.resolution}
                                     onVerifyClick={() => verifyChannel(ch.id, ch.url)}
-                                    onPlayClick={() => openInVLC(ch.url)}
+                                    onPlayClick={shouldShowPlayButton ? () => openInVLC(ch.url) : undefined}
                                     isSencillo={isSencillo}
                                     style={{
                                         position: 'absolute',
