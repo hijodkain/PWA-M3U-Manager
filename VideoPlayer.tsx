@@ -125,8 +125,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, channelName, onClose }) 
 
     const handlePlayError = (err: Error) => {
         console.error('Play error:', err);
-        setError('No se pudo iniciar la reproducción automática. Haz clic en Play.');
+        // No establecer error para que se muestren los controles
         setIsLoading(false);
+        setIsPlaying(false);
     };
 
     const togglePlay = () => {
@@ -211,8 +212,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, channelName, onClose }) 
                         </div>
                     )}
 
-                    {/* Controls Overlay */}
-                    {!error && !isLoading && (
+                    {/* Controls Overlay - Siempre visible si no está cargando */}
+                    {!isLoading && (
                         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
                             <div className="flex items-center justify-center gap-4">
                                 <button
