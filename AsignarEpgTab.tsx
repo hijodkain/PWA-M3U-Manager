@@ -223,8 +223,8 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                         <div className="flex items-center gap-3">
                             <div className="flex-grow">
                                 <SmartSearchInput
-                                    value={epgSearchTerm}
-                                    onChange={setEpgSearchTerm}
+                                    searchTerm={epgSearchTerm}
+                                    onSearchChange={setEpgSearchTerm}
                                     isSmartSearchEnabled={isSmartSearchEnabled}
                                     onToggleSmartSearch={toggleSmartSearch}
                                     placeholder="Busca un canal en la fuente EPG..."
