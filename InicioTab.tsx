@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, Download, Smartphone, AlertCircle, Share2, Trash2, Filter, CheckSquare, Square } from 'lucide-react';
+import { Upload, Download, Smartphone, AlertCircle, Share2, Trash2, Filter, CheckSquare, Square, UploadCloud } from 'lucide-react';
 import { useChannels } from './useChannels';
 import { useSettings } from './useSettings';
 import { Channel } from './index';
