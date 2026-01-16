@@ -84,7 +84,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
                 code_challenge_method: 'S256',
                 redirect_uri: redirectUri,
                 state: state,
-                scope: 'files.content.write',
+                scope: 'files.content.write sharing.write sharing.read',
             });
 
             const authUrl = `https://www.dropbox.com/oauth2/authorize?${authUrlParams.toString()}`;
