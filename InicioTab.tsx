@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, Download, Smartphone, AlertCircle } from 'lucide-react';
+import { Upload, Download, Smartphone, AlertCircle, Share2, Trash2 } from 'lucide-react';
 import { useChannels } from './useChannels';
 import { useSettings } from './useSettings';
 
@@ -32,6 +32,7 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
     const [isMedicinaLoading, setIsMedicinaLoading] = useState(false);
     const [medicinaError, setMedicinaError] = useState('');
     const [savedMedicinaLists, setSavedMedicinaLists] = useState<Array<{ id: string; name: string; url: string }>>([]);
+    const [savedDropboxLists, setSavedDropboxLists] = useState<Array<{ id: string; name: string; url: string; addedAt: string }>>([]);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
 
     useEffect(() => {
@@ -53,6 +54,12 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
         const stored = localStorage.getItem('medicinaLists');
         if (stored) {
             setSavedMedicinaLists(JSON.parse(stored));
+        }
+
+        // Cargar listas de Dropbox guardadas
+        const storedDropbox = localStorage.getItem('dropboxLists');
+        if (storedDropbox) {
+            setSavedDropboxLists(JSON.parse(storedDropbox));
         }
     }, []);
 
@@ -163,6 +170,24 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
         const updated = savedMedicinaLists.filter(list => list.id !== id);
         setSavedMedicinaLists(updated);
         localStorage.setItem('medicinaLists', JSON.stringify(updated));
+    };
+
+    const handleDeleteDropboxList = (id: string) => {
+        if (!confirm('¿Eliminar esta lista de Dropbox?')) return;
+        
+        const updated = savedDropboxLists.filter(list => list.id !== id);
+        setSavedDropboxLists(updated);
+        localStorage.setItem('dropboxLists', JSON.stringify(updated));
+    };
+
+    const handleShareDropboxLink = async (url: string) => {
+        try {
+            await navigator.clipboard.writeText(url);
+            alert('Enlace copiado al portapapeles');
+        } catch (error) {
+            console.error('Error al copiar enlace:', error);
+            alert('No se pudo copiar el enlace');
+        }
     };
 
     const handleUrlLoadWrapper = async () => {
@@ -347,9 +372,35 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                         <h3 className="text-lg font-bold text-white">Mis listas de Dropbox</h3>
                         <img src="/Dropbox_Icon.svg" alt="Dropbox" className="h-6 w-6" />
                     </div>
-                    <div className="text-center text-gray-400 py-8">
-                        <p className="text-sm">Funcionalidad próximamente</p>
-                    </div>
+                    {savedDropboxLists.length === 0 ? (
+                        <div className="text-center text-gray-400 py-8">
+                            <p className="text-sm">No hay listas guardadas</p>
+                        </div>
+                    ) : (
+                        <ul className="space-y-2">
+                            {savedDropboxLists.map(list => (
+                                <li key={list.id} className="flex items-center justify-between bg-gray-700 p-3 rounded-md">
+                                    <span className="text-white text-sm truncate flex-grow">{list.name}</span>
+                                    <div className="flex items-center gap-2 ml-2">
+                                        <button
+                                            onClick={() => handleShareDropboxLink(list.url)}
+                                            className="text-blue-400 hover:text-blue-300 text-xs flex items-center gap-1"
+                                            title="Compartir enlace"
+                                        >
+                                            <Share2 size={14} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteDropboxList(list.id)}
+                                            className="text-red-400 hover:text-red-300 text-xs flex items-center gap-1"
+                                            title="Eliminar"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
                 </div>
 
                 {/* Columna Listas Reparadoras */}
