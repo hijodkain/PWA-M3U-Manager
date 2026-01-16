@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { Upload, Copy, CheckSquare, ArrowLeftCircle, RotateCcw, Trash2, Link, Check } from 'lucide-react';
 import { useReparacion } from './useReparacion';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -6,8 +6,9 @@ import { useChannels } from './useChannels';
 import ReparacionChannelItem from './ReparacionChannelItem';
 import { useSettings } from './useSettings';
 import { useAppMode } from './AppModeContext';
-import { AttributeKey } from './index';
+import { AttributeKey, Channel } from './index';
 import { SmartSearchInput } from './SmartSearchInput';
+import VideoPlayer from './VideoPlayer';
 
 interface ReparacionTabProps {
     reparacionHook: ReturnType<typeof useReparacion>;
@@ -17,6 +18,8 @@ interface ReparacionTabProps {
 
 const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsHook, settingsHook }) => {
     const { isSencillo } = useAppMode();
+    const [playingChannel, setPlayingChannel] = useState<Channel | null>(null);
+    
     const {
         selectedReparacionChannels,
         attributesToCopy,
@@ -362,6 +365,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     quality={channelInfo.quality}
                                     resolution={channelInfo.resolution}
                                     onVerifyClick={() => verifyChannel(ch.id, ch.url)}
+                                    onPlayClick={() => setPlayingChannel(ch)}
                                     isSencillo={isSencillo}
                                     style={{
                                         position: 'absolute',
@@ -376,6 +380,15 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                     </div>
                 </div>
             </div>
+            
+            {/* Video Player Modal */}
+            {playingChannel && (
+                <VideoPlayer
+                    url={playingChannel.url}
+                    channelName={playingChannel.name}
+                    onClose={() => setPlayingChannel(null)}
+                />
+            )}
         </div>
     );
 };

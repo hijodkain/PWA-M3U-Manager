@@ -1,5 +1,6 @@
 import React from 'react';
 import { Channel, QualityLevel, ChannelStatus } from './index';
+import { Play } from 'lucide-react';
 
 interface ReparacionChannelItemProps {
     channel: Channel;
@@ -13,6 +14,7 @@ interface ReparacionChannelItemProps {
     quality?: QualityLevel;
     resolution?: string;
     onVerifyClick?: () => void;
+    onPlayClick?: () => void;
     style?: React.CSSProperties;
     isSencillo?: boolean;
 }
@@ -29,6 +31,7 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
     quality = 'unknown',
     resolution,
     onVerifyClick,
+    onPlayClick,
     style,
     isSencillo = false,
 }) => {
@@ -131,6 +134,20 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
                 <div className="w-16 text-center">
                     {statusIndicator()}
                 </div>
+                
+                {/* Play Button */}
+                {onPlayClick && (
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onPlayClick();
+                        }}
+                        className="bg-green-600 hover:bg-green-700 text-white font-bold p-2 rounded-full transition-all whitespace-nowrap"
+                        title="Reproducir canal"
+                    >
+                        <Play size={16} fill="white" />
+                    </button>
+                )}
                 
                 {/* Verify Button */}
                 <button
