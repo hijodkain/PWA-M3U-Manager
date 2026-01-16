@@ -207,11 +207,66 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
             
             <div>
                 <h2 className="text-xl font-bold mb-4">Configuración de Dropbox</h2>
+                
+                {!dropboxRefreshToken && (
+                    <div className="bg-blue-900/30 border border-blue-700 rounded-lg p-4 mb-6">
+                        <h3 className="font-semibold text-blue-300 mb-3 flex items-center">
+                            <ExternalLink size={16} className="mr-2" />
+                            Guía de conexión con Dropbox
+                        </h3>
+                        <ol className="text-sm text-gray-300 space-y-2 list-decimal list-inside">
+                            <li>
+                                <strong>Ve a la Consola de Apps de Dropbox:</strong>{' '}
+                                <a 
+                                    href="https://www.dropbox.com/developers/apps" 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="text-blue-400 hover:underline"
+                                >
+                                    Dropbox App Console
+                                </a>
+                            </li>
+                            <li>
+                                <strong>Crea una nueva aplicación:</strong>
+                                <ul className="ml-6 mt-1 space-y-1 list-disc">
+                                    <li>Haz clic en "Create app"</li>
+                                    <li>Selecciona "Scoped access"</li>
+                                    <li>Tipo de acceso: "App folder" (más seguro)</li>
+                                    <li>Dale un nombre único (ej: MiGestorM3U)</li>
+                                </ul>
+                            </li>
+                            <li>
+                                <strong>Configura los permisos (pestaña "Permissions"):</strong>
+                                <ul className="ml-6 mt-1 space-y-1 list-disc">
+                                    <li>Marca: <code className="bg-gray-800 px-1 rounded">files.content.write</code></li>
+                                    <li>Marca: <code className="bg-gray-800 px-1 rounded">sharing.write</code></li>
+                                    <li>Marca: <code className="bg-gray-800 px-1 rounded">sharing.read</code></li>
+                                    <li>Haz clic en "Submit" al final de la página</li>
+                                </ul>
+                            </li>
+                            <li>
+                                <strong>Añade la URI de Redirección (pestaña "Settings"):</strong>
+                                <ul className="ml-6 mt-1 space-y-1 list-disc">
+                                    <li>Busca "Redirect URIs" y haz clic en "Add"</li>
+                                    <li>Añade: <code className="bg-gray-800 px-1 rounded">https://m3umanager.cat</code></li>
+                                    <li>Para desarrollo local: <code className="bg-gray-800 px-1 rounded">http://localhost:3000</code></li>
+                                </ul>
+                            </li>
+                            <li>
+                                <strong>Copia tu App Key</strong> (en la pestaña "Settings") y pégala abajo
+                            </li>
+                        </ol>
+                    </div>
+                )}
+
                 <div className="flex flex-col gap-4 md:w-1/2">
                     {dropboxRefreshToken ? (
                         <div>
-                            <p className="text-green-400 font-semibold">Conectado a Dropbox.</p>
-                            <p className="text-xs text-gray-400">App Key: {dropboxAppKey}</p>
+                            <p className="text-green-400 font-semibold">✓ Conectado a Dropbox</p>
+                            <p className="text-xs text-gray-400 mt-1">App Key: {dropboxAppKey}</p>
+                            <p className="text-xs text-gray-500 mt-1">
+                                Permisos activos: Subir archivos • Crear enlaces compartidos • Listar enlaces
+                            </p>
                             <button
                                 onClick={handleDropboxDisconnect}
                                 className="mt-4 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md flex items-center justify-center w-full md:w-auto self-start"
