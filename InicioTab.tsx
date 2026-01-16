@@ -244,26 +244,10 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                 </div>
 
                 <div className="space-y-6">
-                    {/* Botón Instalar App */}
-                    <div className="text-center pb-4 border-b border-gray-700">
-                        <button
-                            onClick={handleInstallClick}
-                            className="bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white font-bold py-3 px-6 rounded-md inline-flex items-center transition-colors"
-                        >
-                            <Smartphone size={20} className="mr-2" /> 
-                            {isInstallable ? 'Instalar App en este Dispositivo' : 'Cómo Instalar la App'}
-                        </button>
-                        {!isInstallable && (
-                            <p className="text-xs text-gray-400 mt-2">
-                                Se abrirá una guía para instalar en Chrome o Brave
-                            </p>
-                        )}
-                    </div>
-
                     {/* Campo de texto para URL */}
                     <div>
                         <label htmlFor="inicio-url-input" className="block text-sm font-medium text-gray-300 mb-2">
-                            Pega el enlace de tu lista M3U
+                            Pega aquí el enlace de tu lista IPTV
                         </label>
                         <div className="flex">
                             <input
@@ -271,7 +255,7 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                                 type="text"
                                 value={url}
                                 onChange={(e) => setUrl(e.target.value)}
-                                placeholder="https://.../playlist.m3u"
+                                placeholder="https://dominio...m3u_plus"
                                 className="flex-grow bg-gray-700 border border-gray-600 rounded-l-md px-4 py-3 text-white focus:ring-blue-500 focus:border-blue-500"
                             />
                             <button
@@ -282,10 +266,10 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                                 <Download size={20} className="mr-2" /> Cargar
                             </button>
                         </div>
-                        {savedUrls.length > 0 && (
+                        {savedDropboxLists.length > 0 && (
                             <div className="mt-3">
                                 <select
-                                    id="inicio-saved-urls-select"
+                                    id="inicio-dropbox-select"
                                     value=""
                                     onChange={(e) => {
                                         if (e.target.value) {
@@ -294,8 +278,8 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                                     }}
                                     className="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-3 text-white focus:ring-blue-500 focus:border-blue-500"
                                 >
-                                    <option value="">o selecciona una lista guardada...</option>
-                                    {savedUrls.map(item => (
+                                    <option value="">o selecciona una de tu Dropbox</option>
+                                    {savedDropboxLists.map(item => (
                                         <option key={item.id} value={item.url}>
                                             {item.name}
                                         </option>
@@ -321,7 +305,7 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                             htmlFor="inicio-file-upload"
                             className="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-md inline-flex items-center transition-colors"
                         >
-                            <Upload size={20} className="mr-2" /> Subir Archivo M3U
+                            <Upload size={20} className="mr-2" /> Añadir desde archivo .m3u
                         </label>
                         <input
                             id="inicio-file-upload"
