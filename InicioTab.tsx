@@ -25,7 +25,7 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
         handleFileUpload,
     } = channelsHook;
 
-    const { savedUrls, addSavedUrl } = settingsHook;
+    const { savedUrls, addSavedUrl, dropboxRefreshToken } = settingsHook;
     
     const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
     const [isInstallable, setIsInstallable] = useState(false);
