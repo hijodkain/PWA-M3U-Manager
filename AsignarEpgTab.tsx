@@ -173,122 +173,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
         });
     };
 
-    // Renderizado para modo sencillo
-    if (isSencillo) {
-        return (
-            <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
-                <h2 className="text-xl font-bold mb-6 text-white">Asignar EPG</h2>
-                
-                {/* Sección: Pega la URL de tu fuente EPG */}
-                <div className="mb-6">
-                    <h3 className="text-lg font-semibold text-white mb-3">Pega la URL de tu fuente EPG</h3>
-                    <div className="flex gap-2">
-                        <input
-                            type="text"
-                            value={epgUrl}
-                            onChange={(e) => setEpgUrl(e.target.value)}
-                            placeholder="https://...archivo.xml"
-                            className="flex-grow bg-gray-700 border border-gray-600 rounded-l-md px-4 py-3 text-white focus:ring-blue-500 focus:border-blue-500"
-                        />
-                        <button
-                            onClick={handleFetchEpgUrl}
-                            disabled={!epgUrl || isEpgLoading}
-                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-r-md flex items-center disabled:bg-gray-600 disabled:cursor-not-allowed"
-                        >
-                            <Download size={20} className="mr-2" />
-                            {isEpgLoading ? 'Cargando...' : 'Cargar'}
-                        </button>
-                    </div>
-                    {savedEpgUrls.length > 0 && (
-                        <div className="mt-3">
-                            <select
-                                value=""
-                                onChange={(e) => { if (e.target.value) setEpgUrl(e.target.value); }}
-                                className="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-3 text-white focus:ring-blue-500 focus:border-blue-500"
-                            >
-                                <option value="">o selecciona una fuente guardada</option>
-                                {savedEpgUrls.map(item => (
-                                    <option key={item.id} value={item.url}>{item.name}</option>
-                                ))}
-                            </select>
-                        </div>
-                    )}
-                    {epgError && <p className="text-red-400 bg-red-900/50 p-3 rounded mt-3">{epgError}</p>}
-                </div>
-
-                {/* Sección: Buscador en la fuente EPG */}
-                {epgChannels.length > 0 && (
-                    <div>
-                        <h3 className="text-lg font-semibold text-white mb-3">Buscador en la fuente EPG</h3>
-                        <div className="flex items-center gap-3">
-                            <div className="flex-grow">
-                                <SmartSearchInput
-                                    searchTerm={epgSearchTerm}
-                                    onSearchChange={setEpgSearchTerm}
-                                    isSmartSearchEnabled={isSmartSearchEnabled}
-                                    onToggleSmartSearch={toggleSmartSearch}
-                                    placeholder="Busca un canal en la fuente EPG..."
-                                />
-                            </div>
-                            <button
-                                onClick={() => {
-                                    if (onNavigateToSettings) {
-                                        onNavigateToSettings();
-                                        // Scroll a la sección después de un pequeño delay
-                                        setTimeout(() => {
-                                            const element = document.getElementById('smart-search-settings');
-                                            if (element) {
-                                                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                            }
-                                        }, 100);
-                                    }
-                                }}
-                                className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1 whitespace-nowrap"
-                                title="Ir a Ajustes de la búsqueda inteligente"
-                            >
-                                <SettingsIcon size={16} />
-                                Ajustes búsqueda
-                            </button>
-                        </div>
-                        
-                        {/* Lista de resultados */}
-                        <div className="mt-4 space-y-2 max-h-[60vh] overflow-y-auto">
-                            {filteredEpgChannels.length > 0 ? (
-                                filteredEpgChannels.slice(0, 20).map(ch => (
-                                    <div
-                                        key={ch.id}
-                                        onClick={() => handleEpgSourceClick(ch)}
-                                        className="bg-gray-700 p-3 rounded-md hover:bg-gray-600 cursor-pointer transition-colors"
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            {ch.logo && (
-                                                <img src={ch.logo} alt="" className="w-12 h-12 object-contain rounded" />
-                                            )}
-                                            <div className="flex-grow">
-                                                <p className="font-semibold text-white">{ch.name}</p>
-                                                <p className="text-xs text-gray-400">{ch.id}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))
-                            ) : epgSearchTerm ? (
-                                <p className="text-gray-400 text-center py-8">No se encontraron resultados para "{epgSearchTerm}"</p>
-                            ) : (
-                                <p className="text-gray-400 text-center py-8">Introduce un término de búsqueda</p>
-                            )}
-                            {filteredEpgChannels.length > 20 && (
-                                <p className="text-gray-400 text-center text-sm py-2">
-                                    Mostrando 20 de {filteredEpgChannels.length} resultados. Refina tu búsqueda.
-                                </p>
-                            )}
-                        </div>
-                    </div>
-                )}
-            </div>
-        );
-    }
-
-    // Renderizado para modo pro (layout completo original)
+    // Renderizado común (3 columnas) con variaciones según modo
     return (
         <div className="grid grid-cols-1 lg:grid-cols-11 gap-4">
             <div className="lg:col-span-5 bg-gray-800 p-4 rounded-lg flex flex-col">
@@ -408,81 +293,39 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
             </div>
             <div className="lg:col-span-5 bg-gray-800 p-4 rounded-lg flex flex-col">
                 <h3 className="font-bold text-lg mb-2">Fuente EPG</h3>
-                <SmartSearchInput
-                    searchTerm={epgSearchTerm}
-                    onSearchChange={setEpgSearchTerm}
-                    isSmartSearchEnabled={isSmartSearchEnabled}
-                    onToggleSmartSearch={toggleSmartSearch}
-                    placeholder="Buscar en la fuente EPG..."
-                    showResults={true}
-                    resultCount={filteredEpgChannels.length}
-                    className="mb-2"
-                />
                 
-                {/* Controles de modo de asignación y selección múltiple */}
-                <div className="flex gap-2 mb-2">
-                    <button
-                        onClick={toggleAssignmentMode}
-                        className={`flex-1 text-sm py-2 px-3 rounded-md transition-colors ${
-                            assignmentMode === 'tvg-id' 
-                                ? 'bg-green-600 text-white' 
-                                : 'bg-yellow-600 text-white'
-                        }`}
-                    >
-                        {assignmentMode === 'tvg-id' ? 'Modo: tvg-id' : 'Modo: tvg-name'}
-                    </button>
-                    <button
-                        onClick={addSelectedEpgChannels}
-                        disabled={selectedEpgChannels.size === 0}
-                        className={`flex-1 text-sm py-2 px-3 rounded-md transition-colors ${
-                            selectedEpgChannels.size > 0
-                                ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                                : 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                        }`}
-                    >
-                        Añadir {selectedEpgChannels.size > 0 ? `(${selectedEpgChannels.size})` : 'Seleccionados'}
-                    </button>
-                </div>
-
-                {/* Checkbox para seleccionar todos */}
-                <div className="flex items-center gap-2 mb-2">
-                    <input
-                        type="checkbox"
-                        id="select-all-epg"
-                        checked={filteredEpgChannels.length > 0 && filteredEpgChannels.every(ch => selectedEpgChannels.has(ch.id))}
-                        onChange={toggleSelectAllEpgChannels}
-                        className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
-                    />
-                    <label htmlFor="select-all-epg" className="text-sm text-gray-300 cursor-pointer">
-                        Seleccionar todos ({filteredEpgChannels.length} canales)
-                    </label>
-                </div>
-                <div className="space-y-4">
+                {/* Input de URL de fuente EPG */}
+                <div className="space-y-2 mb-4">
                     <div className="flex items-center gap-2">
-                        <input
-                            id="epg-file-upload"
-                            type="file"
-                            className="hidden"
-                            onChange={handleEpgFileUpload}
-                            accept=".xml,.xml.gz"
-                        />
-                        <label
-                            htmlFor="epg-file-upload"
-                            className="cursor-pointer text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md flex items-center justify-center"
-                        >
-                            <Upload size={16} className="mr-2" /> Subir XMLTV
-                        </label>
+                        {!isSencillo && (
+                            <>
+                                <input
+                                    id="epg-file-upload"
+                                    type="file"
+                                    className="hidden"
+                                    onChange={handleEpgFileUpload}
+                                    accept=".xml,.xml.gz"
+                                />
+                                <label
+                                    htmlFor="epg-file-upload"
+                                    className="cursor-pointer text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md flex items-center justify-center"
+                                >
+                                    <Upload size={16} className="mr-2" /> Subir XMLTV
+                                </label>
+                            </>
+                        )}
                         <div className="flex-grow flex">
                             <input
                                 type="text"
                                 value={epgUrl}
                                 onChange={(e) => setEpgUrl(e.target.value)}
-                                placeholder="o pega la URL del archivo .xml"
+                                placeholder="Pega la URL del archivo .xml"
                                 className="flex-grow bg-gray-700 border border-gray-600 rounded-l-md px-3 py-2 text-white text-sm focus:ring-blue-500 focus:border-blue-500"
                             />
                             <button
                                 onClick={handleFetchEpgUrl}
-                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-r-md flex items-center text-sm"
+                                disabled={!epgUrl || isEpgLoading}
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-r-md flex items-center text-sm disabled:bg-gray-600 disabled:cursor-not-allowed"
                             >
                                 <Download size={16} />
                             </button>
@@ -498,6 +341,138 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                             <option value="">o selecciona una fuente guardada...</option>
                             {savedEpgUrls.map(item => (
                                 <option key={item.id} value={item.url}>{item.name}</option>
+                            ))}
+                        </select>
+                    )}
+                    {!isSencillo && (
+                        <div className="border-t border-gray-700 pt-2">
+                            <button 
+                                onClick={() => setIsGeneratorVisible(!isGeneratorVisible)}
+                                className="w-full text-sm text-left text-gray-300 hover:text-white flex items-center"
+                            >
+                                <ChevronsUpDown size={16} className="mr-2" />
+                                Generar EPG desde URLs
+                            </button>
+                            {isGeneratorVisible && (
+                                <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2 items-end">
+                                    <input
+                                        type="text"
+                                        value={epgIdListUrl}
+                                        onChange={(e) => setEpgIdListUrl(e.target.value)}
+                                        placeholder="URL de lista de IDs (.txt)"
+                                        className="md:col-span-1 w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white text-sm focus:ring-blue-500 focus:border-blue-500"
+                                    />
+                                    <input
+                                        type="text"
+                                        value={epgLogoFolderUrl}
+                                        onChange={(e) => setEpgLogoFolderUrl(e.target.value)}
+                                        placeholder="URL de carpeta de logos"
+                                        className="md:col-span-1 w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white text-sm focus:ring-blue-500 focus:border-blue-500"
+                                    />
+                                    <button
+                                        onClick={handleGenerateEpgFromUrls}
+                                        className="md:col-span-1 w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-md flex items-center justify-center text-sm"
+                                    >
+                                        <Zap size={16} className="mr-2" /> Generar
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+                {isEpgLoading && <p className="text-center text-blue-400 mb-2">Cargando...</p>}
+                {epgError && <p className="text-center text-red-400 bg-red-900/50 p-2 rounded mb-2">{epgError}</p>}
+                
+                {/* Buscador con enlace a ajustes en modo sencillo */}
+                {isSencillo ? (
+                    <div className="mb-2">
+                        <div className="flex items-center gap-2">
+                            <div className="flex-grow">
+                                <SmartSearchInput
+                                    searchTerm={epgSearchTerm}
+                                    onSearchChange={setEpgSearchTerm}
+                                    isSmartSearchEnabled={isSmartSearchEnabled}
+                                    onToggleSmartSearch={toggleSmartSearch}
+                                    placeholder="Buscar en la fuente EPG..."
+                                    showResults={true}
+                                    resultCount={filteredEpgChannels.length}
+                                />
+                            </div>
+                            <button
+                                onClick={() => {
+                                    if (onNavigateToSettings) {
+                                        onNavigateToSettings();
+                                        setTimeout(() => {
+                                            const element = document.getElementById('smart-search-settings');
+                                            if (element) {
+                                                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                            }
+                                        }, 100);
+                                    }
+                                }}
+                                className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1 whitespace-nowrap"
+                                title="Ir a Ajustes de la búsqueda inteligente"
+                            >
+                                <SettingsIcon size={16} />
+                                Ajustes
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <>
+                        <SmartSearchInput
+                            searchTerm={epgSearchTerm}
+                            onSearchChange={setEpgSearchTerm}
+                            isSmartSearchEnabled={isSmartSearchEnabled}
+                            onToggleSmartSearch={toggleSmartSearch}
+                            placeholder="Buscar en la fuente EPG..."
+                            showResults={true}
+                            resultCount={filteredEpgChannels.length}
+                            className="mb-2"
+                        />
+                        
+                        {/* Controles de modo de asignación y selección múltiple - SOLO MODO PRO */}
+                        <div className="flex gap-2 mb-2">
+                            <button
+                                onClick={toggleAssignmentMode}
+                                className={`flex-1 text-sm py-2 px-3 rounded-md transition-colors ${
+                                    assignmentMode === 'tvg-id' 
+                                        ? 'bg-green-600 text-white' 
+                                        : 'bg-yellow-600 text-white'
+                                }`}
+                            >
+                                {assignmentMode === 'tvg-id' ? 'Modo: tvg-id' : 'Modo: tvg-name'}
+                            </button>
+                            <button
+                                onClick={addSelectedEpgChannels}
+                                disabled={selectedEpgChannels.size === 0}
+                                className={`flex-1 text-sm py-2 px-3 rounded-md transition-colors ${
+                                    selectedEpgChannels.size > 0
+                                        ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                                        : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                                }`}
+                            >
+                                Añadir {selectedEpgChannels.size > 0 ? `(${selectedEpgChannels.size})` : 'Seleccionados'}
+                            </button>
+                        </div>
+
+                        {/* Checkbox para seleccionar todos - SOLO MODO PRO */}
+                        <div className="flex items-center gap-2 mb-2">
+                            <input
+                                type="checkbox"
+                                id="select-all-epg"
+                                checked={filteredEpgChannels.length > 0 && filteredEpgChannels.every(ch => selectedEpgChannels.has(ch.id))}
+                                onChange={toggleSelectAllEpgChannels}
+                                className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+                            />
+                            <label htmlFor="select-all-epg" className="text-sm text-gray-300 cursor-pointer">
+                                Seleccionar todos ({filteredEpgChannels.length} canales)
+                            </label>
+                        </div>
+                    </>
+                )}
+                
+                {/* Lista de canales EPG */}
                             ))}
                         </select>
                     )}
@@ -555,7 +530,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                         transform: `translateY(${virtualItem.start}px)`,
                                     }}
                                     isSelected={selectedEpgChannels.has(ch.id)}
-                                    showCheckbox={true}
+                                    showCheckbox={!isSencillo}
                                     onCheckboxChange={toggleEpgChannelSelection}
                                     assignmentMode={assignmentMode}
                                     score={getEpgSimilarityScore(ch.id)}
