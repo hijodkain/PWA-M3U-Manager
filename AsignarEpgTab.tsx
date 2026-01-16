@@ -473,46 +473,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                 )}
                 
                 {/* Lista de canales EPG */}
-                            ))}
-                        </select>
-                    )}
-                    <div className="border-t border-gray-700 pt-4">
-                        <button 
-                            onClick={() => setIsGeneratorVisible(!isGeneratorVisible)}
-                            className="w-full text-sm text-left text-gray-300 hover:text-white flex items-center"
-                        >
-                            <ChevronsUpDown size={16} className="mr-2" />
-                            Generar EPG desde URLs
-                        </button>
-                        {isGeneratorVisible && (
-                            <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2 items-end">
-                                <input
-                                    type="text"
-                                    value={epgIdListUrl}
-                                    onChange={(e) => setEpgIdListUrl(e.target.value)}
-                                    placeholder="URL de lista de IDs (.txt)"
-                                    className="md:col-span-1 w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white text-sm focus:ring-blue-500 focus:border-blue-500"
-                                />
-                                <input
-                                    type="text"
-                                    value={epgLogoFolderUrl}
-                                    onChange={(e) => setEpgLogoFolderUrl(e.target.value)}
-                                    placeholder="URL de carpeta de logos"
-                                    className="md:col-span-1 w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white text-sm focus:ring-blue-500 focus:border-blue-500"
-                                />
-                                <button
-                                    onClick={handleGenerateEpgFromUrls}
-                                    className="md:col-span-1 w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-md flex items-center justify-center text-sm"
-                                >
-                                    <Zap size={16} className="mr-2" /> Generar
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-                {isEpgLoading && <p className="text-center text-blue-400 mt-2">Cargando...</p>}
-                {epgError && <p className="text-center text-red-400 bg-red-900/50 p-2 rounded mt-2">{epgError}</p>}
-                <div ref={epgListParentRef} className="overflow-auto max-h-[40vh] pr-2 mt-4">
+                <div ref={epgListParentRef} className="overflow-auto max-h-[40vh] pr-2 mt-2">
                     <div style={{ height: `${epgListRowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
                         {epgListVirtualItems.map((virtualItem) => {
                             const ch = filteredEpgChannels[virtualItem.index];
