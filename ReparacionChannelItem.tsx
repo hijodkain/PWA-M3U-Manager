@@ -143,7 +143,7 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
                             onPlayClick();
                         }}
                         className="bg-green-600 hover:bg-green-700 text-white font-bold p-2 rounded-full transition-all whitespace-nowrap"
-                        title="Reproducir canal"
+                        title="Abrir en VLC"
                     >
                         <Play size={16} fill="white" />
                     </button>

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import { Upload, Copy, CheckSquare, ArrowLeftCircle, RotateCcw, Trash2, Link, Check } from 'lucide-react';
 import { useReparacion } from './useReparacion';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -6,9 +6,8 @@ import { useChannels } from './useChannels';
 import ReparacionChannelItem from './ReparacionChannelItem';
 import { useSettings } from './useSettings';
 import { useAppMode } from './AppModeContext';
-import { AttributeKey, Channel } from './index';
+import { AttributeKey } from './index';
 import { SmartSearchInput } from './SmartSearchInput';
-import VideoPlayer from './VideoPlayer';
 
 interface ReparacionTabProps {
     reparacionHook: ReturnType<typeof useReparacion>;
@@ -18,7 +17,6 @@ interface ReparacionTabProps {
 
 const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsHook, settingsHook }) => {
     const { isSencillo } = useAppMode();
-    const [playingChannel, setPlayingChannel] = useState<Channel | null>(null);
     
     const {
         selectedReparacionChannels,
@@ -102,6 +100,25 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
     ];
 
     const isAllInGroupSelected = filteredReparacionChannels.length > 0 && filteredReparacionChannels.every(c => selectedReparacionChannels.has(c.id));
+
+    // Función para abrir canal en VLC
+    const openInVLC = (url: string) => {
+        // Intentar protocolo VLC
+        window.location.href = `vlc://${url}`;
+        
+        // Fallback: crear archivo M3U temporal y descargarlo
+        setTimeout(() => {
+            const m3uContent = `#EXTM3U\n#EXTINF:-1,Stream\n${url}`;
+            const blob = new Blob([m3uContent], { type: 'audio/x-mpegurl' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'stream.m3u';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+        }, 500);
+    };
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-11 gap-4">
@@ -365,7 +382,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     quality={channelInfo.quality}
                                     resolution={channelInfo.resolution}
                                     onVerifyClick={() => verifyChannel(ch.id, ch.url)}
-                                    onPlayClick={() => setPlayingChannel(ch)}
+                                    onPlayClick={() => openInVLC(ch.url)}
                                     isSencillo={isSencillo}
                                     style={{
                                         position: 'absolute',
@@ -380,15 +397,6 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                     </div>
                 </div>
             </div>
-            
-            {/* Video Player Modal */}
-            {playingChannel && (
-                <VideoPlayer
-                    url={playingChannel.url}
-                    channelName={playingChannel.name}
-                    onClose={() => setPlayingChannel(null)}
-                />
-            )}
         </div>
     );
 };
