@@ -26,7 +26,7 @@ export default function PWAM3UManager() {
     const renderTabContent = () => {
         switch (activeTab) {
             case 'inicio':
-                return <InicioTab channelsHook={channelsHook} settingsHook={settingsHook} onNavigateToEditor={() => setActiveTab('editor')} />;
+                return <InicioTab channelsHook={channelsHook} settingsHook={settingsHook} onNavigateToEditor={() => setActiveTab('editor')} onNavigateToSettings={() => setActiveTab('settings')} />;
             case 'editor':
                 return <EditorTab channelsHook={channelsHook} settingsHook={settingsHook} />;
             case 'reparacion':
@@ -64,7 +64,10 @@ export default function PWAM3UManager() {
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center">
                         <img src="/logo.svg" alt="Logo" className="h-10 w-10 mr-3" />
-                        <h1 className="text-3xl font-bold text-blue-400">Gestor de Listas M3U</h1>
+                        <div>
+                            <h1 className="text-3xl font-bold text-blue-400">M3U Manager</h1>
+                            <p className="text-sm text-gray-400">Gestiona las listas M3U de tu Dropbox</p>
+                        </div>
                     </div>
                     <button
                         onClick={toggleMode}

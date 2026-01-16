@@ -7,6 +7,7 @@ interface InicioTabProps {
     channelsHook: ReturnType<typeof useChannels>;
     settingsHook: ReturnType<typeof useSettings>;
     onNavigateToEditor: () => void;
+    onNavigateToSettings?: () => void;
 }
 
 interface BeforeInstallPromptEvent extends Event {
@@ -14,7 +15,7 @@ interface BeforeInstallPromptEvent extends Event {
     userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNavigateToEditor }) => {
+const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNavigateToEditor, onNavigateToSettings }) => {
     const {
         url,
         setUrl,
@@ -207,11 +208,39 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
 
     return (
         <div className="space-y-6 max-w-6xl mx-auto">
+            {/* Estado de conexión a Dropbox */}
+            <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
+                {dropboxRefreshToken ? (
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                            <span className="text-green-400 font-semibold">Conectado a Dropbox</span>
+                        </div>
+                        <img src="/Dropbox_Icon.svg" alt="Dropbox" className="h-5 w-5" />
+                    </div>
+                ) : (
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                            <span className="text-red-400 font-semibold">No conectado a Dropbox</span>
+                        </div>
+                        <button
+                            onClick={() => onNavigateToSettings?.()}
+                            className="text-blue-400 hover:text-blue-300 underline text-sm"
+                        >
+                            Conectar ahora
+                        </button>
+                    </div>
+                )}
+            </div>
+
             {/* Sección principal - Cargar lista */}
             <div className="bg-gray-800 p-8 rounded-lg shadow-lg">
-                <div className="text-center mb-8">
-                    <h2 className="text-3xl font-bold text-blue-400 mb-2">Bienvenido al Gestor de Listas M3U</h2>
-                    <p className="text-gray-300 text-lg">Añade una lista M3U que te guste</p>
+                <div className="mb-8">
+                    <h2 className="text-2xl font-bold text-blue-400 mb-3">Vamos a cargar la lista que quieres gestionar</h2>
+                    <p className="text-gray-300 text-sm">
+                        Si no tienes ninguna aún en tu Dropbox, puedes cargar una cualquiera que editarás a tu gusto y luego subirás como lista nueva a tu Dropbox.
+                    </p>
                 </div>
 
                 <div className="space-y-6">
@@ -318,9 +347,9 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                 </div>
             </div>
 
-            {/* Sección Añadir Lista Medicina */}
+            {/* Sección Añadir Lista Reparadora */}
             <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
-                <h3 className="text-xl font-bold text-purple-400 mb-4">Añadir Lista Medicina</h3>
+                <h3 className="text-xl font-bold text-purple-400 mb-4">Añadir nueva lista reparadora</h3>
                 <div className="flex gap-2 mb-3">
                     <input
                         type="text"
@@ -368,9 +397,13 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Columna Dropbox */}
                 <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
-                    <div className="flex items-center gap-2 mb-4">
-                        <h3 className="text-lg font-bold text-white">Mis listas de Dropbox</h3>
-                        <img src="/Dropbox_Icon.svg" alt="Dropbox" className="h-6 w-6" />
+                    <div className="mb-4">
+                        <div className="flex items-center gap-2 mb-1">
+                            <h3 className="text-lg font-bold text-white">Mis Listas de</h3>
+                            <img src="/Dropbox_Icon.svg" alt="Dropbox" className="h-6 w-6" />
+                            <h3 className="text-lg font-bold text-white">Dropbox</h3>
+                        </div>
+                        <p className="text-xs text-gray-400">Pulsa compartir para copiar el enlace para tu app de IPTV</p>
                     </div>
                     {savedDropboxLists.length === 0 ? (
                         <div className="text-center text-gray-400 py-8">
