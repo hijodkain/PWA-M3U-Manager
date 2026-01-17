@@ -52,6 +52,12 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
     const [isUploadingFiltered, setIsUploadingFiltered] = useState(false);
     const [uploadFilteredStatus, setUploadFilteredStatus] = useState('');
 
+    // Estados para búsqueda en Dropbox
+    const [isSearchingDropbox, setIsSearchingDropbox] = useState(false);
+    const [dropboxSearchType, setDropboxSearchType] = useState<'main' | 'medicina' | null>(null);
+    const [foundDropboxFiles, setFoundDropboxFiles] = useState<Array<{ path: string; name: string; selected: boolean }>>([]);
+    const [showDropboxModal, setShowDropboxModal] = useState(false);
+
     useEffect(() => {
         const handler = (e: Event) => {
             e.preventDefault();
@@ -496,6 +502,163 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
         }
     };
 
+    // Funciones para buscar en Dropbox
+    const searchDropboxForM3UFiles = async (searchType: 'main' | 'medicina') => {
+        if (!dropboxAppKey || !dropboxRefreshToken) {
+            alert('Por favor, conecta tu cuenta de Dropbox en Configuración');
+            return;
+        }
+
+        setIsSearchingDropbox(true);
+        setDropboxSearchType(searchType);
+        setFoundDropboxFiles([]);
+
+        try {
+            const accessToken = await getDropboxAccessToken();
+            const files: Array<{ path: string; name: string }> = [];
+
+            // Buscar recursivamente en Dropbox
+            const searchFolder = async (path: string = '') => {
+                const listResponse = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        path: path,
+                        recursive: true,
+                        include_mounted_folders: false,
+                    }),
+                });
+
+                if (!listResponse.ok) {
+                    throw new Error('No se pudo listar archivos de Dropbox');
+                }
+
+                const data = await listResponse.json();
+                
+                // Filtrar solo archivos .m3u y .m3u8
+                data.entries.forEach((entry: any) => {
+                    if (entry['.tag'] === 'file' && (entry.name.endsWith('.m3u') || entry.name.endsWith('.m3u8'))) {
+                        files.push({
+                            path: entry.path_lower,
+                            name: entry.name,
+                        });
+                    }
+                });
+
+                // Si hay más resultados, continuar
+                if (data.has_more) {
+                    let cursor = data.cursor;
+                    while (cursor) {
+                        const continueResponse = await fetch('https://api.dropboxapi.com/2/files/list_folder/continue', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${accessToken}`,
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ cursor }),
+                        });
+
+                        if (!continueResponse.ok) break;
+
+                        const continueData = await continueResponse.json();
+                        continueData.entries.forEach((entry: any) => {
+                            if (entry['.tag'] === 'file' && (entry.name.endsWith('.m3u') || entry.name.endsWith('.m3u8'))) {
+                                files.push({
+                                    path: entry.path_lower,
+                                    name: entry.name,
+                                });
+                            }
+                        });
+
+                        cursor = continueData.has_more ? continueData.cursor : null;
+                    }
+                }
+            };
+
+            await searchFolder('');
+
+            if (files.length === 0) {
+                alert('No se encontraron archivos M3U en tu Dropbox');
+                setIsSearchingDropbox(false);
+                return;
+            }
+
+            setFoundDropboxFiles(files.map(f => ({ ...f, selected: false })));
+            setShowDropboxModal(true);
+
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+            alert(`Error al buscar en Dropbox: ${errorMessage}`);
+        } finally {
+            setIsSearchingDropbox(false);
+        }
+    };
+
+    const toggleFileSelection = (path: string) => {
+        setFoundDropboxFiles(prev =>
+            prev.map(f => f.path === path ? { ...f, selected: !f.selected } : f)
+        );
+    };
+
+    const toggleAllFiles = () => {
+        const allSelected = foundDropboxFiles.every(f => f.selected);
+        setFoundDropboxFiles(prev =>
+            prev.map(f => ({ ...f, selected: !allSelected }))
+        );
+    };
+
+    const addSelectedFilesToLists = async () => {
+        const selectedFiles = foundDropboxFiles.filter(f => f.selected);
+        if (selectedFiles.length === 0) {
+            alert('Selecciona al menos un archivo');
+            return;
+        }
+
+        setIsSearchingDropbox(true);
+
+        try {
+            const accessToken = await getDropboxAccessToken();
+            const newLists: Array<{ id: string; name: string; url: string; addedAt?: string }> = [];
+
+            for (const file of selectedFiles) {
+                try {
+                    const shareUrl = await getSharedLink(accessToken, file.path);
+                    newLists.push({
+                        id: Date.now().toString() + Math.random(),
+                        name: file.name.replace(/\.(m3u8?)/i, ''),
+                        url: shareUrl,
+                        ...(dropboxSearchType === 'main' ? { addedAt: new Date().toISOString() } : {}),
+                    });
+                } catch (error) {
+                    console.error(`Error getting link for ${file.name}:`, error);
+                }
+            }
+
+            if (dropboxSearchType === 'main') {
+                const updated = [...savedDropboxLists, ...newLists];
+                setSavedDropboxLists(updated);
+                localStorage.setItem('dropboxLists', JSON.stringify(updated));
+            } else {
+                const updated = [...savedMedicinaLists, ...newLists];
+                setSavedMedicinaLists(updated);
+                localStorage.setItem('medicinaLists', JSON.stringify(updated));
+            }
+
+            setShowDropboxModal(false);
+            setFoundDropboxFiles([]);
+            alert(`${newLists.length} archivos añadidos correctamente`);
+
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+            alert(`Error al añadir archivos: ${errorMessage}`);
+        } finally {
+            setIsSearchingDropbox(false);
+        }
+    };
+
     return (
         <div className="space-y-6 max-w-6xl mx-auto">
             {/* Estado de conexión a Dropbox */}
@@ -795,10 +958,21 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                 {/* Columna Dropbox */}
                 <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
                     <div className="mb-4">
-                        <div className="flex items-center gap-2 mb-1">
-                            <h3 className="text-lg font-bold text-white">Mis Listas de</h3>
-                            <img src="/Dropbox_Icon.svg" alt="Dropbox" className="h-6 w-6" />
-                            <h3 className="text-lg font-bold text-white">Dropbox</h3>
+                        <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2">
+                                <h3 className="text-lg font-bold text-white">Mis Listas de</h3>
+                                <img src="/Dropbox_Icon.svg" alt="Dropbox" className="h-6 w-6" />
+                                <h3 className="text-lg font-bold text-white">Dropbox</h3>
+                            </div>
+                            {dropboxRefreshToken && (
+                                <button
+                                    onClick={() => searchDropboxForM3UFiles('main')}
+                                    disabled={isSearchingDropbox}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-1 px-3 rounded-md disabled:bg-gray-600 disabled:cursor-not-allowed"
+                                >
+                                    {isSearchingDropbox && dropboxSearchType === 'main' ? 'Buscando...' : 'Buscar en mi Dropbox'}
+                                </button>
+                            )}
                         </div>
                         <p className="text-xs text-gray-400">Pulsa compartir para copiar el enlace para tu app de IPTV</p>
                     </div>
@@ -835,9 +1009,22 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
 
                 {/* Columna Listas Reparadoras */}
                 <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
-                    <div className="flex items-center gap-2 mb-4">
-                        <h3 className="text-lg font-bold text-white">Listas Reparadoras</h3>
-                        <img src="/medical-history.png" alt="Medicina" className="h-6 w-6" />
+                    <div className="mb-4">
+                        <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2">
+                                <h3 className="text-lg font-bold text-white">Listas Reparadoras</h3>
+                                <img src="/medical-history.png" alt="Medicina" className="h-6 w-6" />
+                            </div>
+                            {dropboxRefreshToken && (
+                                <button
+                                    onClick={() => searchDropboxForM3UFiles('medicina')}
+                                    disabled={isSearchingDropbox}
+                                    className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold py-1 px-3 rounded-md disabled:bg-gray-600 disabled:cursor-not-allowed"
+                                >
+                                    {isSearchingDropbox && dropboxSearchType === 'medicina' ? 'Buscando...' : 'Buscar en mi Dropbox'}
+                                </button>
+                            )}
+                        </div>
                     </div>
                     {savedMedicinaLists.length === 0 ? (
                         <div className="text-center text-gray-400 py-8">
@@ -877,6 +1064,91 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                                 className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-md transition-colors"
                             >
                                 OK
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de archivos de Dropbox encontrados */}
+            {showDropboxModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-gray-800 rounded-lg p-6 max-w-3xl w-full max-h-[80vh] overflow-y-auto border border-blue-500">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-xl font-semibold text-white">
+                                Archivos M3U encontrados en Dropbox ({foundDropboxFiles.length})
+                            </h3>
+                            <button
+                                onClick={() => {
+                                    setShowDropboxModal(false);
+                                    setFoundDropboxFiles([]);
+                                }}
+                                className="text-gray-400 hover:text-white text-2xl"
+                            >
+                                ×
+                            </button>
+                        </div>
+                        
+                        <div className="flex items-center justify-between mb-4">
+                            <p className="text-sm text-gray-400">
+                                Selecciona los archivos que quieres añadir a tu lista
+                            </p>
+                            <button
+                                onClick={toggleAllFiles}
+                                className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
+                            >
+                                {foundDropboxFiles.every(f => f.selected) ? (
+                                    <>
+                                        <Square size={16} /> Deseleccionar todos
+                                    </>
+                                ) : (
+                                    <>
+                                        <CheckSquare size={16} /> Seleccionar todos
+                                    </>
+                                )}
+                            </button>
+                        </div>
+
+                        <div className="space-y-2 mb-4 max-h-96 overflow-y-auto">
+                            {foundDropboxFiles.map((file) => (
+                                <label
+                                    key={file.path}
+                                    className="flex items-center gap-3 p-3 bg-gray-700 hover:bg-gray-600 rounded-md cursor-pointer transition-colors"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={file.selected}
+                                        onChange={() => toggleFileSelection(file.path)}
+                                        className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+                                    />
+                                    <div className="flex-grow min-w-0">
+                                        <p className="text-white text-sm font-medium truncate">
+                                            {file.name}
+                                        </p>
+                                        <p className="text-gray-400 text-xs truncate">
+                                            {file.path}
+                                        </p>
+                                    </div>
+                                </label>
+                            ))}
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={addSelectedFilesToLists}
+                                disabled={foundDropboxFiles.filter(f => f.selected).length === 0 || isSearchingDropbox}
+                                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md disabled:bg-gray-600 disabled:cursor-not-allowed"
+                            >
+                                {isSearchingDropbox ? 'Añadiendo...' : `Añadir ${foundDropboxFiles.filter(f => f.selected).length} archivos`}
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowDropboxModal(false);
+                                    setFoundDropboxFiles([]);
+                                }}
+                                className="px-6 bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 rounded-md"
+                            >
+                                Cancelar
                             </button>
                         </div>
                     </div>
