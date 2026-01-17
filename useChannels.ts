@@ -3,15 +3,26 @@ import { arrayMove } from '@dnd-kit/sortable';
 import { Channel, ChannelStatus } from './index';
 
 function extractDropboxFileName(url: string): string | null {
-    if (!url || !url.includes('dropbox.com')) {
+    if (!url) {
         return null;
     }
     try {
         const urlObject = new URL(url);
         const pathname = urlObject.pathname;
         const parts = pathname.split('/');
-        const filename = parts[parts.length - 1];
-        return filename && filename.includes('.') ? filename : null;
+        let filename = parts[parts.length - 1];
+        
+        // Limpiar parámetros de query si existen en el nombre
+        if (filename.includes('?')) {
+            filename = filename.split('?')[0];
+        }
+        
+        // Verificar que sea un archivo válido (.m3u, .m3u8, etc.)
+        if (filename && (filename.endsWith('.m3u') || filename.endsWith('.m3u8') || filename.includes('.'))) {
+            return filename;
+        }
+        
+        return null;
     } catch (error) {
         console.error('Error extracting filename from URL:', error);
         return null;
