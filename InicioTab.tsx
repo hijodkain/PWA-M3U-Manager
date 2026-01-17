@@ -621,27 +621,43 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
 
         try {
             const accessToken = await getDropboxAccessToken();
-            const newLists: Array<{ id: string; name: string; url: string; addedAt?: string }> = [];
-
-            for (const file of selectedFiles) {
-                try {
-                    const shareUrl = await getSharedLink(accessToken, file.path);
-                    newLists.push({
-                        id: Date.now().toString() + Math.random(),
-                        name: file.name.replace(/\.(m3u8?)/i, ''),
-                        url: shareUrl,
-                        ...(dropboxSearchType === 'main' ? { addedAt: new Date().toISOString() } : {}),
-                    });
-                } catch (error) {
-                    console.error(`Error getting link for ${file.name}:`, error);
-                }
-            }
 
             if (dropboxSearchType === 'main') {
+                const newLists: Array<{ id: string; name: string; url: string; addedAt: string }> = [];
+                
+                for (const file of selectedFiles) {
+                    try {
+                        const shareUrl = await getSharedLink(accessToken, file.path);
+                        newLists.push({
+                            id: Date.now().toString() + Math.random(),
+                            name: file.name.replace(/\.(m3u8?)/i, ''),
+                            url: shareUrl,
+                            addedAt: new Date().toISOString(),
+                        });
+                    } catch (error) {
+                        console.error(`Error getting link for ${file.name}:`, error);
+                    }
+                }
+
                 const updated = [...savedDropboxLists, ...newLists];
                 setSavedDropboxLists(updated);
                 localStorage.setItem('dropboxLists', JSON.stringify(updated));
             } else {
+                const newLists: Array<{ id: string; name: string; url: string }> = [];
+                
+                for (const file of selectedFiles) {
+                    try {
+                        const shareUrl = await getSharedLink(accessToken, file.path);
+                        newLists.push({
+                            id: Date.now().toString() + Math.random(),
+                            name: file.name.replace(/\.(m3u8?)/i, ''),
+                            url: shareUrl,
+                        });
+                    } catch (error) {
+                        console.error(`Error getting link for ${file.name}:`, error);
+                    }
+                }
+
                 const updated = [...savedMedicinaLists, ...newLists];
                 setSavedMedicinaLists(updated);
                 localStorage.setItem('medicinaLists', JSON.stringify(updated));
@@ -649,7 +665,7 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
 
             setShowDropboxModal(false);
             setFoundDropboxFiles([]);
-            alert(`${newLists.length} archivos añadidos correctamente`);
+            alert(`${selectedFiles.length} archivos añadidos correctamente`);
 
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
