@@ -193,81 +193,122 @@ const SaveTab: React.FC<SaveTabProps> = ({ channelsHook, settingsHook }) => {
 
     return (
         <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
-            <h2 className="text-xl font-bold mb-4 text-white">Guardar y Exportar Playlist</h2>
+            <h2 className="text-xl font-bold mb-6 text-white">Guardar y Exportar Playlist</h2>
 
-            <div className="mb-6">
-                <label htmlFor="filename-input" className="block text-sm font-medium text-gray-300 mb-2">
-                    Nombre del archivo
-                </label>
-                <input
-                    id="filename-input"
-                    type="text"
-                    value={fileName}
-                    onChange={(e) => {
-                        const newValue = e.target.value.replace(/\s+/g, '_');
-                        setFileName(newValue);
-                    }}
-                    className="w-full md:w-1/2 bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="mi_playlist.m3u"
-                />
-                <p className="text-xs text-gray-400 mt-1">Los espacios se convertirán automáticamente en guiones bajos (_)</p>
-            </div>
-
-            {/* Sección Subir a Dropbox primero */}
-            <div className="mb-8">
-                <h3 className="text-lg font-bold text-white mb-2">Subir a Dropbox</h3>
-                <p className="text-sm text-gray-400 mb-4">
-                    El archivo se guardará como <strong>{fileName}</strong> en la carpeta de la aplicación de tu Dropbox.
-                </p>
-                <div className="flex flex-wrap gap-4">
-                    <button
-                        onClick={() => handleUploadToDropbox(false)}
-                        disabled={isUploading || channels.length === 0 || areDropboxSettingsMissing}
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md flex items-center justify-center disabled:bg-gray-600 disabled:cursor-not-allowed"
-                    >
-                        <UploadCloud size={18} className="mr-2" />
-                        {isUploading ? 'Subiendo...' : 'Actualizar en mi Dropbox'}
-                    </button>
-                    <button
-                        onClick={() => handleUploadToDropbox(true)}
-                        disabled={isUploading || channels.length === 0 || areDropboxSettingsMissing}
-                        className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md flex items-center justify-center disabled:bg-gray-600 disabled:cursor-not-allowed"
-                    >
-                        <PlusCircle size={18} className="mr-2" />
-                        {isUploading ? 'Subiendo...' : 'Subir nueva lista a mi Dropbox'}
-                    </button>
+            {channels.length === 0 && (
+                <div className="bg-yellow-900/30 border border-yellow-600 rounded-lg p-4 mb-6">
+                    <p className="text-yellow-400">
+                        No hay canales en la lista. Carga una lista en la pestaña "Inicio" para poder exportarla.
+                    </p>
                 </div>
+            )}
+
+            {/* SECCIÓN 1: Actualizar archivo original en Dropbox */}
+            {originalFileName && (
+                <>
+                    <div className="mb-8">
+                        <h3 className="text-lg font-bold text-blue-400 mb-3">1. Actualizar lista en mi Dropbox</h3>
+                        <p className="text-sm text-gray-400 mb-4">
+                            Actualiza el archivo <strong className="text-white">{originalFileName}</strong> en tu Dropbox con los cambios realizados.
+                        </p>
+                        
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-300 mb-2">
+                                Nombre del archivo en Dropbox:
+                            </label>
+                            <input
+                                type="text"
+                                value={originalFileName}
+                                disabled
+                                className="w-full md:w-2/3 bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-gray-400 cursor-not-allowed"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">Este es el nombre original del archivo que cargaste</p>
+                        </div>
+
+                        <button
+                            onClick={() => handleUploadToDropbox(false)}
+                            disabled={isUploading || channels.length === 0 || areDropboxSettingsMissing}
+                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-md flex items-center justify-center disabled:bg-gray-600 disabled:cursor-not-allowed"
+                        >
+                            <UploadCloud size={20} className="mr-2" />
+                            {isUploading ? 'Actualizando...' : 'Actualizar en mi Dropbox'}
+                        </button>
+
+                        {areDropboxSettingsMissing && (
+                            <p className="text-xs text-yellow-400 mt-2">
+                                Falta la configuración de Dropbox. Por favor, conéctate en la pestaña de Configuración.
+                            </p>
+                        )}
+                        {uploadStatus && (
+                            <p className="mt-4 text-sm text-yellow-300">{uploadStatus}</p>
+                        )}
+                    </div>
+
+                    <hr className="my-8 border-gray-700" />
+                </>
+            )}
+
+            {/* SECCIÓN 2: Subir nueva lista a Dropbox */}
+            <div className="mb-8">
+                <h3 className="text-lg font-bold text-green-400 mb-3">
+                    {originalFileName ? '2. Subir como nueva lista a mi Dropbox' : '1. Subir nueva lista a mi Dropbox'}
+                </h3>
+                <p className="text-sm text-gray-400 mb-4">
+                    Crea una nueva lista en tu Dropbox y añádela a "Mis listas de Dropbox" para acceso rápido.
+                </p>
+
+                <button
+                    onClick={() => handleUploadToDropbox(true)}
+                    disabled={isUploading || channels.length === 0 || areDropboxSettingsMissing}
+                    className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-md flex items-center justify-center disabled:bg-gray-600 disabled:cursor-not-allowed"
+                >
+                    <PlusCircle size={20} className="mr-2" />
+                    {isUploading ? 'Subiendo...' : 'Subir nueva lista a mi Dropbox'}
+                </button>
+
                 {areDropboxSettingsMissing && (
                     <p className="text-xs text-yellow-400 mt-2">
                         Falta la configuración de Dropbox. Por favor, conéctate en la pestaña de Configuración.
                     </p>
                 )}
-                {uploadStatus && (
-                    <p className="mt-4 text-sm text-yellow-300">{uploadStatus}</p>
-                )}
             </div>
 
-            <hr className="my-8 border-gray-600" />
+            <hr className="my-8 border-gray-700" />
 
-            {/* Sección Guardar y Exportar Playlist */}
+            {/* SECCIÓN 3: Descargar archivo M3U a local */}
             <div>
-                <h3 className="text-lg font-bold text-white mb-4">Guardar y Exportar Playlist</h3>
-                <div className="flex flex-wrap gap-4">
-                    <button
-                        onClick={handleDownload}
-                        disabled={channels.length === 0}
-                        className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md flex items-center disabled:bg-gray-600 disabled:cursor-not-allowed"
-                    >
-                        <FileDown size={18} className="mr-2" /> Descargar .m3u
-                    </button>
-                </div>
-            </div>
-
-            {channels.length === 0 && (
-                <p className="mt-4 text-yellow-400">
-                    No hay canales en la lista para guardar. Carga una lista en la pestaña "Editor de Playlist".
+                <h3 className="text-lg font-bold text-purple-400 mb-3">
+                    {originalFileName ? '3. Descargar archivo M3U a local' : '2. Descargar archivo M3U a local'}
+                </h3>
+                <p className="text-sm text-gray-400 mb-4">
+                    Descarga el archivo M3U a tu ordenador.
                 </p>
-            )}
+
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Nombre del archivo a descargar:
+                    </label>
+                    <input
+                        type="text"
+                        value={fileName}
+                        onChange={(e) => {
+                            const newValue = e.target.value.replace(/\s+/g, '_');
+                            setFileName(newValue);
+                        }}
+                        className="w-full md:w-2/3 bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-purple-500 focus:border-purple-500"
+                        placeholder="mi_playlist.m3u"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Los espacios se convertirán automáticamente en guiones bajos (_)</p>
+                </div>
+
+                <button
+                    onClick={handleDownload}
+                    disabled={channels.length === 0}
+                    className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-md flex items-center disabled:bg-gray-600 disabled:cursor-not-allowed"
+                >
+                    <FileDown size={20} className="mr-2" /> Descargar .m3u
+                </button>
+            </div>
 
             {/* Modal: Añadir a "Mis listas de Dropbox" */}
             {showAddToListModal && (
