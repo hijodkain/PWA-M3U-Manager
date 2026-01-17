@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, Download, Smartphone, AlertCircle, Share2, Trash2, Filter, CheckSquare, Square, UploadCloud } from 'lucide-react';
+import { Upload, Download, Smartphone, AlertCircle, Share2, Trash2, Filter, CheckSquare, Square, UploadCloud, Info } from 'lucide-react';
 import { useChannels } from './useChannels';
 import { useSettings } from './useSettings';
 import { Channel } from './index';
@@ -804,7 +804,13 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
             <div className="bg-gray-800 p-6 rounded-lg shadow-lg border-2 border-purple-500">
                 <div className="flex items-center gap-3 mb-4">
                     <Filter className="text-purple-400" size={24} />
-                    <h3 className="text-xl font-bold text-purple-400">Filtrar Lista por Categorías</h3>
+                    <h3 className="text-xl font-bold text-purple-400">Sube solo algunos grupos de canales de una lista de reparación.</h3>
+                    <div className="relative group">
+                        <Info className="text-yellow-400 cursor-help" size={20} />
+                        <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-64 bg-gray-900 text-white text-xs rounded-lg p-3 shadow-lg z-10 border border-yellow-400">
+                            Manejar listas de decenas de miles de canales puede enlentencer la app hasta detenerla
+                        </div>
+                    </div>
                 </div>
                 <p className="text-gray-300 text-sm mb-4">
                     Carga una lista, selecciona las categorías que quieres mantener y súbela directamente a tu Dropbox como lista reparadora.

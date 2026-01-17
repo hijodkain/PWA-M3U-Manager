@@ -141,7 +141,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-11 gap-4">
-            <div className="lg:col-span-4 bg-gray-800 p-4 rounded-lg flex flex-col">
+            <div className="lg:col-span-5 bg-gray-800 p-4 rounded-lg flex flex-col">
                 <h3 className="font-bold text-lg mb-2">{isSencillo ? 'Mi Lista' : 'Lista Principal'}</h3>
                 {!isSencillo && (
                     <SmartSearchInput
@@ -287,7 +287,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                     </button>
                 </div>
             </div>
-            <div className="lg:col-span-6 bg-gray-800 p-4 rounded-lg flex flex-col">
+            <div className="lg:col-span-5 bg-gray-800 p-4 rounded-lg flex flex-col">
                 {/* Header con nombre de lista en modo sencillo */}
                 {isSencillo && filteredReparacionChannels.length > 0 && reparacionListName && (
                     <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-700">

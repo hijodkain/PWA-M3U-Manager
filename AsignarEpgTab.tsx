@@ -229,42 +229,47 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                 <div className="w-full space-y-2">
                     <button
                         onClick={handleOttModeClick}
-                        className={`w-full p-3 rounded-md border-2 transition-all ${
+                        className={`w-full p-2 rounded-md border-2 transition-all overflow-hidden ${
                             ottModeActive 
                                 ? 'border-purple-500 bg-purple-900/30' 
                                 : 'border-gray-600 hover:border-gray-500 bg-gray-700/30'
                         }`}
                         title="Modo OTT: Asigna channel ID a tvg-id y tvg-name"
                     >
-                        <div className="flex items-center justify-center">
+                        <div className="flex items-center justify-center w-full h-full">
                             <img 
                                 src="/ott-logo.webp" 
                                 alt="OTT" 
-                                className="h-12 w-auto object-contain"
+                                className="w-full h-auto object-contain"
                             />
                         </div>
                     </button>
                     
                     <button
                         onClick={handleTivimateModeClick}
-                        className={`w-full p-3 rounded-md border-2 transition-all ${
+                        className={`w-full p-2 rounded-md border-2 transition-all overflow-hidden ${
                             tivimateModeActive 
                                 ? 'border-blue-500 bg-blue-900/30' 
                                 : 'border-gray-600 hover:border-gray-500 bg-gray-700/30'
                         }`}
                         title="Modo TiviMate: Asigna channel ID solo a tvg-id"
                     >
-                        <div className="flex items-center justify-center">
+                        <div className="flex items-center justify-center w-full h-full">
                             <img 
-                                src="/Tivimate-logo.png" 
+                                src="/tivimate-logo.webp" 
                                 alt="TiviMate" 
-                                className="h-12 w-auto object-contain"
+                                className="w-full h-auto object-contain"
                             />
                         </div>
                     </button>
                 </div>
                 
                 <div className="w-full border-t border-gray-700 my-1"></div>
+                
+                {/* Pregunta sobre logo */}
+                <p className="text-xs text-center text-gray-300 mb-2">
+                    ¿Extraer el logo del EPG y asignarlo a mi canal?
+                </p>
                 
                 {/* Botones de logo */}
                 <div className="w-full space-y-2">
@@ -276,7 +281,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                 : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
                         }`}
                     >
-                        <Copy size={14} /> Transferir Logo
+                        <Copy size={14} /> Si
                     </button>
                     
                     <button
@@ -287,7 +292,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                 : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
                         }`}
                     >
-                        <ArrowLeftCircle size={14} /> Mantener Logo
+                        <ArrowLeftCircle size={14} /> NO
                     </button>
                 </div>
             </div>
