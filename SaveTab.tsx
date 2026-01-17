@@ -9,7 +9,7 @@ interface SaveTabProps {
 }
 
 const SaveTab: React.FC<SaveTabProps> = ({ channelsHook, settingsHook }) => {
-    const { channels, fileName, setFileName, handleDownload, generateM3UContent } = channelsHook;
+    const { channels, fileName, setFileName, originalFileName, handleDownload, generateM3UContent } = channelsHook;
     const { dropboxAppKey, dropboxRefreshToken } = settingsHook;
 
     const [isUploading, setIsUploading] = useState(false);
@@ -127,7 +127,9 @@ const SaveTab: React.FC<SaveTabProps> = ({ channelsHook, settingsHook }) => {
         try {
             const accessToken = await getDropboxAccessToken();
             const fileContent = generateM3UContent();
-            const filePath = `/${fileName}`;
+            // Si es actualización (no nuevo archivo), usar el nombre original del archivo cargado
+            const fileNameToUse = !isNewFile && originalFileName ? originalFileName : fileName;
+            const filePath = `/${fileNameToUse}`;
 
             const dropboxApiArg = {
                 path: filePath,

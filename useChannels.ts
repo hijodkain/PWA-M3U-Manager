@@ -30,6 +30,7 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [fileName, setFileName] = useState('my_playlist.m3u');
+    const [originalFileName, setOriginalFileName] = useState<string | null>(null);
     const [activeId, setActiveId] = useState<string | null>(null);
     const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
     const [filterGroup, setFilterGroup] = useState<string>('Todos los canales');
@@ -110,6 +111,7 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
             const extractedFname = extractDropboxFileName(url);
             if (extractedFname) {
                 setFileName(extractedFname);
+                setOriginalFileName(extractedFname);
             }
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Ocurrió un error desconocido.');
@@ -123,6 +125,7 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
         setIsLoading(true);
         setError(null);
         setFileName(file.name);
+        setOriginalFileName(file.name);
         const reader = new FileReader();
         reader.onload = (e) => {
             const content = e.target?.result as string;
@@ -400,6 +403,7 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
         error,
         fileName,
         setFileName,
+        originalFileName,
         activeId,
         selectedChannels,
         setSelectedChannels,

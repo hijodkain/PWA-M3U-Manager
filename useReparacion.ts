@@ -31,6 +31,7 @@ export const useReparacion = (
         isRunning: false
     });
     const [reparacionUrl, setReparacionUrl] = useState('');
+    const [reparacionListName, setReparacionListName] = useState<string | null>(null);
     const [isCurationLoading, setIsCurationLoading] = useState(false);
     const [curationError, setCurationError] = useState<string | null>(null);
     const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
@@ -422,6 +423,7 @@ export const useReparacion = (
                 setReparacionChannels(channels);
                 // Resetear el filtro a 'Todos los canales' cuando se carga una nueva lista
                 setReparacionListFilter('Todos los canales');
+                // El nombre de la lista se establecerá en handleReparacionUrlLoad o handleReparacionFileUpload
             } else {
                 setCurationError(message);
             }
@@ -469,6 +471,24 @@ export const useReparacion = (
                 throw new Error(`Error al descargar la lista: ${response.statusText}`);
             }
             const text = await response.text();
+            
+            // Extraer nombre del archivo de la URL
+            let fileName = 'Lista de reparación';
+            if (reparacionUrl.includes('dropbox.com')) {
+                try {
+                    const urlObject = new URL(reparacionUrl);
+                    const pathname = urlObject.pathname;
+                    const parts = pathname.split('/');
+                    const extracted = parts[parts.length - 1];
+                    if (extracted && extracted.includes('.')) {
+                        fileName = extracted.replace(/\.(m3u8?|txt)$/i, '');
+                    }
+                } catch (error) {
+                    console.error('Error extracting filename:', error);
+                }
+            }
+            
+            setReparacionListName(fileName);
             processCurationM3U(text);
         } catch (error) {
             console.error('Failed to load from URL', error);
@@ -508,6 +528,11 @@ export const useReparacion = (
         if (!file) return;
         setIsCurationLoading(true);
         setCurationError(null);
+        
+        // Guardar nombre del archivo (sin extensión)
+        const fileName = file.name.replace(/\.(m3u8?|txt)$/i, '');
+        setReparacionListName(fileName);
+        
         const reader = new FileReader();
         reader.onload = (e) => {
             const content = e.target?.result as string;
@@ -708,6 +733,13 @@ export const useReparacion = (
         toggleSelectAllReparacionGroup,
         verifySelectedReparacionChannels,
         handleAddSelectedFromReparacion,
+        reparacionListName,
+        clearReparacionList: () => {
+            setReparacionChannels([]);
+            setReparacionListName(null);
+            setReparacionUrl('');
+            setSelectedReparacionChannels(new Set());
+        },
         mainListSearch,
         setMainListSearch,
         reparacionListSearch,

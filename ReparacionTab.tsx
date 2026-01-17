@@ -40,6 +40,8 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         setReparacionListFilter,
         handleReparacionFileUpload,
         processCurationM3U,
+        reparacionListName,
+        clearReparacionList,
         toggleAttributeToCopy,
         handleSourceChannelClick,
         mainListUniqueGroups,
@@ -286,6 +288,22 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 </div>
             </div>
             <div className="lg:col-span-6 bg-gray-800 p-4 rounded-lg flex flex-col">
+                {/* Header con nombre de lista en modo sencillo */}
+                {isSencillo && filteredReparacionChannels.length > 0 && reparacionListName && (
+                    <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-700">
+                        <h3 className="font-bold text-lg text-white">
+                            Lista de reparación: <span className="text-blue-400">{reparacionListName}</span>
+                        </h3>
+                        <button
+                            onClick={clearReparacionList}
+                            className="text-red-500 hover:text-red-400 font-bold text-2xl px-2"
+                            title="Cerrar lista y volver al selector"
+                        >
+                            ×
+                        </button>
+                    </div>
+                )}
+                
                 {/* Sección de carga - se oculta en modo sencillo cuando hay canales cargados */}
                 {!(isSencillo && filteredReparacionChannels.length > 0) && (
                     <>
