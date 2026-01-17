@@ -418,7 +418,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     onSelectClick={(e) => toggleReparacionSelection(ch.id, virtualItem.index, e.shiftKey, e.metaKey, e.ctrlKey)}
                                     isSelected={false}
                                     isChecked={selectedReparacionChannels.has(ch.id)}
-                                    showCheckbox={true}
+                                    showCheckbox={!isSencillo}
                                     verificationStatus={channelInfo.status}
                                     quality={channelInfo.quality}
                                     resolution={channelInfo.resolution}
