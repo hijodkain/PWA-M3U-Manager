@@ -204,54 +204,58 @@ const SaveTab: React.FC<SaveTabProps> = ({ channelsHook, settingsHook }) => {
             )}
 
             {/* SECCIÓN 1: Actualizar archivo original en Dropbox */}
-            {originalFileName && (
-                <>
-                    <div className="mb-8">
-                        <h3 className="text-lg font-bold text-blue-400 mb-3">1. Actualizar lista en mi Dropbox</h3>
-                        <p className="text-sm text-gray-400 mb-4">
-                            Actualiza el archivo <strong className="text-white">{originalFileName}</strong> en tu Dropbox con los cambios realizados.
-                        </p>
-                        
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-300 mb-2">
-                                Nombre del archivo en Dropbox:
-                            </label>
-                            <input
-                                type="text"
-                                value={originalFileName}
-                                disabled
-                                className="w-full md:w-2/3 bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-gray-400 cursor-not-allowed"
-                            />
-                            <p className="text-xs text-gray-500 mt-1">Este es el nombre original del archivo que cargaste</p>
-                        </div>
+            <div className="mb-8">
+                <h3 className="text-lg font-bold text-blue-400 mb-3">1. Actualizar lista en mi Dropbox</h3>
+                <p className="text-sm text-gray-400 mb-4">
+                    {originalFileName ? (
+                        <>Actualiza el archivo <strong className="text-white">{originalFileName}</strong> en tu Dropbox con los cambios realizados.</>
+                    ) : (
+                        <>Sube la lista actual a tu Dropbox con el nombre <strong className="text-white">{fileName}</strong>.</>
+                    )}
+                </p>
+                
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Nombre del archivo en Dropbox:
+                    </label>
+                    <input
+                        type="text"
+                        value={originalFileName || fileName}
+                        disabled
+                        className="w-full md:w-2/3 bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-gray-400 cursor-not-allowed"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                        {originalFileName 
+                            ? 'Este es el nombre original del archivo que cargaste' 
+                            : 'Usa el nombre del archivo actual'}
+                    </p>
+                </div>
 
-                        <button
-                            onClick={() => handleUploadToDropbox(false)}
-                            disabled={isUploading || channels.length === 0 || areDropboxSettingsMissing}
-                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-md flex items-center justify-center disabled:bg-gray-600 disabled:cursor-not-allowed"
-                        >
-                            <UploadCloud size={20} className="mr-2" />
-                            {isUploading ? 'Actualizando...' : 'Actualizar en mi Dropbox'}
-                        </button>
+                <button
+                    onClick={() => handleUploadToDropbox(false)}
+                    disabled={isUploading || channels.length === 0 || areDropboxSettingsMissing}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-md flex items-center justify-center disabled:bg-gray-600 disabled:cursor-not-allowed"
+                >
+                    <UploadCloud size={20} className="mr-2" />
+                    {isUploading ? 'Actualizando...' : 'Actualizar en mi Dropbox'}
+                </button>
 
-                        {areDropboxSettingsMissing && (
-                            <p className="text-xs text-yellow-400 mt-2">
-                                Falta la configuración de Dropbox. Por favor, conéctate en la pestaña de Configuración.
-                            </p>
-                        )}
-                        {uploadStatus && (
-                            <p className="mt-4 text-sm text-yellow-300">{uploadStatus}</p>
-                        )}
-                    </div>
+                {areDropboxSettingsMissing && (
+                    <p className="text-xs text-yellow-400 mt-2">
+                        Falta la configuración de Dropbox. Por favor, conéctate en la pestaña de Configuración.
+                    </p>
+                )}
+                {uploadStatus && (
+                    <p className="mt-4 text-sm text-yellow-300">{uploadStatus}</p>
+                )}
+            </div>
 
-                    <hr className="my-8 border-gray-700" />
-                </>
-            )}
+            <hr className="my-8 border-gray-700" />
 
             {/* SECCIÓN 2: Subir nueva lista a Dropbox */}
             <div className="mb-8">
                 <h3 className="text-lg font-bold text-green-400 mb-3">
-                    {originalFileName ? '2. Subir como nueva lista a mi Dropbox' : '1. Subir nueva lista a mi Dropbox'}
+                    2. Subir nueva lista a mi Dropbox
                 </h3>
                 <p className="text-sm text-gray-400 mb-4">
                     Crea una nueva lista en tu Dropbox y añádela a "Mis listas de Dropbox" para acceso rápido.
@@ -278,7 +282,7 @@ const SaveTab: React.FC<SaveTabProps> = ({ channelsHook, settingsHook }) => {
             {/* SECCIÓN 3: Descargar archivo M3U a local */}
             <div>
                 <h3 className="text-lg font-bold text-purple-400 mb-3">
-                    {originalFileName ? '3. Descargar archivo M3U a local' : '2. Descargar archivo M3U a local'}
+                    3. Descargar archivo M3U a local
                 </h3>
                 <p className="text-sm text-gray-400 mb-4">
                     Descarga el archivo M3U a tu ordenador.
