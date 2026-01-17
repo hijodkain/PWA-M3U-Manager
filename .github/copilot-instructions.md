@@ -58,6 +58,8 @@ El estado persistente usa estas claves (ver [useSettings.ts](../useSettings.ts))
 - `appMode`: 'sencillo' | 'pro'
 - `dropbox_app_key`, `dropbox_refresh_token_new`
 - `saved_m3u_urls`, `saved_epg_urls`
+- `medicinaLists`: Listas reparadoras guardadas con {id, name, url}
+- `dropboxLists`: Listas principales de Dropbox guardadas con {id, name, url, addedAt}
 - `channel_prefixes`, `channel_suffixes`: Para normalización en búsqueda inteligente
 
 ### Sistema de Búsqueda Inteligente
@@ -65,6 +67,13 @@ El estado persistente usa estas claves (ver [useSettings.ts](../useSettings.ts))
 - Normaliza nombres de canales eliminando prefijos/sufijos configurables (ej: "HD ", " 4K")
 - Devuelve coincidencias con score (0-100%) e indicadores de tipo (exacta/parcial/similaridad)
 - Usado en pestañas Reparación y Asignar EPG para encontrar canales similares
+- **VISIBLE en ambos modos** (sencillo y pro) desde las últimas actualizaciones
+
+### Sistema de Nombres de Archivo Original
+[useChannels.ts](../useChannels.ts) mantiene dos estados para nombres de archivo:
+- `fileName`: Nombre editable para descargas locales
+- `originalFileName`: Nombre extraído de la URL original al cargar, usado para actualizar en Dropbox
+- Función `extractDropboxFileName()`: Extrae nombre de cualquier URL que termine en .m3u/.m3u8, limpia parámetros de query
 
 ## 🔧 Flujos de Trabajo de Desarrollo
 
@@ -175,6 +184,37 @@ El `.gitignore` ya está configurado correctamente. NO modificar sin razón.
 4. **URLs Dropbox**: Deben transformarse antes de fetch (ver lógica en proxy.ts)
 5. **Features por Modo**: Verificar `useAppMode().isPro` antes de mostrar funciones avanzadas
 6. **Gestión de Historial**: Llamar `saveStateToHistory()` después de actualizaciones masivas de canales para undo/redo
+
+## 🆕 Actualizaciones Recientes (Enero 2026)
+
+### ReparacionTab - Mejoras UX
+- **Toggle de selección**: Canal seleccionado se deselecciona al hacer clic de nuevo (`destinationChannelId === ch.id ? null : ch.id`)
+- **Búsqueda visible en modo sencillo**: SmartSearchInput ahora visible en ambos modos (pro y sencillo) para lista de reparación
+- **Header con nombre de lista**: En modo sencillo muestra "Lista de reparación: [Nombre]" con botón X rojo para limpiar
+- **Estado `reparacionListName`**: Nuevo estado que guarda el nombre de la lista cargada, extraído de URL o archivo
+- **Función `clearReparacionList()`**: Limpia canales, nombre y URL, vuelve a mostrar selector
+
+### SaveTab - Reorganización Completa (3 Secciones)
+**SECCIÓN 1: Actualizar lista en mi Dropbox** (azul, siempre visible)
+- Caja de texto deshabilitada con `originalFileName || fileName`
+- Botón "Actualizar en mi Dropbox" usa nombre original del archivo cargado
+- Descripción dinámica según haya `originalFileName` o no
+
+**SECCIÓN 2: Subir nueva lista a mi Dropbox** (verde)
+- Botón "Subir nueva lista a mi Dropbox" abre modal pidiendo nombre
+- Añade automáticamente a `dropboxLists` en localStorage
+- Función `handleUploadToDropbox(true)` para archivos nuevos
+
+**SECCIÓN 3: Descargar archivo M3U a local** (púrpura)
+- Caja de texto editable con `fileName` para personalizar nombre de descarga
+- Botón "Descargar .m3u" usa el nombre personalizado
+- Espacios convertidos automáticamente a guiones bajos
+
+### InicioTab - Funcionalidades Añadidas
+- **Búsqueda en Dropbox**: Botones "Buscar en mi Dropbox" en secciones de listas principales y reparadoras
+- **Búsqueda recursiva**: Función `searchDropboxForM3UFiles()` con paginación automática
+- **Filtrado por categorías**: Carga M3U, selecciona group-title, genera lista filtrada con nombre automático `Repara_dominio_DD_MM_YYYY.m3u`
+- **Gestión de listas medicina**: localStorage `medicinaLists` con añadir/eliminar/cargar
 
 ## 📚 Archivos de Documentación Clave
 - [DEPLOYMENT.md](../DEPLOYMENT.md): Guía completa de despliegue (Vercel + AWS)
