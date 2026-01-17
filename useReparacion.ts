@@ -420,6 +420,8 @@ export const useReparacion = (
             const { type, channels, message } = event.data;
             if (type === 'success') {
                 setReparacionChannels(channels);
+                // Resetear el filtro a 'Todos los canales' cuando se carga una nueva lista
+                setReparacionListFilter('Todos los canales');
             } else {
                 setCurationError(message);
             }
