@@ -221,7 +221,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     key={ch.id}
                                     channel={ch}
                                     onBodyClick={() => {
-                                        setDestinationChannelId(ch.id)
+                                        setDestinationChannelId(destinationChannelId === ch.id ? null : ch.id);
                                         setReparacionListSearch(normalizeChannelName(ch.name));
                                     }}
                                     isSelected={destinationChannelId === ch.id}
@@ -369,6 +369,18 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                         <label htmlFor="select-all-group" className="text-sm text-gray-300">Seleccionar todo el grupo</label>
                     </div>
                 )}
+                
+                {/* Buscador de lista de reparación - visible en ambos modos */}
+                <SmartSearchInput
+                    searchTerm={reparacionListSearch}
+                    onSearchChange={setReparacionListSearch}
+                    isSmartSearchEnabled={isSmartSearchEnabled}
+                    onToggleSmartSearch={toggleSmartSearch}
+                    placeholder="Buscar canal en lista de reparación..."
+                    showResults={true}
+                    resultCount={filteredReparacionChannels.length}
+                    className="mb-2"
+                />
                 
                 {/* Indicador de progreso de verificación */}
                 {verificationProgress.isRunning && (
