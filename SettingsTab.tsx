@@ -396,6 +396,8 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
                 </div>
 
                 <h3 className="text-lg font-semibold mb-3">Añadir EPG</h3>
+                
+                <form onSubmit={handleAddEpgUrl} className="bg-gray-700 p-4 rounded-lg mb-4 space-y-4 md:space-y-0 md:flex md:items-end md:gap-4">
                     <div className="flex-grow">
                         <label htmlFor="epg-name" className="block text-sm font-medium text-gray-300 mb-1">Nombre</label>
                         <input
