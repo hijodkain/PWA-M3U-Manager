@@ -123,7 +123,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             case 'failed':
                 return <span title="Fallido"><ShieldX size={16} className="text-red-500 mx-auto" /></span>;
             case 'verifying':
-                return <span title="Verificando..."><Hourglass size={16} className="text-yellow-500 mx-auto animate-spin" /></span>;
+                return <span title="Verificando..."><ShieldQuestion size={16} className="text-yellow-500 mx-auto animate-pulse" /></span>;
             default:
                 return <span title="Pendiente"><ShieldQuestion size={16} className="text-gray-500 mx-auto" /></span>;
         }
