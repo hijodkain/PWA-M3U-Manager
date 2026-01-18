@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ExternalLink, XCircle, PlusCircle, Trash2 } from 'lucide-react';
+import { ExternalLink, XCircle, PlusCircle, Trash2, Copy } from 'lucide-react';
 import { useSettings } from './useSettings';
 
 interface SettingsTabProps {
@@ -360,30 +360,43 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
             <hr className="my-8 border-gray-600" />
 
             <div>
-                <h2 className="text-xl font-bold mb-2">Fuentes EPG Guardadas</h2>
+                <h2 className="text-xl font-bold mb-2">Ajustes de EPG</h2>
                 <div className="mb-4 text-sm text-gray-300">
                     <p className="mb-2">Prueba con alguna de estas dos listas públicas o añade la tuya:</p>
-                    <ol className="list-decimal list-inside space-y-1 text-blue-400">
-                        <li>
-                            <a href="https://raw.githubusercontent.com/davidmuma/EPG_dobleM/master/guiaiptv.xml" 
-                               target="_blank" 
-                               rel="noopener noreferrer" 
-                               className="hover:text-blue-300 underline break-all">
-                                https://raw.githubusercontent.com/davidmuma/EPG_dobleM/master/guiaiptv.xml
-                            </a>
-                        </li>
-                        <li>
-                            <a href="https://iptv-epg.org/files/epg-es.xml" 
-                               target="_blank" 
-                               rel="noopener noreferrer" 
-                               className="hover:text-blue-300 underline break-all">
-                                https://iptv-epg.org/files/epg-es.xml
-                            </a>
-                        </li>
-                    </ol>
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-2 bg-gray-700 p-2 rounded">
+                            <span className="text-xs text-gray-300 flex-grow break-all">
+                                1. https://raw.githubusercontent.com/davidmuma/EPG_dobleM/master/guiaiptv.xml
+                            </span>
+                            <button
+                                onClick={() => {
+                                    navigator.clipboard.writeText('https://raw.githubusercontent.com/davidmuma/EPG_dobleM/master/guiaiptv.xml');
+                                }}
+                                className="text-blue-400 hover:text-blue-300 p-1 flex-shrink-0"
+                                title="Copiar al portapapeles"
+                            >
+                                <Copy size={16} />
+                            </button>
+                        </div>
+                        <div className="flex items-center gap-2 bg-gray-700 p-2 rounded">
+                            <span className="text-xs text-gray-300 flex-grow break-all">
+                                2. https://iptv-epg.org/files/epg-es.xml
+                            </span>
+                            <button
+                                onClick={() => {
+                                    navigator.clipboard.writeText('https://iptv-epg.org/files/epg-es.xml');
+                                }}
+                                className="text-blue-400 hover:text-blue-300 p-1 flex-shrink-0"
+                                title="Copiar al portapapeles"
+                            >
+                                <Copy size={16} />
+                            </button>
+                        </div>
+                    </div>
+                    <p className="mt-3 text-center font-semibold">Añadir EPG</p>
                 </div>
                 
-                <form onSubmit={handleAddEpgUrl} className="bg-gray-700 p-4 rounded-lg mb-6 space-y-4 md:space-y-0 md:flex md:items-end md:gap-4">
+                <form onSubmit={handleAddEpgUrl} className="bg-gray-700 p-4 rounded-lg mb-4 space-y-4 md:space-y-0 md:flex md:items-end md:gap-4">
                     <div className="flex-grow">
                         <label htmlFor="epg-name" className="block text-sm font-medium text-gray-300 mb-1">Nombre</label>
                         <input
@@ -411,6 +424,8 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
                         Añadir
                     </button>
                 </form>
+
+                <h3 className="text-lg font-semibold mb-3">Fuentes EPG guardadas</h3>
 
                 <div className="space-y-3">
                     {savedEpgUrls.length > 0 ? (
