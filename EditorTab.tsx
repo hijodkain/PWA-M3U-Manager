@@ -2,7 +2,7 @@ import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { Upload, Download, Plus, Trash2, GripVertical, Zap, ShieldCheck, ShieldX, Hourglass, ShieldQuestion } from 'lucide-react';
+import { Upload, Download, Plus, Trash2, GripVertical, ShieldCheck, ShieldX, ShieldQuestion } from 'lucide-react';
 import { useChannels } from './useChannels';
 import { useSettings } from './useSettings';
 import { useAppMode } from './AppModeContext';
@@ -48,10 +48,6 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         handleFileUpload,
         handleAddNewChannel,
         handleDeleteSelected,
-        handleVerifyChannels,
-        handleDeleteFailed,
-        isVerifying,
-        verificationProgress,
         handleUpdateChannel,
         handleOrderChange,
         handleDragStart,
@@ -198,6 +194,40 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         setShowDeleteModal(false);
     };
 
+    // Funciones para operaciones de atributos
+    const handleSwapIdName = () => {
+        channelsHook.setChannels(prev =>
+            prev.map(ch =>
+                selectedChannels.includes(ch.id)
+                    ? { ...ch, tvgId: ch.tvgName, tvgName: ch.tvgId }
+                    : ch
+            )
+        );
+        channelsHook.saveStateToHistory();
+    };
+
+    const handleCopyIdToName = () => {
+        channelsHook.setChannels(prev =>
+            prev.map(ch =>
+                selectedChannels.includes(ch.id)
+                    ? { ...ch, tvgName: ch.tvgId }
+                    : ch
+            )
+        );
+        channelsHook.saveStateToHistory();
+    };
+
+    const handleCopyNameToId = () => {
+        channelsHook.setChannels(prev =>
+            prev.map(ch =>
+                selectedChannels.includes(ch.id)
+                    ? { ...ch, tvgId: ch.tvgName }
+                    : ch
+            )
+        );
+        channelsHook.saveStateToHistory();
+    };
+
     return (
         <>
             {!isSencillo && (
@@ -288,26 +318,28 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                     </div>
                     <div className="flex items-center gap-4">
                         <div className="flex items-center gap-2 flex-wrap justify-end">
-                            {isVerifying && (
-                                <div className="text-sm text-blue-400">
-                                    Verificando {verificationProgress} de {channels.length}...
-                                </div>
-                            )}
-                            {!isSencillo && (
+                            {!isSencillo && selectedChannels.length > 0 && (
                                 <>
                                     <button
-                                        onClick={handleVerifyChannels}
-                                        disabled={isVerifying}
-                                        className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-md flex items-center disabled:bg-gray-600 disabled:cursor-not-allowed"
+                                        onClick={handleSwapIdName}
+                                        className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-md flex items-center text-sm"
+                                        title="Intercambia tvg-id por tvg-name en los canales seleccionados"
                                     >
-                                        <Zap size={18} className="mr-2" /> Verificar Canales
+                                        Intercambiar ID ↔ Name
                                     </button>
                                     <button
-                                        onClick={handleDeleteFailed}
-                                        disabled={isVerifying || channels.every(c => c.status !== 'failed')}
-                                        className="bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-md flex items-center disabled:bg-gray-600 disabled:cursor-not-allowed"
+                                        onClick={handleCopyIdToName}
+                                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md flex items-center text-sm"
+                                        title="Copia tvg-id en tvg-name de los canales seleccionados"
                                     >
-                                        <Trash2 size={18} className="mr-2" /> Eliminar Fallidos
+                                        Copiar ID → Name
+                                    </button>
+                                    <button
+                                        onClick={handleCopyNameToId}
+                                        className="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-md flex items-center text-sm"
+                                        title="Copia tvg-name en tvg-id de los canales seleccionados"
+                                    >
+                                        Copiar Name → ID
                                     </button>
                                 </>
                             )}
