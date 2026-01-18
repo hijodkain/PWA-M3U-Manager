@@ -160,6 +160,51 @@ channels[0].name = newName; setChannels(channels);
 - Commits atómicos (un cambio lógico por commit)
 - Nombres de ramas descriptivos: `feature/busqueda-inteligente`, `fix/verificacion-canales`
 
+### 📋 Sistema de Seguimiento de Cambios con Checklists
+
+**REGLAS OBLIGATORIAS:**
+
+1. **Al subir cambios a una rama feature:**
+   - SIEMPRE terminar la respuesta con un **checklist numerado** de TODOS los cambios realizados en esa rama
+   - Formato: `## 📋 CHECKLIST DE CAMBIOS (Rama: feature/nombre)`
+   - Cada cambio debe ser verificable con pasos claros
+   - Incluir checkboxes vacíos `[ ]` para que el usuario pueda marcar
+
+2. **Persistencia del checklist:**
+   - Mantener el checklist completo en memoria durante toda la conversación sobre esa rama
+   - Si el usuario menciona un cambio específico (ej: "cambio 3"), los cambios NO revisados (4, 5, etc.) se DEBEN seguir mencionando
+   - NO eliminar cambios del checklist hasta que se haga merge a main
+
+3. **Al hacer merge a main:**
+   - Presentar un **checklist abreviado** de TODOS los cambios de la rama mergeada
+   - Formato más compacto: título + descripción breve (1 línea por cambio)
+   - Incluir enlace al commit en GitHub
+
+**Ejemplo de checklist en rama:**
+```markdown
+## 📋 CHECKLIST DE CAMBIOS (Rama: feature/mejoras-epg-settings)
+
+### 1. SettingsTab - Cambio de título principal
+- [ ] Ir a Configuración
+- [ ] Verificar que el título es "Ajustes de EPG"
+
+### 2. AsignarEpgTab - Enlace "Añadir fuentes"
+- [ ] Ir a Asignar EPG
+- [ ] Verificar enlace "Añadir fuentes →"
+- [ ] Hacer clic y confirmar navegación
+```
+
+**Ejemplo de checklist abreviado al merge:**
+```markdown
+## ✅ CAMBIOS MERGEADOS A MAIN
+
+1. **SettingsTab**: Título cambiado a "Ajustes de EPG" con URLs copiables
+2. **AsignarEpgTab**: Añadido enlace "Añadir fuentes" que navega a Configuración
+3. **ReparacionTab**: Igualados anchos de listas (5+1+5)
+
+Commit: https://github.com/hijodkain/PWA-M3U-Manager/commit/xxxxx
+```
+
 ## 📦 Archivos Vercel y .gitignore
 
 ### NO subir a GitHub (Vercel los genera automáticamente)
