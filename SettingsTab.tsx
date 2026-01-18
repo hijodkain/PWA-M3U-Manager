@@ -360,43 +360,42 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
             <hr className="my-8 border-gray-600" />
 
             <div>
-                <h2 className="text-xl font-bold mb-2">Ajustes de EPG</h2>
+                <h2 className="text-xl font-bold mb-2 text-center">Ajustes de EPG</h2>
                 <div className="mb-4 text-sm text-gray-300">
                     <p className="mb-2">Prueba con alguna de estas dos listas públicas o añade la tuya:</p>
                     <div className="space-y-2">
-                        <div className="flex items-center gap-2 bg-gray-700 p-2 rounded">
-                            <span className="text-xs text-gray-300 flex-grow break-all">
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-300">
                                 1. https://raw.githubusercontent.com/davidmuma/EPG_dobleM/master/guiaiptv.xml
                             </span>
                             <button
                                 onClick={() => {
                                     navigator.clipboard.writeText('https://raw.githubusercontent.com/davidmuma/EPG_dobleM/master/guiaiptv.xml');
                                 }}
-                                className="text-blue-400 hover:text-blue-300 p-1 flex-shrink-0"
+                                className="text-blue-400 hover:text-blue-300 p-1"
                                 title="Copiar al portapapeles"
                             >
                                 <Copy size={16} />
                             </button>
                         </div>
-                        <div className="flex items-center gap-2 bg-gray-700 p-2 rounded">
-                            <span className="text-xs text-gray-300 flex-grow break-all">
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-300">
                                 2. https://iptv-epg.org/files/epg-es.xml
                             </span>
                             <button
                                 onClick={() => {
                                     navigator.clipboard.writeText('https://iptv-epg.org/files/epg-es.xml');
                                 }}
-                                className="text-blue-400 hover:text-blue-300 p-1 flex-shrink-0"
+                                className="text-blue-400 hover:text-blue-300 p-1"
                                 title="Copiar al portapapeles"
                             >
                                 <Copy size={16} />
                             </button>
                         </div>
                     </div>
-                    <p className="mt-3 text-center font-semibold">Añadir EPG</p>
                 </div>
-                
-                <form onSubmit={handleAddEpgUrl} className="bg-gray-700 p-4 rounded-lg mb-4 space-y-4 md:space-y-0 md:flex md:items-end md:gap-4">
+
+                <h3 className="text-lg font-semibold mb-3">Añadir EPG</h3>
                     <div className="flex-grow">
                         <label htmlFor="epg-name" className="block text-sm font-medium text-gray-300 mb-1">Nombre</label>
                         <input
@@ -450,8 +449,8 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
 
             {/* Sección de Ajustes de Búsqueda Inteligente */}
             <div id="smart-search-settings">
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-bold">Ajustes de la Búsqueda Inteligente</h2>
+                <h2 className="text-xl font-bold text-center mb-4">Ajustes de la Búsqueda Inteligente</h2>
+                <div className="flex items-center justify-end mb-4">
                     <button
                         onClick={resetChannelPrefixesAndSuffixes}
                         className="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-md text-sm"
