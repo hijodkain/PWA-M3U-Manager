@@ -31,6 +31,8 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         tvgLogo: '',
     });
     const [filteredGroups, setFilteredGroups] = useState<string[]>([]);
+    const [prefixInput, setPrefixInput] = useState('');
+    const [suffixInput, setSuffixInput] = useState('');
     
     const {
         channels,
@@ -254,6 +256,92 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         channelsHook.saveStateToHistory();
     };
 
+    const handleRemovePrefix = () => {
+        if (!prefixInput.trim()) {
+            alert('Por favor, introduce un prefijo');
+            return;
+        }
+
+        channelsHook.setChannels(prev =>
+            prev.map(ch => {
+                if (!selectedChannels.includes(ch.id)) return ch;
+                
+                // Si el nombre empieza con el prefijo, eliminarlo
+                if (ch.name.startsWith(prefixInput)) {
+                    const newName = ch.name.substring(prefixInput.length).trim();
+                    return { ...ch, name: newName };
+                }
+                return ch;
+            })
+        );
+        channelsHook.saveStateToHistory();
+        setPrefixInput('');
+    };
+
+    const handleAddPrefix = () => {
+        if (!prefixInput.trim()) {
+            alert('Por favor, introduce un prefijo');
+            return;
+        }
+
+        channelsHook.setChannels(prev =>
+            prev.map(ch => {
+                if (!selectedChannels.includes(ch.id)) return ch;
+                
+                // Añadir prefijo solo si no lo tiene ya
+                if (!ch.name.startsWith(prefixInput)) {
+                    return { ...ch, name: `${prefixInput}${ch.name}` };
+                }
+                return ch;
+            })
+        );
+        channelsHook.saveStateToHistory();
+        setPrefixInput('');
+    };
+
+    const handleRemoveSuffix = () => {
+        if (!suffixInput.trim()) {
+            alert('Por favor, introduce un sufijo');
+            return;
+        }
+
+        channelsHook.setChannels(prev =>
+            prev.map(ch => {
+                if (!selectedChannels.includes(ch.id)) return ch;
+                
+                // Si el nombre termina con el sufijo, eliminarlo
+                if (ch.name.endsWith(suffixInput)) {
+                    const newName = ch.name.substring(0, ch.name.length - suffixInput.length).trim();
+                    return { ...ch, name: newName };
+                }
+                return ch;
+            })
+        );
+        channelsHook.saveStateToHistory();
+        setSuffixInput('');
+    };
+
+    const handleAddSuffix = () => {
+        if (!suffixInput.trim()) {
+            alert('Por favor, introduce un sufijo');
+            return;
+        }
+
+        channelsHook.setChannels(prev =>
+            prev.map(ch => {
+                if (!selectedChannels.includes(ch.id)) return ch;
+                
+                // Añadir sufijo solo si no lo tiene ya
+                if (!ch.name.endsWith(suffixInput)) {
+                    return { ...ch, name: `${ch.name}${suffixInput}` };
+                }
+                return ch;
+            })
+        );
+        channelsHook.saveStateToHistory();
+        setSuffixInput('');
+    };
+
     return (
         <>
             {!isSencillo && (
@@ -382,6 +470,69 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                 >
                                     Eliminar Name
                                 </button>
+                            </div>
+                        )}
+
+                        {/* Sección de prefijos y sufijos */}
+                        {!isSencillo && selectedChannels.length > 0 && (
+                            <div className="flex flex-col gap-2 p-3 bg-gray-700 rounded-lg border border-gray-600 w-full">
+                                <span className="text-xs text-gray-400 font-semibold mb-1">Modificar Nombres de Canales:</span>
+                                
+                                {/* Prefijos */}
+                                <div className="flex items-center gap-2">
+                                    <label className="text-xs text-gray-300 w-16">Prefijo:</label>
+                                    <input
+                                        type="text"
+                                        value={prefixInput}
+                                        onChange={(e) => setPrefixInput(e.target.value)}
+                                        placeholder="Ej: HD "
+                                        className="bg-gray-600 border border-gray-500 rounded px-2 py-1 text-white text-xs flex-grow max-w-xs focus:ring-blue-500 focus:border-blue-500"
+                                    />
+                                    <button
+                                        onClick={handleRemovePrefix}
+                                        disabled={!prefixInput.trim()}
+                                        className="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-xs disabled:bg-gray-600 disabled:cursor-not-allowed"
+                                        title="Elimina el prefijo de los canales que lo tengan"
+                                    >
+                                        Quitar
+                                    </button>
+                                    <button
+                                        onClick={handleAddPrefix}
+                                        disabled={!prefixInput.trim()}
+                                        className="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-xs disabled:bg-gray-600 disabled:cursor-not-allowed"
+                                        title="Añade el prefijo a los canales seleccionados"
+                                    >
+                                        Añadir
+                                    </button>
+                                </div>
+
+                                {/* Sufijos */}
+                                <div className="flex items-center gap-2">
+                                    <label className="text-xs text-gray-300 w-16">Sufijo:</label>
+                                    <input
+                                        type="text"
+                                        value={suffixInput}
+                                        onChange={(e) => setSuffixInput(e.target.value)}
+                                        placeholder="Ej: 4K"
+                                        className="bg-gray-600 border border-gray-500 rounded px-2 py-1 text-white text-xs flex-grow max-w-xs focus:ring-blue-500 focus:border-blue-500"
+                                    />
+                                    <button
+                                        onClick={handleRemoveSuffix}
+                                        disabled={!suffixInput.trim()}
+                                        className="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-xs disabled:bg-gray-600 disabled:cursor-not-allowed"
+                                        title="Elimina el sufijo de los canales que lo tengan"
+                                    >
+                                        Quitar
+                                    </button>
+                                    <button
+                                        onClick={handleAddSuffix}
+                                        disabled={!suffixInput.trim()}
+                                        className="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-xs disabled:bg-gray-600 disabled:cursor-not-allowed"
+                                        title="Añade el sufijo a los canales seleccionados"
+                                    >
+                                        Añadir
+                                    </button>
+                                </div>
                             </div>
                         )}
 
