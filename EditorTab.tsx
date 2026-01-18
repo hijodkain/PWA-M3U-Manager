@@ -2,7 +2,7 @@ import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { Upload, Download, Plus, Trash2, GripVertical, ShieldCheck, ShieldX, ShieldQuestion } from 'lucide-react';
+import { Upload, Download, Plus, Trash2, GripVertical, ShieldCheck, ShieldX, ShieldQuestion, Undo2 } from 'lucide-react';
 import { useChannels } from './useChannels';
 import { useSettings } from './useSettings';
 import { useAppMode } from './AppModeContext';
@@ -58,6 +58,8 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         toggleChannelSelection,
         handleSelectAll,
         processM3UContent,
+        undo,
+        history,
     } = channelsHook;
 
     const { savedUrls } = settingsHook;
@@ -228,6 +230,28 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         channelsHook.saveStateToHistory();
     };
 
+    const handleClearId = () => {
+        channelsHook.setChannels(prev =>
+            prev.map(ch =>
+                selectedChannels.includes(ch.id)
+                    ? { ...ch, tvgId: '' }
+                    : ch
+            )
+        );
+        channelsHook.saveStateToHistory();
+    };
+
+    const handleClearName = () => {
+        channelsHook.setChannels(prev =>
+            prev.map(ch =>
+                selectedChannels.includes(ch.id)
+                    ? { ...ch, tvgName: '' }
+                    : ch
+            )
+        );
+        channelsHook.saveStateToHistory();
+    };
+
     return (
         <>
             {!isSencillo && (
@@ -341,7 +365,30 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                     >
                                         Copiar Name → ID
                                     </button>
+                                    <button
+                                        onClick={handleClearId}
+                                        className="bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-md flex items-center text-sm"
+                                        title="Borra tvg-id de los canales seleccionados"
+                                    >
+                                        Eliminar ID
+                                    </button>
+                                    <button
+                                        onClick={handleClearName}
+                                        className="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded-md flex items-center text-sm"
+                                        title="Borra tvg-name de los canales seleccionados"
+                                    >
+                                        Eliminar Name
+                                    </button>
                                 </>
+                            )}
+                            {!isSencillo && history.length > 0 && (
+                                <button
+                                    onClick={undo}
+                                    className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md flex items-center text-sm"
+                                    title={`Deshacer (${history.length} cambios disponibles)`}
+                                >
+                                    <Undo2 size={18} className="mr-2" /> Deshacer
+                                </button>
                             )}
                             <p className={`text-sm ${selectedChannels.length > 0 ? 'text-yellow-400 font-semibold' : 'text-gray-400'}`}>
                                 {selectedChannels.length} de {filteredChannels.length} canales seleccionados
