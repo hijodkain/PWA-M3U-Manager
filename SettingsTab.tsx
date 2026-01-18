@@ -393,6 +393,9 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
                             </button>
                         </div>
                     </div>
+                    <p className="mt-3 text-xs text-yellow-300 bg-yellow-900/20 p-3 rounded border border-yellow-700">
+                        <strong>Nota:</strong> Si tu proveedor de EPG solo te da un enlace terminado en .xml.gz ten en cuenta que no se puede descomprimir en un navegador, deberás descargar el archivo y subirlo en la pestaña Asignar EPG con el botón Subir XMLTV.
+                    </p>
                 </div>
 
                 <h3 className="text-lg font-semibold mb-3">Añadir EPG</h3>
