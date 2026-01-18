@@ -297,7 +297,15 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                 </div>
             </div>
             <div className="lg:col-span-5 bg-gray-800 p-4 rounded-lg flex flex-col">
-                <h3 className="font-bold text-lg mb-2">Fuente EPG</h3>
+                <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-bold text-lg">Fuente EPG</h3>
+                    <button
+                        onClick={() => onNavigateToSettings?.()}
+                        className="text-xs text-blue-400 hover:text-blue-300 underline"
+                    >
+                        Añadir fuentes →
+                    </button>
+                </div>
                 
                 {/* Input de URL de fuente EPG */}
                 <div className="space-y-2 mb-4">

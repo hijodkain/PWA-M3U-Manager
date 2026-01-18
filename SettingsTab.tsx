@@ -360,7 +360,28 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
             <hr className="my-8 border-gray-600" />
 
             <div>
-                <h2 className="text-xl font-bold mb-4">Fuentes EPG Guardadas</h2>
+                <h2 className="text-xl font-bold mb-2">Fuentes EPG Guardadas</h2>
+                <div className="mb-4 text-sm text-gray-300">
+                    <p className="mb-2">Prueba con alguna de estas dos listas públicas o añade la tuya:</p>
+                    <ol className="list-decimal list-inside space-y-1 text-blue-400">
+                        <li>
+                            <a href="https://raw.githubusercontent.com/davidmuma/EPG_dobleM/master/guiaiptv.xml" 
+                               target="_blank" 
+                               rel="noopener noreferrer" 
+                               className="hover:text-blue-300 underline break-all">
+                                https://raw.githubusercontent.com/davidmuma/EPG_dobleM/master/guiaiptv.xml
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://iptv-epg.org/files/epg-es.xml" 
+                               target="_blank" 
+                               rel="noopener noreferrer" 
+                               className="hover:text-blue-300 underline break-all">
+                                https://iptv-epg.org/files/epg-es.xml
+                            </a>
+                        </li>
+                    </ol>
+                </div>
                 
                 <form onSubmit={handleAddEpgUrl} className="bg-gray-700 p-4 rounded-lg mb-6 space-y-4 md:space-y-0 md:flex md:items-end md:gap-4">
                     <div className="flex-grow">
@@ -409,6 +430,8 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
                     )}
                 </div>
             </div>
+
+            <hr className="my-8 border-gray-600" />
 
             {/* Sección de Ajustes de Búsqueda Inteligente */}
             <div id="smart-search-settings">
