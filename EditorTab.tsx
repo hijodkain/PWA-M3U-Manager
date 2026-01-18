@@ -2,7 +2,7 @@ import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { Upload, Download, Plus, Trash2, GripVertical, ShieldCheck, ShieldX, ShieldQuestion, Undo2 } from 'lucide-react';
+import { Upload, Download, Plus, Trash2, GripVertical, ShieldCheck, ShieldX, ShieldQuestion, Undo2, Redo2 } from 'lucide-react';
 import { useChannels } from './useChannels';
 import { useSettings } from './useSettings';
 import { useAppMode } from './AppModeContext';
@@ -59,7 +59,9 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         handleSelectAll,
         processM3UContent,
         undo,
+        redo,
         history,
+        redoHistory,
     } = channelsHook;
 
     const { savedUrls } = settingsHook;
@@ -340,56 +342,74 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                             ))}
                         </select>
                     </div>
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2 flex-wrap justify-end">
-                            {!isSencillo && selectedChannels.length > 0 && (
-                                <>
-                                    <button
-                                        onClick={handleSwapIdName}
-                                        className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-md flex items-center text-sm"
-                                        title="Intercambia tvg-id por tvg-name en los canales seleccionados"
-                                    >
-                                        Intercambiar ID ↔ Name
-                                    </button>
-                                    <button
-                                        onClick={handleCopyIdToName}
-                                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md flex items-center text-sm"
-                                        title="Copia tvg-id en tvg-name de los canales seleccionados"
-                                    >
-                                        Copiar ID → Name
-                                    </button>
-                                    <button
-                                        onClick={handleCopyNameToId}
-                                        className="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-md flex items-center text-sm"
-                                        title="Copia tvg-name en tvg-id de los canales seleccionados"
-                                    >
-                                        Copiar Name → ID
-                                    </button>
-                                    <button
-                                        onClick={handleClearId}
-                                        className="bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-md flex items-center text-sm"
-                                        title="Borra tvg-id de los canales seleccionados"
-                                    >
-                                        Eliminar ID
-                                    </button>
-                                    <button
-                                        onClick={handleClearName}
-                                        className="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded-md flex items-center text-sm"
-                                        title="Borra tvg-name de los canales seleccionados"
-                                    >
-                                        Eliminar Name
-                                    </button>
-                                </>
-                            )}
-                            {!isSencillo && history.length > 0 && (
+                    <div className="flex items-center gap-4 flex-wrap">
+                        {/* Sección de edición de atributos */}
+                        {!isSencillo && selectedChannels.length > 0 && (
+                            <div className="flex items-center gap-2 p-2 bg-gray-700 rounded-lg border border-gray-600">
+                                <span className="text-xs text-gray-400 font-semibold mr-2">Edición de Atributos:</span>
+                                <button
+                                    onClick={handleSwapIdName}
+                                    className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-1.5 px-3 rounded-md text-xs"
+                                    title="Intercambia tvg-id por tvg-name en los canales seleccionados"
+                                >
+                                    Intercambiar ID ↔ Name
+                                </button>
+                                <button
+                                    onClick={handleCopyIdToName}
+                                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1.5 px-3 rounded-md text-xs"
+                                    title="Copia tvg-id en tvg-name de los canales seleccionados"
+                                >
+                                    Copiar ID → Name
+                                </button>
+                                <button
+                                    onClick={handleCopyNameToId}
+                                    className="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-1.5 px-3 rounded-md text-xs"
+                                    title="Copia tvg-name en tvg-id de los canales seleccionados"
+                                >
+                                    Copiar Name → ID
+                                </button>
+                                <button
+                                    onClick={handleClearId}
+                                    className="bg-orange-600 hover:bg-orange-700 text-white font-bold py-1.5 px-3 rounded-md text-xs"
+                                    title="Borra tvg-id de los canales seleccionados"
+                                >
+                                    Eliminar ID
+                                </button>
+                                <button
+                                    onClick={handleClearName}
+                                    className="bg-amber-600 hover:bg-amber-700 text-white font-bold py-1.5 px-3 rounded-md text-xs"
+                                    title="Borra tvg-name de los canales seleccionados"
+                                >
+                                    Eliminar Name
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Sección de historial (deshacer/rehacer) */}
+                        {!isSencillo && (history.length > 0 || redoHistory.length > 0) && (
+                            <div className="flex items-center gap-2 p-2 bg-gray-700 rounded-lg border border-gray-600">
+                                <span className="text-xs text-gray-400 font-semibold mr-2">Historial:</span>
                                 <button
                                     onClick={undo}
-                                    className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md flex items-center text-sm"
-                                    title={`Deshacer (${history.length} cambios disponibles)`}
+                                    disabled={history.length === 0}
+                                    className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-1.5 px-3 rounded-md flex items-center text-xs disabled:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                    title={history.length > 0 ? `Deshacer (${history.length} cambios disponibles)` : 'No hay cambios para deshacer'}
                                 >
-                                    <Undo2 size={18} className="mr-2" /> Deshacer
+                                    <Undo2 size={16} className="mr-1" /> Deshacer
                                 </button>
-                            )}
+                                <button
+                                    onClick={redo}
+                                    disabled={redoHistory.length === 0}
+                                    className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-1.5 px-3 rounded-md flex items-center text-xs disabled:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                    title={redoHistory.length > 0 ? `Rehacer (${redoHistory.length} cambios disponibles)` : 'No hay cambios para rehacer'}
+                                >
+                                    <Redo2 size={16} className="mr-1" /> Rehacer
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Contador de selección y botones de acción */}
+                        <div className="flex items-center gap-2 flex-wrap">
                             <p className={`text-sm ${selectedChannels.length > 0 ? 'text-yellow-400 font-semibold' : 'text-gray-400'}`}>
                                 {selectedChannels.length} de {filteredChannels.length} canales seleccionados
                             </p>

@@ -50,6 +50,7 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
     const tableContainerRef = useRef<HTMLDivElement>(null);
     const prevChannelsCount = useRef(channels.length);
     const [history, setHistory] = useState<Channel[][]>([]);
+    const [redoHistory, setRedoHistory] = useState<Channel[][]>([]);
     const [isVerifying, setIsVerifying] = useState(false);
     const [verificationProgress, setVerificationProgress] = useState(0);
 
@@ -322,12 +323,23 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
     
     const saveStateToHistory = useCallback(() => {
         setHistory(prev => [...prev, channels]);
+        setRedoHistory([]); // Limpiar redo history cuando se hace un cambio nuevo
     }, [channels]);
 
     const undo = () => {
         if (history.length === 0) return;
-        setChannels(history[history.length - 1]);
+        const previousState = history[history.length - 1];
+        setRedoHistory(prev => [...prev, channels]); // Guardar estado actual en redo
+        setChannels(previousState);
         setHistory(prev => prev.slice(0, -1));
+    };
+
+    const redo = () => {
+        if (redoHistory.length === 0) return;
+        const nextState = redoHistory[redoHistory.length - 1];
+        setHistory(prev => [...prev, channels]); // Guardar estado actual en undo
+        setChannels(nextState);
+        setRedoHistory(prev => prev.slice(0, -1));
     };
 
     const handleVerifyChannels = async () => {
@@ -439,7 +451,9 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
         handleSelectAll,
         saveStateToHistory,
         undo,
+        redo,
         history,
+        redoHistory,
         generateM3UContent,
         processM3UContent,
         handleVerifyChannels,
