@@ -386,6 +386,16 @@ export const useAsignarEpg = (
         setAssignmentMode(prev => prev === 'tvg-id' ? 'tvg-name' : 'tvg-id');
     }, []);
 
+    // Función para limpiar la fuente EPG cargada
+    const clearEpgChannels = useCallback(() => {
+        setEpgChannels([]);
+        setEpgUrl('');
+        setEpgSearchTerm('');
+        setSmartSearchResults([]);
+        setSelectedEpgChannels(new Set());
+        setDestinationChannelId(null);
+    }, []);
+
     return {
         epgChannels,
         filteredEpgChannels,
@@ -425,5 +435,7 @@ export const useAsignarEpg = (
         // Nuevas funciones para asignación de nombre y asignación automática
         assignChannelName,
         autoAssignEpgToVisibleGroup,
+        // Función para limpiar fuente EPG
+        clearEpgChannels,
     };
 };

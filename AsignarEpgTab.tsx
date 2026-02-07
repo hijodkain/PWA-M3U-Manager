@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { Upload, Download, Copy, Zap, ArrowLeftCircle, ChevronsUpDown, Settings as SettingsIcon } from 'lucide-react';
+import { Upload, Download, Copy, Zap, ArrowLeftCircle, ChevronsUpDown, Settings as SettingsIcon, X } from 'lucide-react';
 import { useAsignarEpg } from './useAsignarEpg';
 import { useChannels } from './useChannels';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -56,6 +56,8 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
         // Nuevas funciones para asignar nombre y asignación automática
         assignChannelName,
         autoAssignEpgToVisibleGroup,
+        // Función para limpiar fuente EPG
+        clearEpgChannels,
     } = epgHook;
     
     // Extraer funciones para evitar problemas de dependencias
@@ -66,6 +68,9 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
     const [mainListSearch, setMainListSearch] = useState('');
     const [selectedGroup, setSelectedGroup] = useState('all');
     const [isGeneratorVisible, setIsGeneratorVisible] = useState(false);
+    
+    // Estados para modo sencillo - controlar fuente EPG cargada
+    const [loadedEpgSourceName, setLoadedEpgSourceName] = useState<string | null>(null);
     
     // Estados para los botones toggle
     const [ottModeActive, setOttModeActive] = useState(false);
@@ -174,6 +179,26 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
             newSet.delete('tvgLogo');
             return newSet;
         });
+    };
+
+    // Función para manejar selección de fuente EPG en modo sencillo (carga automática)
+    const handleEpgSourceSelect = async (selectedUrl: string, selectedName: string) => {
+        if (!selectedUrl) return;
+        setEpgUrl(selectedUrl);
+        
+        // Cargar automáticamente la fuente
+        try {
+            await handleFetchEpgUrl();
+            setLoadedEpgSourceName(selectedName);
+        } catch (error) {
+            console.error('Error al cargar fuente EPG:', error);
+        }
+    };
+
+    // Función para limpiar la fuente EPG cargada
+    const clearLoadedEpgSource = () => {
+        setLoadedEpgSourceName(null);
+        clearEpgChannels();
     };
 
     // Renderizado común (3 columnas) con variaciones según modo
@@ -325,57 +350,104 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                     </button>
                 </div>
                 
-                {/* Input de URL de fuente EPG */}
-                <div className="space-y-2 mb-4">
-                    <div className="flex items-center gap-2">
-                        {!isSencillo && (
-                            <>
-                                <input
-                                    id="epg-file-upload"
-                                    type="file"
-                                    className="hidden"
-                                    onChange={handleEpgFileUpload}
-                                    accept=".xml,.xml.gz"
-                                />
-                                <label
-                                    htmlFor="epg-file-upload"
-                                    className="cursor-pointer text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md flex items-center justify-center"
+                {/* Input de URL de fuente EPG - Diferente según modo */}
+                {isSencillo ? (
+                    // MODO SENCILLO: Mostrar nombre de fuente cargada o selector
+                    <div className="space-y-2 mb-4">
+                        {loadedEpgSourceName ? (
+                            // Fuente EPG cargada - Mostrar nombre con botón X
+                            <div className="flex items-center justify-between bg-green-900/30 border border-green-600 rounded-md px-4 py-3">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                    <span className="text-green-400 font-semibold">{loadedEpgSourceName}</span>
+                                </div>
+                                <button
+                                    onClick={clearLoadedEpgSource}
+                                    className="text-red-400 hover:text-red-300 transition-colors"
+                                    title="Limpiar fuente EPG"
                                 >
-                                    <Upload size={16} className="mr-2" /> Subir XMLTV
-                                </label>
-                            </>
+                                    <X size={20} />
+                                </button>
+                            </div>
+                        ) : (
+                            // No hay fuente cargada - Mostrar selector
+                            savedEpgUrls.length > 0 ? (
+                                <select
+                                    id="saved-epg-urls-select-simple"
+                                    value=""
+                                    onChange={(e) => {
+                                        const selectedOption = savedEpgUrls.find(item => item.url === e.target.value);
+                                        if (selectedOption) {
+                                            handleEpgSourceSelect(selectedOption.url, selectedOption.name);
+                                        }
+                                    }}
+                                    className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-3 text-white focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                >
+                                    <option value="">Selecciona una fuente EPG...</option>
+                                    {savedEpgUrls.map(item => (
+                                        <option key={item.id} value={item.url}>{item.name}</option>
+                                    ))}
+                                </select>
+                            ) : (
+                                <div className="text-center text-gray-400 py-4">
+                                    <p className="text-sm mb-2">No hay fuentes EPG guardadas</p>
+                                    <button
+                                        onClick={() => onNavigateToSettings?.()}
+                                        className="text-blue-400 hover:text-blue-300 underline text-sm"
+                                    >
+                                        Añadir fuentes →
+                                    </button>
+                                </div>
+                            )
                         )}
-                        <div className="flex-grow flex">
-                            <input
-                                type="text"
-                                value={epgUrl}
-                                onChange={(e) => setEpgUrl(e.target.value)}
-                                placeholder="Pega la URL del archivo .xml"
-                                className="flex-grow bg-gray-700 border border-gray-600 rounded-l-md px-3 py-2 text-white text-sm focus:ring-blue-500 focus:border-blue-500"
-                            />
-                            <button
-                                onClick={handleFetchEpgUrl}
-                                disabled={!epgUrl || isEpgLoading}
-                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-r-md flex items-center text-sm disabled:bg-gray-600 disabled:cursor-not-allowed"
-                            >
-                                <Download size={16} />
-                            </button>
-                        </div>
                     </div>
-                    {savedEpgUrls.length > 0 && (
-                        <select
-                            id="saved-epg-urls-select"
-                            value=""
-                            onChange={(e) => { if (e.target.value) setEpgUrl(e.target.value); }}
-                            className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-blue-500 focus:border-blue-500 text-sm"
-                        >
-                            <option value="">o selecciona una fuente guardada...</option>
-                            {savedEpgUrls.map(item => (
-                                <option key={item.id} value={item.url}>{item.name}</option>
-                            ))}
-                        </select>
-                    )}
-                    {!isSencillo && (
+                ) : (
+                    // MODO PRO: UI completa con todas las opciones
+                    <div className="space-y-2 mb-4">
+                        <div className="flex items-center gap-2">
+                            <input
+                                id="epg-file-upload"
+                                type="file"
+                                className="hidden"
+                                onChange={handleEpgFileUpload}
+                                accept=".xml,.xml.gz"
+                            />
+                            <label
+                                htmlFor="epg-file-upload"
+                                className="cursor-pointer text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md flex items-center justify-center"
+                            >
+                                <Upload size={16} className="mr-2" /> Subir XMLTV
+                            </label>
+                            <div className="flex-grow flex">
+                                <input
+                                    type="text"
+                                    value={epgUrl}
+                                    onChange={(e) => setEpgUrl(e.target.value)}
+                                    placeholder="Pega la URL del archivo .xml"
+                                    className="flex-grow bg-gray-700 border border-gray-600 rounded-l-md px-3 py-2 text-white text-sm focus:ring-blue-500 focus:border-blue-500"
+                                />
+                                <button
+                                    onClick={handleFetchEpgUrl}
+                                    disabled={!epgUrl || isEpgLoading}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-r-md flex items-center text-sm disabled:bg-gray-600 disabled:cursor-not-allowed"
+                                >
+                                    <Download size={16} />
+                                </button>
+                            </div>
+                        </div>
+                        {savedEpgUrls.length > 0 && (
+                            <select
+                                id="saved-epg-urls-select"
+                                value=""
+                                onChange={(e) => { if (e.target.value) setEpgUrl(e.target.value); }}
+                                className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-blue-500 focus:border-blue-500 text-sm"
+                            >
+                                <option value="">o selecciona una fuente guardada...</option>
+                                {savedEpgUrls.map(item => (
+                                    <option key={item.id} value={item.url}>{item.name}</option>
+                                ))}
+                            </select>
+                        )}
                         <div className="border-t border-gray-700 pt-2">
                             <button 
                                 onClick={() => setIsGeneratorVisible(!isGeneratorVisible)}
@@ -409,8 +481,8 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                 </div>
                             )}
                         </div>
-                    )}
-                </div>
+                    </div>
+                )}
                 {isEpgLoading && <p className="text-center text-blue-400 mb-2">Cargando...</p>}
                 {epgError && <p className="text-center text-red-400 bg-red-900/50 p-2 rounded mb-2">{epgError}</p>}
                 
