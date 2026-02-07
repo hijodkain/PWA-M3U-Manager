@@ -228,11 +228,30 @@ export const useAsignarEpg = (
         const matches = new Map<string, EpgChannel>();
         
         channelsWithoutEpg.forEach((channel) => {
-            const normalizedChannelName = normalizeChannelName(channel.name).toLowerCase();
-            const exactMatch = epgChannels.find(epgCh => {
-                const normalizedEpgName = normalizeChannelName(epgCh.name).toLowerCase();
-                return normalizedEpgName === normalizedChannelName;
-            });
+            let exactMatch: EpgChannel | undefined;
+            
+            // Intento 1: Comparación exacta (case-insensitive y trim)
+            const channelNameClean = channel.name.trim().toLowerCase();
+            exactMatch = epgChannels.find(epgCh => 
+                epgCh.name.trim().toLowerCase() === channelNameClean
+            );
+            
+            // Intento 2: Si no encuentra, probar con normalización (eliminar prefijos/sufijos)
+            if (!exactMatch) {
+                const normalizedChannelName = normalizeChannelName(channel.name).toLowerCase();
+                exactMatch = epgChannels.find(epgCh => {
+                    const normalizedEpgName = normalizeChannelName(epgCh.name).toLowerCase();
+                    return normalizedEpgName === normalizedChannelName;
+                });
+            }
+            
+            // Intento 3: Si aún no encuentra, probar sin espacios
+            if (!exactMatch) {
+                const channelNameNoSpaces = channel.name.trim().toLowerCase().replace(/\s+/g, '');
+                exactMatch = epgChannels.find(epgCh => 
+                    epgCh.name.trim().toLowerCase().replace(/\s+/g, '') === channelNameNoSpaces
+                );
+            }
             
             if (exactMatch) {
                 matches.set(channel.id, exactMatch);
