@@ -42,13 +42,13 @@ export const useAsignarEpg = (
     const [selectedEpgChannels, setSelectedEpgChannels] = useState<Set<string>>(new Set());
     const [lastSelectedEpgChannelIndex, setLastSelectedEpgChannelIndex] = useState<number | null>(null);
 
-    // Inicializar búsqueda inteligente
+    // Inicializar búsqueda inteligente - se recrea cuando cambian los prefijos/sufijos
     const smartSearch = useSmartSearch({
         channelPrefixes: settingsHook.channelPrefixes,
         channelSuffixes: settingsHook.channelSuffixes
     });
     
-    // Extraer funciones para evitar problemas de dependencias
+    // Extraer funciones - se actualizarán automáticamente cuando smartSearch cambie
     const { searchChannels, normalizeChannelName } = smartSearch;
 
     const handleEpgFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -271,7 +271,7 @@ export const useAsignarEpg = (
         });
 
         alert(`EPG asignado automáticamente a ${matches.size} de ${channelsWithoutEpg.length} canales`);
-    }, [epgChannels, normalizeChannelName, attributesToCopy, assignmentMode, setChannels, saveStateToHistory]);
+    }, [epgChannels, normalizeChannelName, attributesToCopy, assignmentMode, setChannels, saveStateToHistory, settingsHook.channelPrefixes, settingsHook.channelSuffixes]);
 
     // Función para buscar canales EPG similares automáticamente
     const findSimilarEpgChannels = useCallback((channelName: string) => {
