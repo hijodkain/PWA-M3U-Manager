@@ -77,6 +77,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
     const [tivimateModeActive, setTivimateModeActive] = useState(false);
     const [transferLogoActive, setTransferLogoActive] = useState(false);
     const [keepLogoActive, setKeepLogoActive] = useState(false);
+    const [copyNameActive, setCopyNameActive] = useState(false);
 
     const channelGroups = useMemo(() => {
         const groups = new Set(channels.map(c => c.groupTitle).filter(Boolean));
@@ -185,6 +186,22 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
         setAttributesToCopy(prev => {
             const newSet = new Set(prev);
             newSet.delete('tvgLogo');
+            return newSet;
+        });
+    };
+
+    const handleCopyNameClick = () => {
+        const newState = !copyNameActive;
+        setCopyNameActive(newState);
+        
+        // Actualizar attributesToCopy con 'name'
+        setAttributesToCopy(prev => {
+            const newSet = new Set(prev);
+            if (newState) {
+                newSet.add('name');
+            } else {
+                newSet.delete('name');
+            }
             return newSet;
         });
     };
@@ -331,24 +348,18 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                     </button>
                 </div>
                 
-                {/* Botón "Arreglar nombre del canal" - AMBOS MODOS */}
+                {/* Toggle "Copiar nombre del canal" - AMBOS MODOS */}
                 <div className="w-full border-t border-gray-700 my-2"></div>
                 <button
-                    onClick={() => {
-                        const selectedEpgChannel = epgChannels.find(ch => selectedEpgChannels.has(ch.id));
-                        if (selectedEpgChannel && destinationChannelId) {
-                            assignChannelName(selectedEpgChannel);
-                        }
-                    }}
-                    disabled={!destinationChannelId || selectedEpgChannels.size !== 1}
+                    onClick={handleCopyNameClick}
                     className={`w-full text-xs py-2 px-2 rounded-md flex items-center justify-center gap-2 transition-colors ${
-                        destinationChannelId && selectedEpgChannels.size === 1
-                            ? 'bg-purple-600 hover:bg-purple-700 text-white'
-                            : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                        copyNameActive
+                            ? 'bg-purple-600 text-white'
+                            : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
                     }`}
-                    title="Asigna el nombre del canal EPG seleccionado al nombre del canal principal"
+                    title="Copia el nombre del canal EPG al asignar"
                 >
-                    Arreglar nombre del canal
+                    Copiar nombre del canal
                 </button>
                 
                 {/* Botón de asignación automática por grupo - AMBOS MODOS */}

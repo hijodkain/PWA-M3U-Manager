@@ -154,9 +154,6 @@ export const useAsignarEpg = (
     }, [epgChannels, epgSearchTerm, isSmartSearchEnabled, searchChannels]);
 
     const handleEpgSourceClick = (sourceEpg: EpgChannel) => {
-        // Siempre seleccionar el canal EPG clickeado
-        setSelectedEpgChannels(new Set([sourceEpg.id]));
-        
         if (!destinationChannelId) return;
         saveStateToHistory();
         setChannels((prev) =>
@@ -167,6 +164,7 @@ export const useAsignarEpg = (
                     // Verificar modos activos
                     const isOttMode = attributesToCopy.has('tvgName');
                     const isTivimateMode = attributesToCopy.has('tvgId');
+                    const copyName = attributesToCopy.has('name');
                     
                     // Modo OTT: asignar el channel ID solo a tvgName
                     if (isOttMode) {
@@ -181,6 +179,11 @@ export const useAsignarEpg = (
                     // Copiar logo si está seleccionado
                     if (attributesToCopy.has('tvgLogo')) {
                         updated.tvgLogo = sourceEpg.logo;
+                    }
+                    
+                    // Copiar nombre si está activo
+                    if (copyName) {
+                        updated.name = sourceEpg.name;
                     }
                     
                     return updated;
