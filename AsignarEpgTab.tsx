@@ -443,7 +443,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                         className="flex-grow bg-gray-700 border border-gray-600 rounded-l-md px-3 py-2 text-white text-sm focus:ring-blue-500 focus:border-blue-500"
                                     />
                                     <button
-                                        onClick={handleFetchEpgUrl}
+                                        onClick={() => handleFetchEpgUrl()}
                                         disabled={!epgUrl || isEpgLoading}
                                         className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-r-md flex items-center text-sm disabled:bg-gray-600 disabled:cursor-not-allowed"
                                     >
