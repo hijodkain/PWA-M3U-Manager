@@ -274,7 +274,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                     </div>
                 </div>
             </div>
-            <div className="lg:col-span-1 flex flex-col items-center justify-start gap-3 bg-gray-800 p-4 rounded-lg">
+            <div className="lg:col-span-2 flex flex-col items-center justify-start gap-3 bg-gray-800 p-4 rounded-lg">
                 <h4 className="font-bold text-center mb-1">Preparar para:</h4>
                 
                 {/* Botones de modo: OTT y TiviMate */}
@@ -372,7 +372,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                     <Zap size={14} /> Asignar EPG al grupo
                 </button>
             </div>
-            <div className="lg:col-span-5 bg-gray-800 p-4 rounded-lg flex flex-col">
+            <div className="lg:col-span-4 bg-gray-800 p-4 rounded-lg flex flex-col">
                 <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
                         <h3 className="font-bold text-lg">Fuente EPG</h3>
