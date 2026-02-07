@@ -503,6 +503,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                             )}
                         </div>
                     </div>
+                )
                 )}
                 {isEpgLoading && <p className="text-center text-blue-400 mb-2">Cargando...</p>}
                 {epgError && <p className="text-center text-red-400 bg-red-900/50 p-2 rounded mb-2">{epgError}</p>}
