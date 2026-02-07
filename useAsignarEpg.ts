@@ -215,56 +215,62 @@ export const useAsignarEpg = (
             return;
         }
 
-        let assignedCount = 0;
+        // Primero, calcular coincidencias para contar correctamente
+        const matches = new Map<string, EpgChannel>();
+        
+        channelsWithoutEpg.forEach((channel) => {
+            const normalizedChannelName = normalizeChannelName(channel.name).toLowerCase();
+            const exactMatch = epgChannels.find(epgCh => {
+                const normalizedEpgName = normalizeChannelName(epgCh.name).toLowerCase();
+                return normalizedEpgName === normalizedChannelName;
+            });
+            
+            if (exactMatch) {
+                matches.set(channel.id, exactMatch);
+            }
+        });
+
+        if (matches.size === 0) {
+            alert(`No se encontraron coincidencias exactas para los ${channelsWithoutEpg.length} canales sin EPG`);
+            return;
+        }
+
         saveStateToHistory();
 
         setChannels((prev) => {
             return prev.map((channel) => {
-                // Solo procesar canales que están en la lista visible y sin EPG
-                if (!channelsWithoutEpg.find(ch => ch.id === channel.id)) {
+                // Solo procesar canales que tienen coincidencia
+                const exactMatch = matches.get(channel.id);
+                if (!exactMatch) {
                     return channel;
                 }
 
-                // Normalizar nombre del canal
-                const normalizedChannelName = normalizeChannelName(channel.name).toLowerCase();
+                const updated = { ...channel };
 
-                // Buscar coincidencia exacta en EPG
-                const exactMatch = epgChannels.find(epgCh => {
-                    const normalizedEpgName = normalizeChannelName(epgCh.name).toLowerCase();
-                    return normalizedEpgName === normalizedChannelName;
-                });
+                // Verificar si es modo OTT
+                const isOttMode = attributesToCopy.has('tvgId') && attributesToCopy.has('tvgName');
 
-                if (exactMatch) {
-                    assignedCount++;
-                    const updated = { ...channel };
-
-                    // Verificar si es modo OTT
-                    const isOttMode = attributesToCopy.has('tvgId') && attributesToCopy.has('tvgName');
-
-                    if (isOttMode) {
+                if (isOttMode) {
+                    updated.tvgId = exactMatch.id;
+                    updated.tvgName = exactMatch.id;
+                } else {
+                    if (assignmentMode === 'tvg-id') {
                         updated.tvgId = exactMatch.id;
-                        updated.tvgName = exactMatch.id;
                     } else {
-                        if (assignmentMode === 'tvg-id') {
-                            updated.tvgId = exactMatch.id;
-                        } else {
-                            updated.tvgName = exactMatch.name;
-                        }
+                        updated.tvgName = exactMatch.name;
                     }
-
-                    // Copiar logo si está seleccionado
-                    if (attributesToCopy.has('tvgLogo')) {
-                        updated.tvgLogo = exactMatch.logo;
-                    }
-
-                    return updated;
                 }
 
-                return channel;
+                // Copiar logo si está seleccionado
+                if (attributesToCopy.has('tvgLogo')) {
+                    updated.tvgLogo = exactMatch.logo;
+                }
+
+                return updated;
             });
         });
 
-        alert(`EPG asignado automáticamente a ${assignedCount} de ${channelsWithoutEpg.length} canales`);
+        alert(`EPG asignado automáticamente a ${matches.size} de ${channelsWithoutEpg.length} canales`);
     }, [epgChannels, normalizeChannelName, attributesToCopy, assignmentMode, setChannels, saveStateToHistory]);
 
     // Función para buscar canales EPG similares automáticamente
