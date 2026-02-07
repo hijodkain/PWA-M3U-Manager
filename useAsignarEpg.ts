@@ -74,21 +74,26 @@ export const useAsignarEpg = (
         event.target.value = '';
     };
 
-    const handleFetchEpgUrl = async () => {
-        if (!epgUrl) {
+    const handleFetchEpgUrl = async (urlToFetch?: string) => {
+        const targetUrl = urlToFetch || epgUrl;
+        if (!targetUrl) {
             setEpgError('Por favor, introduce una URL de EPG.');
             return;
         }
         setIsEpgLoading(true);
         setEpgError(null);
         try {
-            const proxyUrl = `/api/proxy?url=${encodeURIComponent(epgUrl)}`;
+            const proxyUrl = `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
             const response = await fetch(proxyUrl);
             if (!response.ok) {
                 throw new Error(`Error al descargar el EPG: ${response.statusText}`);
             }
             const text = await response.text();
             setEpgChannels(parseXMLTV(text));
+            // Actualizar epgUrl si se pasó una URL específica
+            if (urlToFetch) {
+                setEpgUrl(urlToFetch);
+            }
         } catch (err) {
             setEpgError(err instanceof Error ? err.message : 'Ocurrió un error desconocido.');
         } finally {

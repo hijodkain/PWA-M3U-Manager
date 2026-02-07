@@ -192,11 +192,10 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
     // Función para manejar selección de fuente EPG en modo sencillo (carga automática)
     const handleEpgSourceSelect = async (selectedUrl: string, selectedName: string) => {
         if (!selectedUrl) return;
-        setEpgUrl(selectedUrl);
         
-        // Cargar automáticamente la fuente
+        // Cargar automáticamente la fuente pasando la URL directamente
         try {
-            await handleFetchEpgUrl();
+            await handleFetchEpgUrl(selectedUrl);
             setLoadedEpgSourceName(selectedName);
         } catch (error) {
             console.error('Error al cargar fuente EPG:', error);
