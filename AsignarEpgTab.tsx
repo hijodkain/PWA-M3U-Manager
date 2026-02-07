@@ -53,6 +53,9 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
         toggleEpgChannelSelection,
         toggleSelectAllEpgChannels,
         addSelectedEpgChannels,
+        // Nuevas funciones para asignar nombre y asignación automática
+        assignChannelName,
+        autoAssignEpgToVisibleGroup,
     } = epgHook;
     
     // Extraer funciones para evitar problemas de dependencias
@@ -295,6 +298,21 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                         <ArrowLeftCircle size={14} /> NO
                     </button>
                 </div>
+                
+                {/* Botón de asignación automática por grupo - SOLO MODO PRO */}
+                {!isSencillo && (
+                    <>
+                        <div className="w-full border-t border-gray-700 my-2"></div>
+                        <button
+                            onClick={() => autoAssignEpgToVisibleGroup(filteredMainChannelsForEpg)}
+                            disabled={filteredMainChannelsForEpg.length === 0 || epgChannels.length === 0}
+                            className="w-full text-xs py-2 px-2 rounded-md flex items-center justify-center gap-2 transition-colors bg-yellow-600 hover:bg-yellow-700 text-white disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed"
+                            title="Busca coincidencias exactas y asigna EPG automáticamente a canales sin EPG en el grupo visible"
+                        >
+                            <Zap size={14} /> Asignar EPG al grupo
+                        </button>
+                    </>
+                )}
             </div>
             <div className="lg:col-span-5 bg-gray-800 p-4 rounded-lg flex flex-col">
                 <div className="flex items-center justify-between mb-2">
@@ -466,6 +484,27 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                 }`}
                             >
                                 Añadir {selectedEpgChannels.size > 0 ? `(${selectedEpgChannels.size})` : 'Seleccionados'}
+                            </button>
+                        </div>
+
+                        {/* Botón para arreglar nombre del canal - SOLO MODO PRO */}
+                        <div className="mb-2">
+                            <button
+                                onClick={() => {
+                                    const selectedEpgChannel = epgChannels.find(ch => selectedEpgChannels.has(ch.id));
+                                    if (selectedEpgChannel && destinationChannelId) {
+                                        assignChannelName(selectedEpgChannel);
+                                    }
+                                }}
+                                disabled={!destinationChannelId || selectedEpgChannels.size !== 1}
+                                className={`w-full text-sm py-2 px-3 rounded-md transition-colors ${
+                                    destinationChannelId && selectedEpgChannels.size === 1
+                                        ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                                        : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                                }`}
+                                title="Asigna el nombre del canal EPG seleccionado al canal principal seleccionado"
+                            >
+                                Arreglar nombre del canal
                             </button>
                         </div>
 

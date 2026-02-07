@@ -185,6 +185,88 @@ export const useAsignarEpg = (
         setDestinationChannelId(null);
     };
 
+    // Función para asignar el nombre del canal EPG al canal principal seleccionado
+    const assignChannelName = useCallback((sourceEpg: EpgChannel) => {
+        if (!destinationChannelId) return;
+        saveStateToHistory();
+        setChannels((prev) =>
+            prev.map((dest) => {
+                if (dest.id === destinationChannelId) {
+                    return { ...dest, name: sourceEpg.name };
+                }
+                return dest;
+            })
+        );
+        setDestinationChannelId(null);
+    }, [destinationChannelId, setChannels, saveStateToHistory]);
+
+    // Función para asignar automáticamente EPG a canales sin asignación en un grupo filtrado
+    const autoAssignEpgToVisibleGroup = useCallback((visibleChannels: Channel[]) => {
+        if (epgChannels.length === 0) {
+            alert('No hay canales EPG cargados');
+            return;
+        }
+
+        // Filtrar solo canales sin EPG asignado
+        const channelsWithoutEpg = visibleChannels.filter(ch => !ch.tvgId && !ch.tvgName);
+
+        if (channelsWithoutEpg.length === 0) {
+            alert('Todos los canales visibles ya tienen EPG asignado');
+            return;
+        }
+
+        let assignedCount = 0;
+        saveStateToHistory();
+
+        setChannels((prev) => {
+            return prev.map((channel) => {
+                // Solo procesar canales que están en la lista visible y sin EPG
+                if (!channelsWithoutEpg.find(ch => ch.id === channel.id)) {
+                    return channel;
+                }
+
+                // Normalizar nombre del canal
+                const normalizedChannelName = normalizeChannelName(channel.name).toLowerCase();
+
+                // Buscar coincidencia exacta en EPG
+                const exactMatch = epgChannels.find(epgCh => {
+                    const normalizedEpgName = normalizeChannelName(epgCh.name).toLowerCase();
+                    return normalizedEpgName === normalizedChannelName;
+                });
+
+                if (exactMatch) {
+                    assignedCount++;
+                    const updated = { ...channel };
+
+                    // Verificar si es modo OTT
+                    const isOttMode = attributesToCopy.has('tvgId') && attributesToCopy.has('tvgName');
+
+                    if (isOttMode) {
+                        updated.tvgId = exactMatch.id;
+                        updated.tvgName = exactMatch.id;
+                    } else {
+                        if (assignmentMode === 'tvg-id') {
+                            updated.tvgId = exactMatch.id;
+                        } else {
+                            updated.tvgName = exactMatch.name;
+                        }
+                    }
+
+                    // Copiar logo si está seleccionado
+                    if (attributesToCopy.has('tvgLogo')) {
+                        updated.tvgLogo = exactMatch.logo;
+                    }
+
+                    return updated;
+                }
+
+                return channel;
+            });
+        });
+
+        alert(`EPG asignado automáticamente a ${assignedCount} de ${channelsWithoutEpg.length} canales`);
+    }, [epgChannels, normalizeChannelName, attributesToCopy, assignmentMode, setChannels, saveStateToHistory]);
+
     // Función para buscar canales EPG similares automáticamente
     const findSimilarEpgChannels = useCallback((channelName: string) => {
         if (!channelName.trim()) return [];
@@ -334,5 +416,8 @@ export const useAsignarEpg = (
         toggleEpgChannelSelection,
         toggleSelectAllEpgChannels,
         addSelectedEpgChannels,
+        // Nuevas funciones para asignación de nombre y asignación automática
+        assignChannelName,
+        autoAssignEpgToVisibleGroup,
     };
 };
