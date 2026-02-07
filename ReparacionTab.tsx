@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef } from 'react';
 import { Upload, Copy, CheckSquare, ArrowLeftCircle, RotateCcw, Trash2, Link, Check } from 'lucide-react';
 import { useReparacion } from './useReparacion';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -18,17 +18,6 @@ interface ReparacionTabProps {
 const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsHook, settingsHook }) => {
     const { isSencillo } = useAppMode();
     
-    // Estado para listas medicina guardadas
-    const [savedMedicinaLists, setSavedMedicinaLists] = useState<Array<{ id: string; name: string; url: string }>>([]);
-    
-    // Cargar listas medicina al montar el componente
-    useEffect(() => {
-        const stored = localStorage.getItem('medicinaLists');
-        if (stored) {
-            setSavedMedicinaLists(JSON.parse(stored));
-        }
-    }, []);
-    
     const {
         selectedReparacionChannels,
         attributesToCopy,
@@ -40,8 +29,6 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         setReparacionListFilter,
         handleReparacionFileUpload,
         processCurationM3U,
-        reparacionListName,
-        clearReparacionList,
         toggleAttributeToCopy,
         handleSourceChannelClick,
         mainListUniqueGroups,
@@ -141,7 +128,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-11 gap-4">
-            <div className="lg:col-span-5 bg-gray-800 p-4 rounded-lg flex flex-col">
+            <div className="lg:col-span-4 bg-gray-800 p-4 rounded-lg flex flex-col">
                 <h3 className="font-bold text-lg mb-2">{isSencillo ? 'Mi Lista' : 'Lista Principal'}</h3>
                 {!isSencillo && (
                     <SmartSearchInput
@@ -223,7 +210,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     key={ch.id}
                                     channel={ch}
                                     onBodyClick={() => {
-                                        setDestinationChannelId(destinationChannelId === ch.id ? null : ch.id);
+                                        setDestinationChannelId(ch.id)
                                         setReparacionListSearch(normalizeChannelName(ch.name));
                                     }}
                                     isSelected={destinationChannelId === ch.id}
@@ -287,23 +274,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                     </button>
                 </div>
             </div>
-            <div className="lg:col-span-5 bg-gray-800 p-4 rounded-lg flex flex-col">
-                {/* Header con nombre de lista en modo sencillo */}
-                {isSencillo && filteredReparacionChannels.length > 0 && reparacionListName && (
-                    <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-700">
-                        <h3 className="font-bold text-lg text-white">
-                            Lista de reparación: <span className="text-blue-400">{reparacionListName}</span>
-                        </h3>
-                        <button
-                            onClick={clearReparacionList}
-                            className="text-red-500 hover:text-red-400 font-bold text-2xl px-2"
-                            title="Cerrar lista y volver al selector"
-                        >
-                            ×
-                        </button>
-                    </div>
-                )}
-                
+            <div className="lg:col-span-6 bg-gray-800 p-4 rounded-lg flex flex-col">
                 {/* Sección de carga - se oculta en modo sencillo cuando hay canales cargados */}
                 {!(isSencillo && filteredReparacionChannels.length > 0) && (
                     <>
@@ -334,30 +305,6 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                             />
                         </div>
                         
-                        {/* Desplegable para listas medicina guardadas */}
-                        {savedMedicinaLists.length > 0 && (
-                            <div className="mb-2">
-                                <select
-                                    value=""
-                                    onChange={(e) => {
-                                        if (e.target.value) {
-                                            setReparacionUrl(e.target.value);
-                                            // Auto-cargar la lista seleccionada
-                                            setTimeout(() => handleReparacionUrlLoad(), 100);
-                                        }
-                                    }}
-                                    className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-1.5 text-white focus:ring-blue-500 focus:border-blue-500"
-                                >
-                                    <option value="">o selecciona una lista reparadora guardada</option>
-                                    {savedMedicinaLists.map(item => (
-                                        <option key={item.id} value={item.url}>
-                                            {item.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                        )}
-                        
                         {isCurationLoading && <p className="text-center text-blue-400 mt-2">Cargando lista de recambios...</p>}
                         {curationError && <p className="text-center text-red-400 bg-red-900/50 p-2 rounded mt-2">{curationError}</p>}
                     </>
@@ -387,18 +334,6 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                         <label htmlFor="select-all-group" className="text-sm text-gray-300">Seleccionar todo el grupo</label>
                     </div>
                 )}
-                
-                {/* Buscador de lista de reparación - visible en ambos modos */}
-                <SmartSearchInput
-                    searchTerm={reparacionListSearch}
-                    onSearchChange={setReparacionListSearch}
-                    isSmartSearchEnabled={isSmartSearchEnabled}
-                    onToggleSmartSearch={toggleSmartSearch}
-                    placeholder="Buscar canal en lista de reparación..."
-                    showResults={true}
-                    resultCount={filteredReparacionChannels.length}
-                    className="mb-2"
-                />
                 
                 {/* Indicador de progreso de verificación */}
                 {verificationProgress.isRunning && (
@@ -448,7 +383,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     onSelectClick={(e) => toggleReparacionSelection(ch.id, virtualItem.index, e.shiftKey, e.metaKey, e.ctrlKey)}
                                     isSelected={false}
                                     isChecked={selectedReparacionChannels.has(ch.id)}
-                                    showCheckbox={!isSencillo}
+                                    showCheckbox={true}
                                     verificationStatus={channelInfo.status}
                                     quality={channelInfo.quality}
                                     resolution={channelInfo.resolution}

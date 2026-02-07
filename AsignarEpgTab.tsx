@@ -130,25 +130,33 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
     const handleOttModeClick = () => {
         const newState = !ottModeActive;
         setOttModeActive(newState);
-        setTivimateModeActive(false);
         
-        if (newState) {
-            setAttributesToCopy(new Set<AttributeKey>(['tvgId', 'tvgName']));
-        } else {
-            setAttributesToCopy(new Set<AttributeKey>());
-        }
+        // Actualizar attributesToCopy con tvgName
+        setAttributesToCopy(prev => {
+            const newSet = new Set(prev);
+            if (newState) {
+                newSet.add('tvgName');
+            } else {
+                newSet.delete('tvgName');
+            }
+            return newSet;
+        });
     };
 
     const handleTivimateModeClick = () => {
         const newState = !tivimateModeActive;
         setTivimateModeActive(newState);
-        setOttModeActive(false);
         
-        if (newState) {
-            setAttributesToCopy(new Set<AttributeKey>(['tvgId']));
-        } else {
-            setAttributesToCopy(new Set<AttributeKey>());
-        }
+        // Actualizar attributesToCopy con tvgId
+        setAttributesToCopy(prev => {
+            const newSet = new Set(prev);
+            if (newState) {
+                newSet.add('tvgId');
+            } else {
+                newSet.delete('tvgId');
+            }
+            return newSet;
+        });
     };
 
     const handleTransferLogoClick = () => {
@@ -324,54 +332,70 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                     </button>
                 </div>
                 
-                {/* Botón de asignación automática por grupo - SOLO MODO PRO */}
-                {!isSencillo && (
-                    <>
-                        <div className="w-full border-t border-gray-700 my-2"></div>
-                        <button
-                            onClick={() => autoAssignEpgToVisibleGroup(filteredMainChannelsForEpg)}
-                            disabled={filteredMainChannelsForEpg.length === 0 || epgChannels.length === 0}
-                            className="w-full text-xs py-2 px-2 rounded-md flex items-center justify-center gap-2 transition-colors bg-yellow-600 hover:bg-yellow-700 text-white disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed"
-                            title="Busca coincidencias exactas y asigna EPG automáticamente a canales sin EPG en el grupo visible"
-                        >
-                            <Zap size={14} /> Asignar EPG al grupo
-                        </button>
-                    </>
-                )}
+                {/* Botón "Arreglar nombre del canal" - AMBOS MODOS */}
+                <div className="w-full border-t border-gray-700 my-2"></div>
+                <button
+                    onClick={() => {
+                        const selectedEpgChannel = epgChannels.find(ch => selectedEpgChannels.has(ch.id));
+                        if (selectedEpgChannel && destinationChannelId) {
+                            assignChannelName(selectedEpgChannel);
+                        }
+                    }}
+                    disabled={!destinationChannelId || selectedEpgChannels.size !== 1}
+                    className={`w-full text-xs py-2 px-2 rounded-md flex items-center justify-center gap-2 transition-colors ${
+                        destinationChannelId && selectedEpgChannels.size === 1
+                            ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                            : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                    }`}
+                    title="Asigna el nombre del canal EPG seleccionado al nombre del canal principal"
+                >
+                    Arreglar nombre del canal
+                </button>
+                
+                {/* Botón de asignación automática por grupo - AMBOS MODOS */}
+                <button
+                    onClick={() => autoAssignEpgToVisibleGroup(filteredMainChannelsForEpg)}
+                    disabled={filteredMainChannelsForEpg.length === 0 || epgChannels.length === 0}
+                    className="w-full text-xs py-2 px-2 rounded-md flex items-center justify-center gap-2 transition-colors bg-yellow-600 hover:bg-yellow-700 text-white disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed mt-2"
+                    title="Busca coincidencias exactas y asigna EPG automáticamente a canales sin EPG en el grupo visible"
+                >
+                    <Zap size={14} /> Asignar EPG al grupo
+                </button>
             </div>
             <div className="lg:col-span-5 bg-gray-800 p-4 rounded-lg flex flex-col">
                 <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-bold text-lg">Fuente EPG</h3>
-                    <button
-                        onClick={() => onNavigateToSettings?.()}
-                        className="text-xs text-blue-400 hover:text-blue-300 underline"
-                    >
-                        Añadir fuentes →
-                    </button>
-                </div>
-                
-                {/* Input de URL de fuente EPG - Diferente según modo */}
-                {isSencillo ? (
-                    // MODO SENCILLO: Mostrar nombre de fuente cargada o selector
-                    <div className="space-y-2 mb-4">
-                        {loadedEpgSourceName ? (
-                            // Fuente EPG cargada - Mostrar nombre con botón X
-                            <div className="flex items-center justify-between bg-green-900/30 border border-green-600 rounded-md px-4 py-3">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                                    <span className="text-green-400 font-semibold">{loadedEpgSourceName}</span>
-                                </div>
+                    <div className="flex items-center gap-3">
+                        <h3 className="font-bold text-lg">Fuente EPG</h3>
+                        {loadedEpgSourceName && (
+                            <div className="flex items-center gap-2 bg-green-900/30 border border-green-600 rounded-md px-3 py-1">
+                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                <span className="text-green-400 font-semibold text-sm">{loadedEpgSourceName}</span>
                                 <button
                                     onClick={clearLoadedEpgSource}
-                                    className="text-red-400 hover:text-red-300 transition-colors"
+                                    className="text-red-400 hover:text-red-300 transition-colors ml-1"
                                     title="Limpiar fuente EPG"
                                 >
-                                    <X size={20} />
+                                    <X size={16} />
                                 </button>
                             </div>
-                        ) : (
-                            // No hay fuente cargada - Mostrar selector
-                            savedEpgUrls.length > 0 ? (
+                        )}
+                    </div>
+                    {!loadedEpgSourceName && (
+                        <button
+                            onClick={() => onNavigateToSettings?.()}
+                            className="text-xs text-blue-400 hover:text-blue-300 underline"
+                        >
+                            Añadir fuentes →
+                        </button>
+                    )}
+                </div>
+                
+                {/* Input de URL de fuente EPG - Solo visible si NO hay fuente cargada */}
+                {!loadedEpgSourceName && (
+                    isSencillo ? (
+                        // MODO SENCILLO: Solo selector
+                        <div className="space-y-2 mb-4">
+                            {savedEpgUrls.length > 0 ? (
                                 <select
                                     id="saved-epg-urls-select-simple"
                                     value=""
@@ -390,65 +414,63 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                 </select>
                             ) : (
                                 <div className="text-center text-gray-400 py-4">
-                                    <p className="text-sm mb-2">No hay fuentes EPG guardadas</p>
+                                    <p className="text-sm">No hay fuentes EPG guardadas</p>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        // MODO PRO: UI completa con todas las opciones
+                        <div className="space-y-2 mb-4">
+                            <div className="flex items-center gap-2">
+                                <input
+                                    id="epg-file-upload"
+                                    type="file"
+                                    className="hidden"
+                                    onChange={handleEpgFileUpload}
+                                    accept=".xml,.xml.gz"
+                                />
+                                <label
+                                    htmlFor="epg-file-upload"
+                                    className="cursor-pointer text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md flex items-center justify-center"
+                                >
+                                    <Upload size={16} className="mr-2" /> Subir XMLTV
+                                </label>
+                                <div className="flex-grow flex">
+                                    <input
+                                        type="text"
+                                        value={epgUrl}
+                                        onChange={(e) => setEpgUrl(e.target.value)}
+                                        placeholder="Pega la URL del archivo .xml"
+                                        className="flex-grow bg-gray-700 border border-gray-600 rounded-l-md px-3 py-2 text-white text-sm focus:ring-blue-500 focus:border-blue-500"
+                                    />
                                     <button
-                                        onClick={() => onNavigateToSettings?.()}
-                                        className="text-blue-400 hover:text-blue-300 underline text-sm"
+                                        onClick={handleFetchEpgUrl}
+                                        disabled={!epgUrl || isEpgLoading}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-r-md flex items-center text-sm disabled:bg-gray-600 disabled:cursor-not-allowed"
                                     >
-                                        Añadir fuentes →
+                                        <Download size={16} />
                                     </button>
                                 </div>
-                            )
-                        )}
-                    </div>
-                ) : (
-                    // MODO PRO: UI completa con todas las opciones
-                    <div className="space-y-2 mb-4">
-                        <div className="flex items-center gap-2">
-                            <input
-                                id="epg-file-upload"
-                                type="file"
-                                className="hidden"
-                                onChange={handleEpgFileUpload}
-                                accept=".xml,.xml.gz"
-                            />
-                            <label
-                                htmlFor="epg-file-upload"
-                                className="cursor-pointer text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md flex items-center justify-center"
-                            >
-                                <Upload size={16} className="mr-2" /> Subir XMLTV
-                            </label>
-                            <div className="flex-grow flex">
-                                <input
-                                    type="text"
-                                    value={epgUrl}
-                                    onChange={(e) => setEpgUrl(e.target.value)}
-                                    placeholder="Pega la URL del archivo .xml"
-                                    className="flex-grow bg-gray-700 border border-gray-600 rounded-l-md px-3 py-2 text-white text-sm focus:ring-blue-500 focus:border-blue-500"
-                                />
-                                <button
-                                    onClick={handleFetchEpgUrl}
-                                    disabled={!epgUrl || isEpgLoading}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-r-md flex items-center text-sm disabled:bg-gray-600 disabled:cursor-not-allowed"
-                                >
-                                    <Download size={16} />
-                                </button>
                             </div>
-                        </div>
-                        {savedEpgUrls.length > 0 && (
-                            <select
-                                id="saved-epg-urls-select"
-                                value=""
-                                onChange={(e) => { if (e.target.value) setEpgUrl(e.target.value); }}
-                                className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-blue-500 focus:border-blue-500 text-sm"
-                            >
-                                <option value="">o selecciona una fuente guardada...</option>
-                                {savedEpgUrls.map(item => (
-                                    <option key={item.id} value={item.url}>{item.name}</option>
-                                ))}
-                            </select>
-                        )}
-                        <div className="border-t border-gray-700 pt-2">
+                            {savedEpgUrls.length > 0 && (
+                                <select
+                                    id="saved-epg-urls-select"
+                                    value=""
+                                    onChange={(e) => {
+                                        const selectedOption = savedEpgUrls.find(item => item.url === e.target.value);
+                                        if (selectedOption && e.target.value) {
+                                            handleEpgSourceSelect(selectedOption.url, selectedOption.name);
+                                        }
+                                    }}
+                                    className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                >
+                                    <option value="">o selecciona una fuente guardada...</option>
+                                    {savedEpgUrls.map(item => (
+                                        <option key={item.id} value={item.url}>{item.name}</option>
+                                    ))}
+                                </select>
+                            )}
+                            <div className="border-t border-gray-700 pt-2">
                             <button 
                                 onClick={() => setIsGeneratorVisible(!isGeneratorVisible)}
                                 className="w-full text-sm text-left text-gray-300 hover:text-white flex items-center"
@@ -534,32 +556,8 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                             className="mb-2"
                         />
                         
-                        {/* Controles de modo de asignación y selección múltiple - SOLO MODO PRO */}
-                        <div className="flex gap-2 mb-2">
-                            <button
-                                onClick={toggleAssignmentMode}
-                                className={`flex-1 text-sm py-2 px-3 rounded-md transition-colors ${
-                                    assignmentMode === 'tvg-id' 
-                                        ? 'bg-green-600 text-white' 
-                                        : 'bg-yellow-600 text-white'
-                                }`}
-                            >
-                                {assignmentMode === 'tvg-id' ? 'Modo: tvg-id' : 'Modo: tvg-name'}
-                            </button>
-                            <button
-                                onClick={addSelectedEpgChannels}
-                                disabled={selectedEpgChannels.size === 0}
-                                className={`flex-1 text-sm py-2 px-3 rounded-md transition-colors ${
-                                    selectedEpgChannels.size > 0
-                                        ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                                        : 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                                }`}
-                            >
-                                Añadir {selectedEpgChannels.size > 0 ? `(${selectedEpgChannels.size})` : 'Seleccionados'}
-                            </button>
-                        </div>
-
-                        {/* Botón para arreglar nombre del canal - SOLO MODO PRO */}
+                        {/* Controles - SOLO MODO PRO */}
+                        {/* Botón para arreglar nombre del canal */}
                         <div className="mb-2">
                             <button
                                 onClick={() => {
@@ -574,9 +572,36 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                         ? 'bg-purple-600 hover:bg-purple-700 text-white'
                                         : 'bg-gray-600 text-gray-400 cursor-not-allowed'
                                 }`}
-                                title="Asigna el nombre del canal EPG seleccionado al canal principal seleccionado"
+                                title="Asigna el nombre del canal EPG seleccionado al nombre del canal principal"
                             >
                                 Arreglar nombre del canal
+                            </button>
+                        </div>
+
+                        {/* Botón de asignación automática por grupo */}
+                        <div className="mb-2">
+                            <button
+                                onClick={() => autoAssignEpgToVisibleGroup(filteredMainChannelsForEpg)}
+                                disabled={filteredMainChannelsForEpg.length === 0 || epgChannels.length === 0}
+                                className="w-full text-sm py-2 px-3 rounded-md flex items-center justify-center gap-2 transition-colors bg-yellow-600 hover:bg-yellow-700 text-white disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed"
+                                title="Busca coincidencias exactas y asigna EPG automáticamente a canales sin EPG en el grupo visible"
+                            >
+                                <Zap size={14} /> Asignar EPG al grupo
+                            </button>
+                        </div>
+
+                        {/* Botón de añadir seleccionados */}
+                        <div className="mb-2">
+                            <button
+                                onClick={addSelectedEpgChannels}
+                                disabled={selectedEpgChannels.size === 0}
+                                className={`w-full text-sm py-2 px-3 rounded-md transition-colors ${
+                                    selectedEpgChannels.size > 0
+                                        ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                                        : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                                }`}
+                            >
+                                Añadir {selectedEpgChannels.size > 0 ? `(${selectedEpgChannels.size})` : 'Seleccionados'}
                             </button>
                         </div>
 

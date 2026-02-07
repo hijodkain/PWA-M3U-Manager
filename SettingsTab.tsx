@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ExternalLink, XCircle, PlusCircle, Trash2, Copy } from 'lucide-react';
+import { ExternalLink, XCircle, PlusCircle, Trash2 } from 'lucide-react';
 import { useSettings } from './useSettings';
 
 interface SettingsTabProps {
@@ -360,47 +360,9 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
             <hr className="my-8 border-gray-600" />
 
             <div>
-                <h2 className="text-xl font-bold mb-2 text-center">Ajustes de EPG</h2>
-                <div className="mb-4 text-sm text-gray-300">
-                    <p className="mb-2">Prueba con alguna de estas dos listas públicas o añade la tuya:</p>
-                    <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-300">
-                                1. https://raw.githubusercontent.com/davidmuma/EPG_dobleM/master/guiaiptv.xml
-                            </span>
-                            <button
-                                onClick={() => {
-                                    navigator.clipboard.writeText('https://raw.githubusercontent.com/davidmuma/EPG_dobleM/master/guiaiptv.xml');
-                                }}
-                                className="text-blue-400 hover:text-blue-300 p-1"
-                                title="Copiar al portapapeles"
-                            >
-                                <Copy size={16} />
-                            </button>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-300">
-                                2. https://iptv-epg.org/files/epg-es.xml
-                            </span>
-                            <button
-                                onClick={() => {
-                                    navigator.clipboard.writeText('https://iptv-epg.org/files/epg-es.xml');
-                                }}
-                                className="text-blue-400 hover:text-blue-300 p-1"
-                                title="Copiar al portapapeles"
-                            >
-                                <Copy size={16} />
-                            </button>
-                        </div>
-                    </div>
-                    <p className="mt-3 text-xs text-yellow-300 bg-yellow-900/20 p-3 rounded border border-yellow-700">
-                        <strong>Nota:</strong> Si tu proveedor de EPG solo te da un enlace terminado en .xml.gz ten en cuenta que no se puede descomprimir en un navegador, deberás descargar el archivo y subirlo en la pestaña Asignar EPG con el botón Subir XMLTV.
-                    </p>
-                </div>
-
-                <h3 className="text-lg font-semibold mb-3">Añadir EPG</h3>
+                <h2 className="text-xl font-bold mb-4">Fuentes EPG Guardadas</h2>
                 
-                <form onSubmit={handleAddEpgUrl} className="bg-gray-700 p-4 rounded-lg mb-4 space-y-4 md:space-y-0 md:flex md:items-end md:gap-4">
+                <form onSubmit={handleAddEpgUrl} className="bg-gray-700 p-4 rounded-lg mb-6 space-y-4 md:space-y-0 md:flex md:items-end md:gap-4">
                     <div className="flex-grow">
                         <label htmlFor="epg-name" className="block text-sm font-medium text-gray-300 mb-1">Nombre</label>
                         <input
@@ -429,8 +391,6 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
                     </button>
                 </form>
 
-                <h3 className="text-lg font-semibold mb-3">Fuentes EPG guardadas</h3>
-
                 <div className="space-y-3">
                     {savedEpgUrls.length > 0 ? (
                         savedEpgUrls.map(item => (
@@ -450,12 +410,10 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
                 </div>
             </div>
 
-            <hr className="my-8 border-gray-600" />
-
-            {/* Sección de Ajustes de Búsqueda Inteligente */}
-            <div id="smart-search-settings">
-                <h2 className="text-xl font-bold text-center mb-4">Ajustes de la Búsqueda Inteligente</h2>
-                <div className="flex items-center justify-end mb-4">
+            {/* Sección de Prefijos y Sufijos de Canales */}
+            <div>
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-bold">Filtros de Nombres de Canales</h2>
                     <button
                         onClick={resetChannelPrefixesAndSuffixes}
                         className="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-md text-sm"
