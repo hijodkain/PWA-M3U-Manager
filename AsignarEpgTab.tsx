@@ -578,18 +578,6 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                             </button>
                         </div>
 
-                        {/* Botón de asignación automática por grupo */}
-                        <div className="mb-2">
-                            <button
-                                onClick={() => autoAssignEpgToVisibleGroup(filteredMainChannelsForEpg)}
-                                disabled={filteredMainChannelsForEpg.length === 0 || epgChannels.length === 0}
-                                className="w-full text-sm py-2 px-3 rounded-md flex items-center justify-center gap-2 transition-colors bg-yellow-600 hover:bg-yellow-700 text-white disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed"
-                                title="Busca coincidencias exactas y asigna EPG automáticamente a canales sin EPG en el grupo visible"
-                            >
-                                <Zap size={14} /> Asignar EPG al grupo
-                            </button>
-                        </div>
-
                         {/* Botón de añadir seleccionados */}
                         <div className="mb-2">
                             <button

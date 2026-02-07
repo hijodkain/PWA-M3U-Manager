@@ -154,6 +154,9 @@ export const useAsignarEpg = (
     }, [epgChannels, epgSearchTerm, isSmartSearchEnabled, searchChannels]);
 
     const handleEpgSourceClick = (sourceEpg: EpgChannel) => {
+        // Siempre seleccionar el canal EPG clickeado
+        setSelectedEpgChannels(new Set([sourceEpg.id]));
+        
         if (!destinationChannelId) return;
         saveStateToHistory();
         setChannels((prev) =>
@@ -250,22 +253,11 @@ export const useAsignarEpg = (
 
                 const updated = { ...channel };
 
-                // Verificar si es modo OTT
-                const isOttMode = attributesToCopy.has('tvgId') && attributesToCopy.has('tvgName');
-
-                if (isOttMode) {
-                    updated.tvgId = exactMatch.id;
-                    updated.tvgName = exactMatch.id;
-                } else {
-                    if (assignmentMode === 'tvg-id') {
-                        updated.tvgId = exactMatch.id;
-                    } else {
-                        updated.tvgName = exactMatch.name;
-                    }
-                }
-
-                // Copiar logo si está seleccionado
-                if (attributesToCopy.has('tvgLogo')) {
+                // En modo automático, siempre asignar tvgId (modo estándar)
+                updated.tvgId = exactMatch.id;
+                
+                // Copiar logo si está disponible
+                if (exactMatch.logo) {
                     updated.tvgLogo = exactMatch.logo;
                 }
 
@@ -274,7 +266,7 @@ export const useAsignarEpg = (
         });
 
         alert(`EPG asignado automáticamente a ${matches.size} de ${channelsWithoutEpg.length} canales`);
-    }, [epgChannels, normalizeChannelName, attributesToCopy, assignmentMode, setChannels, saveStateToHistory, settingsHook.channelPrefixes, settingsHook.channelSuffixes]);
+    }, [epgChannels, normalizeChannelName, setChannels, saveStateToHistory]);
 
     // Función para buscar canales EPG similares automáticamente
     const findSimilarEpgChannels = useCallback((channelName: string) => {
