@@ -4,17 +4,19 @@ interface EditableCellProps {
     value: string;
     onSave: (value: string) => void;
     className?: string;
+    suggestions?: string[];
 }
 
-const EditableCell: React.FC<EditableCellProps> = ({ value, onSave, className = "truncate" }) => {
+const EditableCell: React.FC<EditableCellProps> = ({ value, onSave, className = "truncate", suggestions }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [text, setText] = useState(value);
+  const listId = React.useId();
 
   const handleDoubleClick = () => {
     setText(value);
     setIsEditing(true);
   };
-    // ... logic remains same
+
   const handleBlur = () => {
     if (text !== value) {
       onSave(text);
@@ -33,15 +35,25 @@ const EditableCell: React.FC<EditableCellProps> = ({ value, onSave, className = 
 
   if (isEditing) {
     return (
-      <input
-        type="text"
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
-        autoFocus
-        className="w-full bg-gray-700 border border-blue-500 rounded px-1 py-0.5 text-white"
-      />
+      <>
+        <input
+          type="text"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          autoFocus
+          list={suggestions ? listId : undefined}
+          className="w-full bg-gray-700 border border-blue-500 rounded px-1 py-0.5 text-white"
+        />
+        {suggestions && (
+          <datalist id={listId}>
+            {suggestions.map((s, i) => (
+              <option key={i} value={s} />
+            ))}
+          </datalist>
+        )}
+      </>
     );
   }
 

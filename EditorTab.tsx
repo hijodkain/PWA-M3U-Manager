@@ -618,6 +618,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                         }
                                         gridTemplateColumns={gridTemplateColumns}
                                         measureRef={rowVirtualizer.measureElement}
+                                        suggestions={{ groupTitle: uniqueGroups }}
                                         style={{
                                             position: 'absolute',
                                             top: `${virtualItem.start}px`, // Use top instead of transform for virtualization
@@ -646,6 +647,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                     ) : null
                                 }
                                 gridTemplateColumns={gridTemplateColumns}
+                                suggestions={{ groupTitle: uniqueGroups }}
                                 style={{ width: `${tableWidth}px` }} // Overlay matches table width
                             />
                         ) : null}

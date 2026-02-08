@@ -18,6 +18,10 @@ interface SortableChannelRowProps {
     measureRef?: (node: HTMLElement | null) => void;
     isOverlay?: boolean;
     gridTemplateColumns: string;
+    suggestions?: {
+        groupTitle?: string[];
+        // Add more suggestion types later if needed
+    };
 }
 
 const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
@@ -31,6 +35,7 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
     measureRef,
     isOverlay,
     gridTemplateColumns,
+    suggestions,
 }) => {
     const { isSencillo } = useAppMode();
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -74,7 +79,7 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
     // Marquee helper: container with overflow hidden, child with animation on hover
     // Using simple truncate for now as base, and hover effect via CSS classes defined globally or locally.
     // To enable the "marquee on hover", we wrap EditableCell in a container that handles the hover trigger.
-    const MarqueeCell = ({ value, onSave }: { value: string, onSave: (val: string) => void }) => (
+    const MarqueeCell = ({ value, onSave, suggestionsList }: { value: string, onSave: (val: string) => void, suggestionsList?: string[] }) => (
         <div className="w-full overflow-hidden group relative" title={value}>
              <div className="truncate group-hover:overflow-visible group-hover:w-auto">
                 <div className={`inline-block ${value.length > 20 ? 'group-hover:animate-marquee' : ''}`}>
@@ -82,6 +87,7 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
                         value={value} 
                         onSave={onSave} 
                         className=""
+                        suggestions={suggestionsList}
                     />
                 </div>
              </div>
@@ -190,7 +196,11 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
 
             {/* Group */}
             <div className="px-2 py-2 text-sm text-gray-300 overflow-hidden">
-                 <MarqueeCell value={channel.groupTitle || ''} onSave={(val) => onUpdate(channel.id, 'groupTitle', val)} />
+                 <MarqueeCell 
+                    value={channel.groupTitle || ''} 
+                    onSave={(val) => onUpdate(channel.id, 'groupTitle', val)} 
+                    suggestionsList={suggestions?.groupTitle}
+                />
             </div>
 
              {/* Name */}
