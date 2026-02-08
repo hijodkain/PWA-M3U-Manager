@@ -48,14 +48,27 @@ export default function PWAM3UManager() {
         }
     };
 
-    const tabs: { id: Tab; name: string; icon: React.ElementType }[] = [
-        { id: 'inicio', name: 'Inicio', icon: Home },
-        { id: 'editor', name: 'Editor de Playlist', icon: Edit },
-        { id: 'reparacion', name: 'Reparación', icon: Wrench },
-        { id: 'asignar-epg', name: 'Asignar EPG', icon: List },
-        { id: 'save', name: 'Guardar y Exportar', icon: Save },
-        { id: 'settings', name: 'Configuración', icon: Settings },
-        { id: 'ayuda', name: 'Ayuda', icon: HelpCircle },
+    const getTabLabel = (tab: Tab) => {
+        switch (tab) {
+            case 'inicio': return <span className="hidden md:inline">Inicio</span>;
+            case 'editor': return <span>Editor</span>;
+            case 'reparacion': return <span>Reparar</span>;
+            case 'asignar-epg': return <span>EPG</span>;
+            case 'save': return <span className="hidden md:inline">Guardar</span>;
+            case 'settings': return <span className="hidden md:inline">Configuración</span>;
+            case 'ayuda': return <span className="hidden md:inline">Ayuda</span>;
+            default: return null;
+        }
+    };
+
+    const tabs: { id: Tab; icon: React.ElementType }[] = [
+        { id: 'inicio', icon: Home },
+        { id: 'editor', icon: Edit },
+        { id: 'reparacion', icon: Wrench },
+        { id: 'asignar-epg', icon: List },
+        { id: 'save', icon: Save },
+        { id: 'settings', icon: Settings },
+        { id: 'ayuda', icon: HelpCircle },
     ];
 
     return (
@@ -90,9 +103,10 @@ export default function PWAM3UManager() {
                                         ? 'border-blue-500 text-blue-400'
                                         : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500'
                                     } flex items-center whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm focus:outline-none`}
+                                title={tab.id}
                             >
                                 <tab.icon className="mr-2 h-5 w-5" />
-                                {tab.name}
+                                {getTabLabel(tab.id)}
                             </button>
                         ))}
                     </nav>

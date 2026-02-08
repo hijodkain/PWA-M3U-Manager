@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, Download, Smartphone, AlertCircle, Share2, Trash2 } from 'lucide-react';
+import { Upload, Download, AlertCircle, Share2, Trash2, Search, Link as LinkIcon, FileText, Settings, RefreshCw, Plus } from 'lucide-react';
 import { useChannels } from './useChannels';
 import { useSettings } from './useSettings';
 
@@ -27,390 +27,165 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
 
     const { savedUrls, addSavedUrl, dropboxRefreshToken } = settingsHook;
     
+    // Estados base (mantenidos del original)
     const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
     const [isInstallable, setIsInstallable] = useState(false);
+    
+    // Estados para gestión de listas
     const [medicinaUrl, setMedicinaUrl] = useState('');
     const [isMedicinaLoading, setIsMedicinaLoading] = useState(false);
     const [medicinaError, setMedicinaError] = useState('');
-    const [savedMedicinaLists, setSavedMedicinaLists] = useState<Array<{ id: string; name: string; url: string }>>([]);
+    const [savedMedicinaLists, setSavedMedicinaLists] = useState<Array<{ id: string; name: string; url: string; content?: string }>>([]);
     const [savedDropboxLists, setSavedDropboxLists] = useState<Array<{ id: string; name: string; url: string; addedAt: string }>>([]);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
 
+    // Initial Load
     useEffect(() => {
         const handler = (e: Event) => {
             e.preventDefault();
             setDeferredPrompt(e as BeforeInstallPromptEvent);
             setIsInstallable(true);
         };
-
         window.addEventListener('beforeinstallprompt', handler);
-
-        return () => {
-            window.removeEventListener('beforeinstallprompt', handler);
-        };
+        return () => window.removeEventListener('beforeinstallprompt', handler);
     }, []);
 
     useEffect(() => {
-        // Cargar listas medicina guardadas
         const stored = localStorage.getItem('medicinaLists');
-        if (stored) {
-            setSavedMedicinaLists(JSON.parse(stored));
-        }
+        if (stored) setSavedMedicinaLists(JSON.parse(stored));
 
-        // Cargar listas de Dropbox guardadas
         const storedDropbox = localStorage.getItem('dropboxLists');
-        if (storedDropbox) {
-            setSavedDropboxLists(JSON.parse(storedDropbox));
-        }
+        if (storedDropbox) setSavedDropboxLists(JSON.parse(storedDropbox));
     }, []);
 
+    // Handlers (Mantenidos y adaptados)
     const handleInstallClick = async () => {
         if (!deferredPrompt) {
-            // Si no hay prompt, redirigir a página de instrucciones
             window.open('https://support.google.com/chrome/answer/9658361', '_blank');
             return;
         }
-
         deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
-        
         if (outcome === 'accepted') {
             setDeferredPrompt(null);
             setIsInstallable(false);
         }
     };
 
+    // --- Carga de listas desde barra lateral ---
+    const loadList = async (item: { url: string; content?: string; name: string }) => {
+        if (isLoading) return;
+
+        if (item.url === 'local' && item.content) {
+            // Cargar desde contenido guardado (simular archivo)
+            try {
+                const file = new File([item.content], `${item.name}.m3u`, { type: 'text/plain' });
+                // @ts-ignore - Simulación básica del evento
+                await handleFileUpload({ target: { files: [file] } } as any);
+                setShowSuccessModal(true);
+            } catch (e) {
+                console.error("Error cargando lista local", e);
+                alert("Error cargando lista local");
+            }
+        } else {
+            // Cargar desde URL: selectAndLoad se encargará del flujo
+            selectAndLoad(item.url);
+        }
+    };
+    
+    // Auto-load effect logic
+    const [triggerLoad, setTriggerLoad] = useState(false);
+    useEffect(() => {
+        if (triggerLoad && url) {
+            handleFetchUrl();
+            setTriggerLoad(false);
+            setShowSuccessModal(true);
+        }
+    }, [triggerLoad, url, handleFetchUrl]);
+
+    const selectAndLoad = (u: string) => {
+        setUrl(u);
+        setTriggerLoad(true);
+    };
+
+
+    // Handlers de gestión de listas (Medicinas, etc)
     const handleMedicinaUrlLoad = async () => {
         if (!medicinaUrl) return;
-
         setIsMedicinaLoading(true);
-        setMedicinaError('');
-
         try {
             const response = await fetch(medicinaUrl);
-            if (!response.ok) throw new Error('No se pudo descargar la lista');
-            
+            if (!response.ok) throw new Error('Falló descarga');
             const content = await response.text();
-            
-            // Pedir nombre al usuario
-            const rawName = prompt('Nombre para esta lista medicina:', 'Lista Medicina');
-            if (!rawName) {
-                setIsMedicinaLoading(false);
-                return;
-            }
-
-            // Reemplazar espacios con guiones medios
+            const rawName = prompt('Nombre para lista:', 'Lista');
+            if (!rawName) return;
             const name = rawName.replace(/\s+/g, '-');
-
-            // Guardar en localStorage
-            const newList = {
-                id: Date.now().toString(),
-                name,
-                url: medicinaUrl,
-                content
-            };
-
+            const newList = { id: Date.now().toString(), name, url: medicinaUrl, content };
             const updated = [...savedMedicinaLists, newList];
             setSavedMedicinaLists(updated);
             localStorage.setItem('medicinaLists', JSON.stringify(updated));
-
             setMedicinaUrl('');
-            alert(`Lista "${name}" guardada correctamente`);
-        } catch (err) {
-            setMedicinaError('Error al descargar la lista. Verifica la URL.');
+            alert('Guardada OK');
+        } catch (e) {
+            setMedicinaError('Error al guardar lista');
         } finally {
             setIsMedicinaLoading(false);
         }
     };
 
-    const handleMedicinaFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        setIsMedicinaLoading(true);
-        setMedicinaError('');
-
-        try {
-            const content = await file.text();
-            
-            // Pedir nombre al usuario
-            const rawName = prompt('Nombre para esta lista medicina:', file.name.replace(/\.(m3u8?|txt)$/i, ''));
-            if (!rawName) {
-                setIsMedicinaLoading(false);
-                e.target.value = '';
-                return;
-            }
-
-            // Reemplazar espacios con guiones medios
-            const name = rawName.replace(/\s+/g, '-');
-
-            // Guardar en localStorage
-            const newList = {
-                id: Date.now().toString(),
-                name,
-                url: 'local',
-                content
-            };
-
-            const updated = [...savedMedicinaLists, newList];
-            setSavedMedicinaLists(updated);
-            localStorage.setItem('medicinaLists', JSON.stringify(updated));
-
-            alert(`Lista "${name}" guardada correctamente`);
-        } catch (err) {
-            setMedicinaError('Error al leer el archivo.');
-        } finally {
-            setIsMedicinaLoading(false);
-            e.target.value = '';
+    const handleDeleteList = (type: 'dropbox' | 'medicina', id: string) => {
+        if (!confirm('¿Eliminar lista?')) return;
+        if (type === 'dropbox') {
+            const upd = savedDropboxLists.filter(l => l.id !== id);
+            setSavedDropboxLists(upd);
+            localStorage.setItem('dropboxLists', JSON.stringify(upd));
+        } else {
+            const upd = savedMedicinaLists.filter(l => l.id !== id);
+            setSavedMedicinaLists(upd);
+            localStorage.setItem('medicinaLists', JSON.stringify(upd));
         }
     };
 
-    const handleDeleteMedicinaList = (id: string) => {
-        if (!confirm('¿Eliminar esta lista medicina?')) return;
-        
-        const updated = savedMedicinaLists.filter(list => list.id !== id);
-        setSavedMedicinaLists(updated);
-        localStorage.setItem('medicinaLists', JSON.stringify(updated));
-    };
-
-    const handleDeleteDropboxList = (id: string) => {
-        if (!confirm('¿Eliminar esta lista de Dropbox?')) return;
-        
-        const updated = savedDropboxLists.filter(list => list.id !== id);
-        setSavedDropboxLists(updated);
-        localStorage.setItem('dropboxLists', JSON.stringify(updated));
-    };
-
-    const handleShareDropboxLink = async (url: string) => {
+    const handleShare = async (u: string) => {
         try {
-            await navigator.clipboard.writeText(url);
-            alert('Enlace copiado al portapapeles');
-        } catch (error) {
-            console.error('Error al copiar enlace:', error);
-            alert('No se pudo copiar el enlace');
+            await navigator.clipboard.writeText(u);
+            alert('Enlace copiado');
+        } catch (e) {
+            alert('No se pudo copiar');
         }
-    };
-
-    const handleUrlLoadWrapper = async () => {
-        await handleFetchUrl();
-        setShowSuccessModal(true);
-    };
-
-    const handleFileUploadWrapper = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        await handleFileUpload(e);
-        setShowSuccessModal(true);
-    };
-
-    const handleModalOk = () => {
-        setShowSuccessModal(false);
-        onNavigateToEditor();
     };
 
     return (
-        <div className="space-y-6 max-w-6xl mx-auto">
-            {/* Estado de conexión a Dropbox */}
-            <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
-                {dropboxRefreshToken ? (
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                            <span className="text-green-400 font-semibold">Conectado a Dropbox</span>
-                        </div>
-                        <img src="/Dropbox_Icon.svg" alt="Dropbox" className="h-5 w-5" />
-                    </div>
-                ) : (
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                            <span className="text-red-400 font-semibold">No conectado a Dropbox</span>
-                        </div>
-                        <button
-                            onClick={() => onNavigateToSettings?.()}
-                            className="text-blue-400 hover:text-blue-300 underline text-sm"
-                        >
-                            Conectar ahora
-                        </button>
-                    </div>
-                )}
-            </div>
-
-            {/* Sección principal - Cargar lista */}
-            <div className="bg-gray-800 p-8 rounded-lg shadow-lg">
-                <div className="mb-8">
-                    <h2 className="text-2xl font-bold text-blue-400 mb-3">Vamos a cargar la lista que quieres gestionar</h2>
-                    <p className="text-gray-300 text-sm">
-                        Si no tienes ninguna aún en tu Dropbox, puedes cargar una cualquiera que editarás a tu gusto y luego subirás como lista nueva a tu Dropbox.
-                    </p>
-                </div>
-
-                <div className="space-y-6">
-                    {/* Campo de texto para URL */}
-                    <div>
-                        <label htmlFor="inicio-url-input" className="block text-sm font-medium text-gray-300 mb-2">
-                            Pega aquí el enlace de tu lista IPTV
-                        </label>
-                        <div className="flex">
-                            <input
-                                id="inicio-url-input"
-                                type="text"
-                                value={url}
-                                onChange={(e) => setUrl(e.target.value)}
-                                placeholder="https://dominio...m3u_plus"
-                                className="flex-grow bg-gray-700 border border-gray-600 rounded-l-md px-4 py-3 text-white focus:ring-blue-500 focus:border-blue-500"
-                            />
-                            <button
-                                onClick={handleUrlLoadWrapper}
-                                disabled={isLoading || !url}
-                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-r-md flex items-center disabled:bg-blue-800 disabled:cursor-not-allowed transition-colors"
-                            >
-                                <Download size={20} className="mr-2" /> Cargar
-                            </button>
-                        </div>
-                        {savedDropboxLists.length > 0 && (
-                            <div className="mt-3">
-                                <select
-                                    id="inicio-dropbox-select"
-                                    value=""
-                                    onChange={(e) => {
-                                        if (e.target.value) {
-                                            setUrl(e.target.value);
-                                        }
-                                    }}
-                                    className="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-3 text-white focus:ring-blue-500 focus:border-blue-500"
-                                >
-                                    <option value="">o selecciona una de tu Dropbox</option>
-                                    {savedDropboxLists.map(item => (
-                                        <option key={item.id} value={item.url}>
-                                            {item.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Divisor */}
-                    <div className="relative">
-                        <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-gray-600"></div>
-                        </div>
-                        <div className="relative flex justify-center text-sm">
-                            <span className="px-4 bg-gray-800 text-gray-400">o</span>
-                        </div>
-                    </div>
-
-                    {/* Botón de subir archivo */}
-                    <div className="text-center">
-                        <label
-                            htmlFor="inicio-file-upload"
-                            className="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-md inline-flex items-center transition-colors"
-                        >
-                            <Upload size={20} className="mr-2" /> Añadir desde archivo .m3u
-                        </label>
-                        <input
-                            id="inicio-file-upload"
-                            type="file"
-                            className="hidden"
-                            onChange={handleFileUploadWrapper}
-                            accept=".m3u,.m3u8"
-                        />
-                    </div>
-
-                    {/* Mensajes de estado */}
-                    {isLoading && (
-                        <div className="text-center mt-4">
-                            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400"></div>
-                            <p className="text-blue-400 mt-2">Cargando lista M3U...</p>
-                        </div>
-                    )}
-                    {error && (
-                        <div className="text-center mt-4 text-red-400 bg-red-900/50 p-4 rounded-md">
-                            {error}
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Sección Añadir Lista Reparadora */}
-            <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
-                <h3 className="text-xl font-bold text-purple-400 mb-4">Añadir nueva lista reparadora</h3>
-                <div className="flex gap-2 mb-3">
-                    <input
-                        type="text"
-                        value={medicinaUrl}
-                        onChange={(e) => setMedicinaUrl(e.target.value)}
-                        placeholder="URL de la lista medicina..."
-                        className="flex-grow bg-gray-700 border border-gray-600 rounded-md px-4 py-2 text-white focus:ring-purple-500 focus:border-purple-500"
-                    />
-                    <button
-                        onClick={handleMedicinaUrlLoad}
-                        disabled={isMedicinaLoading || !medicinaUrl}
-                        className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-md disabled:bg-gray-600 disabled:cursor-not-allowed whitespace-nowrap"
-                    >
-                        Guardar
-                    </button>
-                    <label
-                        htmlFor="medicina-file-upload"
-                        className="cursor-pointer bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-md inline-flex items-center whitespace-nowrap"
-                    >
-                        <Upload size={18} className="mr-1" /> Subir M3U
-                    </label>
-                    <input
-                        id="medicina-file-upload"
-                        type="file"
-                        className="hidden"
-                        onChange={handleMedicinaFileUpload}
-                        accept=".m3u,.m3u8"
-                    />
-                </div>
+        <div className="flex flex-col md:flex-row h-[calc(100vh-80px)] overflow-hidden bg-gray-900 border-t border-gray-800">
+            {/* --- COLUMNA IZQUIERDA: MENÚS --- */}
+            <div className="w-full md:w-1/3 max-w-sm bg-gray-900 border-r border-gray-800 flex flex-col h-full">
                 
-                {isMedicinaLoading && (
-                    <div className="text-center text-purple-400 text-sm">
-                        Guardando lista medicina...
+                {/* Sección Dropbox */}
+                <div className="flex-1 overflow-y-auto border-b border-gray-800 p-4">
+                    <div className="flex items-center gap-2 mb-4 text-gray-300">
+                        <img src="/Dropbox_Icon.svg" alt="Dropbox" className="w-5 h-5 opacity-80" />
+                        <h3 className="font-semibold text-sm uppercase tracking-wider">Mis Listas de Dropbox</h3>
+                        <span className="ml-auto text-xs bg-gray-800 px-2 py-1 rounded-full text-gray-500">{savedDropboxLists.length}</span>
                     </div>
-                )}
-                {medicinaError && (
-                    <div className="flex items-center gap-2 text-red-400 text-sm bg-red-900/30 p-2 rounded">
-                        <AlertCircle size={16} />
-                        {medicinaError}
-                    </div>
-                )}
-            </div>
-
-            {/* Dos columnas: Dropbox y Listas Reparadoras */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Columna Dropbox */}
-                <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
-                    <div className="mb-4">
-                        <div className="flex items-center gap-2 mb-1">
-                            <h3 className="text-lg font-bold text-white">Mis Listas de</h3>
-                            <img src="/Dropbox_Icon.svg" alt="Dropbox" className="h-6 w-6" />
-                            <h3 className="text-lg font-bold text-white">Dropbox</h3>
-                        </div>
-                        <p className="text-xs text-gray-400">Pulsa compartir para copiar el enlace para tu app de IPTV</p>
-                    </div>
+                    
                     {savedDropboxLists.length === 0 ? (
-                        <div className="text-center text-gray-400 py-8">
-                            <p className="text-sm">No hay listas guardadas</p>
+                        <div className="text-center py-8 px-4 border-2 border-dashed border-gray-800 rounded-lg">
+                            <p className="text-gray-600 text-sm">No tienes listas guardadas.</p>
+                            <p className="text-gray-700 text-xs mt-1">Sube una desde la pestaña 'Guardar'</p>
                         </div>
                     ) : (
-                        <ul className="space-y-2">
+                        <ul className="space-y-1">
                             {savedDropboxLists.map(list => (
-                                <li key={list.id} className="flex items-center justify-between bg-gray-700 p-3 rounded-md">
-                                    <span className="text-white text-sm truncate flex-grow">{list.name}</span>
-                                    <div className="flex items-center gap-2 ml-2">
-                                        <button
-                                            onClick={() => handleShareDropboxLink(list.url)}
-                                            className="text-blue-400 hover:text-blue-300 text-xs flex items-center gap-1"
-                                            title="Compartir enlace"
-                                        >
+                                <li key={list.id} className="group flex items-center justify-between p-2 rounded-md hover:bg-gray-800 transition-colors cursor-pointer" onClick={() => selectAndLoad(list.url)}>
+                                    <div className="flex items-center gap-3 overflow-hidden">
+                                        <FileText size={16} className="text-blue-500 flex-shrink-0" />
+                                        <span className="text-gray-300 text-sm truncate">{list.name}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                                        <button onClick={() => handleShare(list.url)} className="p-1.5 text-gray-500 hover:text-white rounded hover:bg-gray-700" title="Copiar enlace">
                                             <Share2 size={14} />
                                         </button>
-                                        <button
-                                            onClick={() => handleDeleteDropboxList(list.id)}
-                                            className="text-red-400 hover:text-red-300 text-xs flex items-center gap-1"
-                                            title="Eliminar"
-                                        >
+                                        <button onClick={() => handleDeleteList('dropbox', list.id)} className="p-1.5 text-gray-500 hover:text-red-400 rounded hover:bg-gray-700" title="Eliminar">
                                             <Trash2 size={14} />
                                         </button>
                                     </div>
@@ -420,27 +195,32 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                     )}
                 </div>
 
-                {/* Columna Listas Reparadoras */}
-                <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
-                    <div className="flex items-center gap-2 mb-4">
-                        <h3 className="text-lg font-bold text-white">Listas Reparadoras</h3>
-                        <img src="/medical-history.png" alt="Medicina" className="h-6 w-6" />
+                {/* Sección Medicina */}
+                <div className="flex-1 overflow-y-auto p-4 bg-gray-900/50">
+                    <div className="flex items-center gap-2 mb-4 text-gray-300">
+                        <img src="/medical-history.png" alt="Medicina" className="w-5 h-5 opacity-80" />
+                        <h3 className="font-semibold text-sm uppercase tracking-wider">Listas Medicina</h3>
+                        <span className="ml-auto text-xs bg-gray-800 px-2 py-1 rounded-full text-gray-500">{savedMedicinaLists.length}</span>
                     </div>
+
                     {savedMedicinaLists.length === 0 ? (
-                        <div className="text-center text-gray-400 py-8">
-                            <p className="text-sm">No hay listas guardadas</p>
+                        <div className="text-center py-8 px-4 border-2 border-dashed border-gray-800 rounded-lg">
+                            <p className="text-gray-600 text-sm">Sin listas auxiliares.</p>
                         </div>
                     ) : (
-                        <ul className="space-y-2">
+                        <ul className="space-y-1">
                             {savedMedicinaLists.map(list => (
-                                <li key={list.id} className="flex items-center justify-between bg-gray-700 p-3 rounded-md">
-                                    <span className="text-white text-sm truncate flex-grow">{list.name}</span>
-                                    <button
-                                        onClick={() => handleDeleteMedicinaList(list.id)}
-                                        className="text-red-400 hover:text-red-300 text-xs ml-2"
-                                    >
-                                        Eliminar
-                                    </button>
+                                <li key={list.id} className="group flex items-center justify-between p-2 rounded-md hover:bg-gray-800 transition-colors cursor-pointer" 
+                                    onClick={() => list.url === 'local' && list.content ? loadList(list) : selectAndLoad(list.url)}>
+                                    <div className="flex items-center gap-3 overflow-hidden">
+                                        <div className="w-2 h-2 rounded-full bg-purple-500 flex-shrink-0"></div>
+                                        <span className="text-gray-300 text-sm truncate">{list.name}</span>
+                                    </div>
+                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                                        <button onClick={() => handleDeleteList('medicina', list.id)} className="p-1.5 text-gray-500 hover:text-red-400 rounded hover:bg-gray-700">
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </div>
                                 </li>
                             ))}
                         </ul>
@@ -448,24 +228,143 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                 </div>
             </div>
 
-            {/* Modal de éxito */}
-            {showSuccessModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-gray-800 rounded-lg p-8 max-w-md mx-4 border border-green-500">
-                        <div className="text-center">
-                            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-                                <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                </svg>
+            {/* --- COLUMNA DERECHA: DASHBOARD --- */}
+            <div className="flex-1 bg-gray-900 p-6 md:p-12 overflow-y-auto">
+                <div className="max-w-4xl mx-auto space-y-8">
+                    
+                    {/* Header */}
+                    <div>
+                        <h1 className="text-3xl font-bold text-white mb-2">Panel de Control</h1>
+                        <p className="text-gray-400">Gestiona tus listas, verifica la conexión y carga contenido.</p>
+                    </div>
+
+                    {/* Connection Status Card */}
+                    <div className={`p-6 rounded-xl border ${dropboxRefreshToken ? 'bg-green-900/10 border-green-900/30' : 'bg-red-900/10 border-red-900/30'} transition-colors`}>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className={`p-3 rounded-lg ${dropboxRefreshToken ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                                    <img src="/Dropbox_Icon.svg" className="w-8 h-8" style={{ filter: dropboxRefreshToken ? 'none' : 'grayscale(100%)' }} />
+                                </div>
+                                <div>
+                                    <h2 className={`font-bold text-lg ${dropboxRefreshToken ? 'text-green-400' : 'text-red-400'}`}>
+                                        {dropboxRefreshToken ? 'Conectado a Dropbox' : 'Desconectado'}
+                                    </h2>
+                                    <p className="text-sm text-gray-400">
+                                        {dropboxRefreshToken ? 'Sincronización activa y lista para usar.' : 'Conecta tu cuenta para guardar y cargar listas.'}
+                                    </p>
+                                </div>
                             </div>
-                            <h3 className="text-xl font-semibold text-white mb-4">Lista cargada exitosamente</h3>
-                            <button
-                                onClick={handleModalOk}
-                                className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-md transition-colors"
+                            {!dropboxRefreshToken && (
+                                <button onClick={onNavigateToSettings} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
+                                    Conectar ahora
+                                </button>
+                            )}
+                            {dropboxRefreshToken && (
+                                <div className="hidden md:flex items-center gap-2 text-sm text-green-500/80 bg-green-900/20 px-3 py-1 rounded-full">
+                                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                    Online
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Área de Carga Manual */}
+                    <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
+                        <label className="block text-gray-300 font-medium mb-3">Cargar URL manualmente</label>
+                        <div className="flex gap-2 mb-6">
+                            <div className="relative flex-grow">
+                                <LinkIcon size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
+                                <input 
+                                    type="text" 
+                                    value={url} 
+                                    onChange={e => setUrl(e.target.value)}
+                                    placeholder="https://ejemplo.com/lista.m3u"
+                                    className="w-full bg-gray-900 border border-gray-700 rounded-lg pl-10 pr-4 py-3 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                                />
+                            </div>
+                            <button 
+                                onClick={() => handleFetchUrl()}
+                                disabled={isLoading || !url}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-6 rounded-lg font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                OK
+                                {isLoading ? <RefreshCw className="animate-spin" size={20} /> : <Download size={20} />}
+                                <span className="hidden md:inline">Cargar</span>
                             </button>
                         </div>
+                        
+                        <div className="flex items-center gap-4 text-sm text-gray-500">
+                            <span className="h-px bg-gray-700 flex-grow"></span>
+                            <span>O sube un archivo</span>
+                            <span className="h-px bg-gray-700 flex-grow"></span>
+                        </div>
+
+                        <div className="mt-6 flex justify-center">
+                            <input
+                                id="file-upload-main"
+                                type="file"
+                                className="hidden"
+                                onChange={async (e) => { await handleFileUpload(e); setShowSuccessModal(true); }}
+                                accept=".m3u,.m3u8"
+                            />
+                            <label htmlFor="file-upload-main" className="cursor-pointer flex flex-col items-center gap-2 p-6 border-2 border-dashed border-gray-700 rounded-xl hover:border-gray-500 hover:bg-gray-800 transition-all w-full md:w-2/3">
+                                <Upload size={32} className="text-gray-400" />
+                                <span className="text-gray-300 font-medium">Click para seleccionar archivo</span>
+                                <span className="text-gray-500 text-xs">Soporta .m3u y .m3u8</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    {/* Gestión Rápida (Añadir Medicina) */}
+                    <div className="bg-gray-800/30 rounded-xl p-4 border border-gray-700/50">
+                        <button 
+                            onClick={() => {
+                                const el = document.getElementById('medicina-panel');
+                                if(el) el.classList.toggle('hidden');
+                            }}
+                            className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm font-medium"
+                        >
+                            <Settings size={16} />
+                            Gestionar Listas Auxiliares / Medicina
+                        </button>
+                        
+                        <div id="medicina-panel" className="hidden mt-4 pt-4 border-t border-gray-700/50">
+                             <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    value={medicinaUrl}
+                                    onChange={(e) => setMedicinaUrl(e.target.value)}
+                                    placeholder="URL nueva lista auxiliar..."
+                                    className="flex-grow bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm text-center text-white"
+                                />
+                                <button
+                                    onClick={handleMedicinaUrlLoad}
+                                    disabled={isMedicinaLoading || !medicinaUrl}
+                                    className="bg-purple-600 hover:bg-purple-700 text-white px-4 rounded text-sm disabled:opacity-50"
+                                >
+                                    Guardar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            {/* Modal Éxito */}
+            {showSuccessModal && (
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+                    <div className="bg-gray-800 rounded-2xl p-8 max-w-sm w-full text-center border border-gray-700 shadow-2xl transform transition-all">
+                        <div className="w-16 h-16 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <Download size={32} />
+                        </div>
+                        <h3 className="text-xl font-bold text-white mb-2">¡Lista Cargada!</h3>
+                        <p className="text-gray-400 mb-6">La lista se ha importado correctamente al editor.</p>
+                        <button
+                            onClick={() => { setShowSuccessModal(false); onNavigateToEditor(); }}
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition-colors"
+                        >
+                            Ir al Editor
+                        </button>
                     </div>
                 </div>
             )}

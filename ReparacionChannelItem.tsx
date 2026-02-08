@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Channel, QualityLevel, ChannelStatus } from './index';
 import { Play } from 'lucide-react';
 
@@ -18,6 +18,60 @@ interface ReparacionChannelItemProps {
     style?: React.CSSProperties;
     isSencillo?: boolean;
 }
+
+const MarqueeText: React.FC<{ text: string; className?: string; isSelected?: boolean }> = ({ text, className = "", isSelected = false }) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const textRef = useRef<HTMLDivElement>(null);
+    const [isOverflowing, setIsOverflowing] = useState(false);
+
+    useEffect(() => {
+        const checkOverflow = () => {
+            if (containerRef.current && textRef.current) {
+                // Check if scrollWidth > clientWidth
+                setIsOverflowing(textRef.current.scrollWidth > containerRef.current.clientWidth);
+            }
+        };
+
+        checkOverflow();
+        window.addEventListener('resize', checkOverflow);
+        return () => window.removeEventListener('resize', checkOverflow);
+    }, [text]);
+
+    // We use data-attributes to styling in CSS
+    // Logic: If overflow, on hover OR if selected, animate.
+    // We duplicate text to clear gap for smooth marquee
+    
+    return (
+        <div 
+            ref={containerRef} 
+            className={`relative overflow-hidden whitespace-nowrap ${className}`}
+        >
+             <style>{`
+                @keyframes marquee {
+                    0% { transform: translateX(0); }
+                    100% { transform: translateX(-50%); } 
+                }
+                .animate-marquee {
+                    display: inline-flex;
+                    animation: marquee 10s linear infinite;
+                }
+                /* Pause on start? No, requested scrolling */
+             `}</style>
+             
+            {isOverflowing ? (
+                 <div 
+                    ref={textRef as any}
+                    className={`inline-flex transition-transform ${isSelected ? 'animate-marquee' : 'group-hover/item:animate-marquee'}`}
+                 >
+                    <span className="pr-8">{text}</span>
+                    <span>{text}</span>
+                </div>
+            ) : (
+                <div ref={textRef as any} className="truncate">{text}</div>
+            )}
+        </div>
+    );
+};
 
 const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
     channel,
@@ -65,7 +119,6 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
     };
 
     const qualityBadge = () => {
-        // Mostrar badge solo si la verificación fue exitosa
         if (verificationStatus !== 'ok') return null;
         
         const qualityColors: Record<QualityLevel, string> = {
@@ -78,7 +131,7 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
 
         const qualityText = quality === 'unknown' ? '?' : quality;
         const tooltipText = quality === 'unknown' 
-            ? 'No se pudo detectar la resolución. Si esto ocurre en todos los canales de este dominio, es probable que el servidor no proporcione estos metadatos.'
+            ? 'No se pudo detectar la resolución.'
             : `Calidad: ${quality}`;
 
         return (
@@ -96,9 +149,9 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
         <div
             style={style}
             onClick={onBodyClick}
-            className={`flex items-center gap-2 p-2 rounded-lg border-2 ${
+            className={`group/item flex items-center gap-2 p-2 rounded-lg border-2 ${
                 isSelected ? 'border-blue-500 bg-blue-900/50' : 'border-transparent'
-            } cursor-pointer hover:bg-gray-700 min-h-[60px]`}
+            } cursor-pointer hover:bg-gray-700 min-h-[60px] transition-colors`}
         >
             <img
                 src={channel.tvgLogo || 'https://placehold.co/40x40/2d3748/e2e8f0?text=?'}
@@ -108,22 +161,31 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
                     e.currentTarget.src = 'https://placehold.co/40x40/2d3748/e2e8f0?text=Error';
                 }}
             />
-            <div className="text-xs overflow-hidden flex-grow min-w-0">
-                <p className={`font-bold truncate text-sm ${nameColor}`}>{channel.name}</p>
+            <div className="text-xs overflow-hidden flex-grow min-w-0 pr-2">
+                <MarqueeText 
+                    text={channel.name} 
+                    className={`font-bold text-sm ${nameColor} mb-0.5`} 
+                    isSelected={isSelected} 
+                />
+                
                 {!isSencillo && (
-                    <div className="flex gap-3 text-[11px]">
-                        <p className="text-gray-400 truncate">
-                            <span className="font-semibold text-gray-300">ID:</span> {channel.tvgId || '---'}
-                        </p>
-                        <p className="text-gray-400 truncate">
-                            <span className="font-semibold text-gray-300">Name:</span> {channel.tvgName || '---'}
-                        </p>
+                    <div className="flex gap-3 text-[11px] mb-0.5">
+                        <div className="flex-1 overflow-hidden flex gap-1">
+                             <span className="font-semibold text-gray-300 flex-shrink-0">ID:</span> 
+                             <MarqueeText text={channel.tvgId || '---'} className="text-gray-400" isSelected={isSelected} />
+                        </div>
+                        <div className="flex-1 overflow-hidden flex gap-1">
+                            <span className="font-semibold text-gray-300 flex-shrink-0">Name:</span> 
+                            <MarqueeText text={channel.tvgName || '---'} className="text-gray-400" isSelected={isSelected} />
+                        </div>
                     </div>
                 )}
-                <p className="text-gray-400 truncate text-[11px]">
-                    <span className="font-semibold text-gray-300">URL:</span> {getDomainFromUrl(channel.url)}
-                </p>
+                <div className="flex gap-1 overflow-hidden">
+                    <span className="font-semibold text-gray-300 flex-shrink-0 text-[11px]">URL:</span> 
+                    <MarqueeText text={getDomainFromUrl(channel.url)} className="text-gray-400 text-[11px]" isSelected={isSelected} />
+                </div>
             </div>
+            
             <div className="flex items-center gap-2 flex-shrink-0">
                 {/* Quality Badge */}
                 <div className="w-12 flex justify-center">
