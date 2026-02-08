@@ -352,254 +352,192 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
 
     return (
         <>
-            {!isSencillo && (
-                <div className="bg-gray-800 p-4 rounded-lg mb-6 shadow-lg">
-                    {/* ... (Previous code for URL input, remains identical, omitting for brevity in thought process but logically present) ... */}
-                    {/* Actually, replacing huge chunks is better done if I include the context. */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-                        <div>
-                            <label htmlFor="url-input" className="block text-sm font-medium text-gray-300 mb-1">
-                                Cargar desde URL
-                            </label>
-                            <div className="flex">
-                                <input
-                                    id="url-input"
-                                    type="text"
-                                    value={url}
-                                    onChange={(e) => setUrl(e.target.value)}
-                                    placeholder="https://.../playlist.m3u"
-                                    className="flex-grow bg-gray-700 border border-gray-600 rounded-l-md px-3 py-2 text-white focus:ring-blue-500 focus:border-blue-500"
-                                    data-testid="url-input"
-                                />
-                                <button
-                                    onClick={handleFetchUrl}
-                                    disabled={isLoading}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-r-md flex items-center disabled:bg-blue-800 disabled:cursor-not-allowed"
-                                >
-                                    <Download size={18} className="mr-2" /> Descargar
-                                </button>
-                            </div>
-                            {savedUrls.length > 0 && (
-                                <div className="mt-2">
-                                    <select
-                                        id="saved-urls-select"
-                                        value=""
-                                        onChange={(e) => {
-                                            if (e.target.value) {
-                                                setUrl(e.target.value);
-                                            }
-                                        }}
-                                        className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-blue-500 focus:border-blue-500 text-sm"
+            {channels.length > 0 && (
+                <div className="bg-gray-800 p-4 rounded-lg mb-4 shadow-lg flex flex-col gap-4">
+                    {/* Upper Row: Editing Tools (Attributes & Name Mods) */}
+                    {!isSencillo && selectedChannels.length > 0 && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Col 1: Attributes */}
+                            <div className="bg-gray-700/50 p-3 rounded-lg border border-gray-600">
+                                <span className="text-xs text-gray-400 font-semibold mb-2 block uppercase tracking-wider">Edición de Atributos</span>
+                                <div className="flex flex-wrap gap-2">
+                                    <button
+                                        onClick={handleSwapIdName}
+                                        className="bg-gray-600 hover:bg-gray-500 text-white font-medium py-1 px-3 rounded text-xs border border-gray-500"
+                                        title="Intercambia tvg-id por tvg-name"
                                     >
-                                        <option value="">o selecciona una lista guardada...</option>
-                                        {savedUrls.map(item => (
-                                            <option key={item.id} value={item.url}>
-                                                {item.name}
-                                            </option>
-                                        ))}
-                                    </select>
+                                        Intercambiar ID ↔ Name
+                                    </button>
+                                    <button
+                                        onClick={handleCopyIdToName}
+                                        className="bg-gray-600 hover:bg-gray-500 text-white font-medium py-1 px-3 rounded text-xs border border-gray-500"
+                                        title="Copia tvg-id en tvg-name"
+                                    >
+                                        Copiar ID → Name
+                                    </button>
+                                    <button
+                                        onClick={handleCopyNameToId}
+                                        className="bg-gray-600 hover:bg-gray-500 text-white font-medium py-1 px-3 rounded text-xs border border-gray-500"
+                                        title="Copia tvg-name en tvg-id"
+                                    >
+                                        Copiar Name → ID
+                                    </button>
+                                    <button
+                                        onClick={handleClearId}
+                                        className="bg-gray-600 hover:bg-gray-500 text-white font-medium py-1 px-3 rounded text-xs border border-gray-500"
+                                        title="Borra tvg-id"
+                                    >
+                                        Eliminar ID
+                                    </button>
+                                    <button
+                                        onClick={handleClearName}
+                                        className="bg-gray-600 hover:bg-gray-500 text-white font-medium py-1 px-3 rounded text-xs border border-gray-500"
+                                        title="Borra tvg-name"
+                                    >
+                                        Eliminar Name
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Col 2: Name Modifiers */}
+                            <div className="bg-gray-700/50 p-3 rounded-lg border border-gray-600">
+                                <span className="text-xs text-gray-400 font-semibold mb-2 block uppercase tracking-wider">Modificar Nombres</span>
+                                <div className="space-y-2">
+                                    {/* Prefijos */}
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="text"
+                                            value={prefixInput}
+                                            onChange={(e) => setPrefixInput(e.target.value)}
+                                            placeholder="Prefijo (ej: HD )"
+                                            className="bg-gray-800 border border-gray-600 rounded px-2 py-1 text-white text-xs flex-grow focus:ring-blue-500 focus:border-blue-500 h-7"
+                                        />
+                                        <div className="flex gap-1">
+                                            <button
+                                                onClick={handleRemovePrefix}
+                                                disabled={!prefixInput.trim()}
+                                                className="bg-red-900/40 hover:bg-red-800 text-red-200 border border-red-800 font-medium py-1 px-2 rounded text-xs disabled:opacity-30 disabled:cursor-not-allowed h-7"
+                                            >
+                                                Quitar
+                                            </button>
+                                            <button
+                                                onClick={handleAddPrefix}
+                                                disabled={!prefixInput.trim()}
+                                                className="bg-green-900/40 hover:bg-green-800 text-green-200 border border-green-800 font-medium py-1 px-2 rounded text-xs disabled:opacity-30 disabled:cursor-not-allowed h-7"
+                                            >
+                                                Añadir
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {/* Sufijos */}
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="text"
+                                            value={suffixInput}
+                                            onChange={(e) => setSuffixInput(e.target.value)}
+                                            placeholder="Sufijo (ej: 4K)"
+                                            className="bg-gray-800 border border-gray-600 rounded px-2 py-1 text-white text-xs flex-grow focus:ring-blue-500 focus:border-blue-500 h-7"
+                                        />
+                                         <div className="flex gap-1">
+                                            <button
+                                                onClick={handleRemoveSuffix}
+                                                disabled={!suffixInput.trim()}
+                                                className="bg-red-900/40 hover:bg-red-800 text-red-200 border border-red-800 font-medium py-1 px-2 rounded text-xs disabled:opacity-30 disabled:cursor-not-allowed h-7"
+                                            >
+                                                Quitar
+                                            </button>
+                                            <button
+                                                onClick={handleAddSuffix}
+                                                disabled={!suffixInput.trim()}
+                                                className="bg-green-900/40 hover:bg-green-800 text-green-200 border border-green-800 font-medium py-1 px-2 rounded text-xs disabled:opacity-30 disabled:cursor-not-allowed h-7"
+                                            >
+                                                Añadir
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Bottom Row: Controls & Stats */}
+                    <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-gray-700">
+                        {/* Left Side: Filter & History */}
+                        <div className="flex items-center gap-4 flex-wrap">
+                            <div className="flex items-center">
+                                <span className="text-xs text-gray-400 mr-2 uppercase tracking-wide font-semibold">Grupo</span>
+                                <select
+                                    id="group-filter"
+                                    value={filterGroup}
+                                    onChange={(e) => setFilterGroup(e.target.value)}
+                                    className="bg-gray-700 border border-gray-600 rounded px-3 py-1 text-sm text-white focus:ring-blue-500 focus:border-blue-500"
+                                >
+                                    {uniqueGroups.map((group) => (
+                                        <option key={group} value={group}>
+                                            {group}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {!isSencillo && (history.length > 0 || redoHistory.length > 0) && (
+                                <div className="flex items-center gap-1 bg-gray-700/50 rounded p-1 border border-gray-600">
+                                    <button
+                                        onClick={undo}
+                                        disabled={history.length === 0}
+                                        className="p-1.5 hover:bg-gray-600 rounded text-gray-300 hover:text-white disabled:opacity-30"
+                                        title={`Deshacer (${history.length})`}
+                                    >
+                                        <Undo2 size={16} />
+                                    </button>
+                                    <div className="w-px h-4 bg-gray-600"></div>
+                                    <button
+                                        onClick={redo}
+                                        disabled={redoHistory.length === 0}
+                                        className="p-1.5 hover:bg-gray-600 rounded text-gray-300 hover:text-white disabled:opacity-30"
+                                        title={`Rehacer (${redoHistory.length})`}
+                                    >
+                                        <Redo2 size={16} />
+                                    </button>
                                 </div>
                             )}
+
+                             <span className={`text-sm ${selectedChannels.length > 0 ? 'text-yellow-400 font-semibold' : 'text-gray-500'}`}>
+                                {selectedChannels.length} / {filteredChannels.length} <span className="text-xs font-normal text-gray-500">seleccionados</span>
+                            </span>
                         </div>
-                        <div className="flex justify-center md:justify-end">
-                            <label
-                                htmlFor="file-upload"
-                                className="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md flex items-center"
-                            >
-                                <Upload size={18} className="mr-2" /> Subir Archivo M3U
-                            </label>
-                            <input
-                                id="file-upload"
-                                type="file"
-                                className="hidden"
-                                onChange={handleFileUpload}
-                                accept=".m3u,.m3u8"
-                            />
-                        </div>
-                    </div>
-                    {isLoading && <p className="text-center mt-4 text-blue-400">Cargando...</p>}
-                    {error && <p className="text-center mt-4 text-red-400 bg-red-900/50 p-2 rounded">{error}</p>}
-                </div>
-            )}
 
-            {channels.length > 0 && (
-                <div className="bg-gray-800 p-4 rounded-lg mb-6 shadow-lg flex flex-wrap items-center justify-between gap-4">
-                    <div>
-                        <label htmlFor="group-filter" className="text-sm font-medium text-gray-300 mr-2">
-                            Filtrar por grupo:
-                        </label>
-                        <select
-                            id="group-filter"
-                            value={filterGroup}
-                            onChange={(e) => setFilterGroup(e.target.value)}
-                            className="bg-gray-700 border border-gray-600 rounded-md px-3 py-1.5 text-white focus:ring-blue-500 focus:border-blue-500"
-                        >
-                            {uniqueGroups.map((group) => (
-                                <option key={group} value={group}>
-                                    {group}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                    <div className="flex items-center gap-4 flex-wrap">
-                        {/* Sección de edición de atributos */}
-                        {!isSencillo && selectedChannels.length > 0 && (
-                            <div className="flex items-center gap-2 p-2 bg-gray-700 rounded-lg border border-gray-600">
-                                <span className="text-xs text-gray-400 font-semibold mr-2">Edición de Atributos:</span>
-                                <button
-                                    onClick={handleSwapIdName}
-                                    className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-1.5 px-3 rounded-md text-xs"
-                                    title="Intercambia tvg-id por tvg-name en los canales seleccionados"
-                                >
-                                    Intercambiar ID ↔ Name
-                                </button>
-                                <button
-                                    onClick={handleCopyIdToName}
-                                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1.5 px-3 rounded-md text-xs"
-                                    title="Copia tvg-id en tvg-name de los canales seleccionados"
-                                >
-                                    Copiar ID → Name
-                                </button>
-                                <button
-                                    onClick={handleCopyNameToId}
-                                    className="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-1.5 px-3 rounded-md text-xs"
-                                    title="Copia tvg-name en tvg-id de los canales seleccionados"
-                                >
-                                    Copiar Name → ID
-                                </button>
-                                <button
-                                    onClick={handleClearId}
-                                    className="bg-orange-600 hover:bg-orange-700 text-white font-bold py-1.5 px-3 rounded-md text-xs"
-                                    title="Borra tvg-id de los canales seleccionados"
-                                >
-                                    Eliminar ID
-                                </button>
-                                <button
-                                    onClick={handleClearName}
-                                    className="bg-amber-600 hover:bg-amber-700 text-white font-bold py-1.5 px-3 rounded-md text-xs"
-                                    title="Borra tvg-name de los canales seleccionados"
-                                >
-                                    Eliminar Name
-                                </button>
-                            </div>
-                        )}
-
-                        {/* Sección de prefijos y sufijos */}
-                        {!isSencillo && selectedChannels.length > 0 && (
-                            <div className="flex flex-col gap-2 p-3 bg-gray-700 rounded-lg border border-gray-600 w-full">
-                                <span className="text-xs text-gray-400 font-semibold mb-1">Modificar Nombres de Canales:</span>
-                                
-                                {/* Prefijos */}
-                                <div className="flex items-center gap-2">
-                                    <label className="text-xs text-gray-300 w-16">Prefijo:</label>
-                                    <input
-                                        type="text"
-                                        value={prefixInput}
-                                        onChange={(e) => setPrefixInput(e.target.value)}
-                                        placeholder="Ej: HD "
-                                        className="bg-gray-600 border border-gray-500 rounded px-2 py-1 text-white text-xs flex-grow max-w-xs focus:ring-blue-500 focus:border-blue-500"
-                                    />
-                                    <button
-                                        onClick={handleRemovePrefix}
-                                        disabled={!prefixInput.trim()}
-                                        className="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-xs disabled:bg-gray-600 disabled:cursor-not-allowed"
-                                        title="Elimina el prefijo de los canales que lo tengan"
-                                    >
-                                        Quitar
-                                    </button>
-                                    <button
-                                        onClick={handleAddPrefix}
-                                        disabled={!prefixInput.trim()}
-                                        className="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-xs disabled:bg-gray-600 disabled:cursor-not-allowed"
-                                        title="Añade el prefijo a los canales seleccionados"
-                                    >
-                                        Añadir
-                                    </button>
-                                </div>
-
-                                {/* Sufijos */}
-                                <div className="flex items-center gap-2">
-                                    <label className="text-xs text-gray-300 w-16">Sufijo:</label>
-                                    <input
-                                        type="text"
-                                        value={suffixInput}
-                                        onChange={(e) => setSuffixInput(e.target.value)}
-                                        placeholder="Ej: 4K"
-                                        className="bg-gray-600 border border-gray-500 rounded px-2 py-1 text-white text-xs flex-grow max-w-xs focus:ring-blue-500 focus:border-blue-500"
-                                    />
-                                    <button
-                                        onClick={handleRemoveSuffix}
-                                        disabled={!suffixInput.trim()}
-                                        className="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-xs disabled:bg-gray-600 disabled:cursor-not-allowed"
-                                        title="Elimina el sufijo de los canales que lo tengan"
-                                    >
-                                        Quitar
-                                    </button>
-                                    <button
-                                        onClick={handleAddSuffix}
-                                        disabled={!suffixInput.trim()}
-                                        className="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-xs disabled:bg-gray-600 disabled:cursor-not-allowed"
-                                        title="Añade el sufijo a los canales seleccionados"
-                                    >
-                                        Añadir
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Sección de historial (deshacer/rehacer) */}
-                        {!isSencillo && (history.length > 0 || redoHistory.length > 0) && (
-                            <div className="flex items-center gap-2 p-2 bg-gray-700 rounded-lg border border-gray-600">
-                                <span className="text-xs text-gray-400 font-semibold mr-2">Historial:</span>
-                                <button
-                                    onClick={undo}
-                                    disabled={history.length === 0}
-                                    className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-1.5 px-3 rounded-md flex items-center text-xs disabled:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-                                    title={history.length > 0 ? `Deshacer (${history.length} cambios disponibles)` : 'No hay cambios para deshacer'}
-                                >
-                                    <Undo2 size={16} className="mr-1" /> Deshacer
-                                </button>
-                                <button
-                                    onClick={redo}
-                                    disabled={redoHistory.length === 0}
-                                    className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-1.5 px-3 rounded-md flex items-center text-xs disabled:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-                                    title={redoHistory.length > 0 ? `Rehacer (${redoHistory.length} cambios disponibles)` : 'No hay cambios para rehacer'}
-                                >
-                                    <Redo2 size={16} className="mr-1" /> Rehacer
-                                </button>
-                            </div>
-                        )}
-
-                        {/* Contador de selección y botones de acción */}
-                        <div className="flex items-center gap-2 flex-wrap">
-                            <p className={`text-sm ${selectedChannels.length > 0 ? 'text-yellow-400 font-semibold' : 'text-gray-400'}`}>
-                                {selectedChannels.length} de {filteredChannels.length} canales seleccionados
-                            </p>
+                        {/* Right Side: Actions */}
+                        <div className="flex items-center gap-3">
                             <button
                                 onClick={handleOpenCreateModal}
-                                className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md flex items-center"
+                                className="bg-gray-700 hover:bg-gray-600 text-white font-medium py-1.5 px-3 rounded-md flex items-center text-sm border border-gray-600"
                             >
-                                <Plus size={18} className="mr-2" /> Crear Canal
+                                <Plus size={16} className="mr-2" /> Crear Canal
                             </button>
-                            <button
-                                onClick={handleDeleteSelectedClick}
-                                disabled={selectedChannels.length === 0}
-                                className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md flex items-center disabled:bg-gray-600 disabled:cursor-not-allowed"
-                            >
-                                <Trash2 size={18} className="mr-2" /> Eliminar Seleccionados
-                            </button>
-                            <button
+
+                            {selectedChannels.length > 0 && (
+                                <button
+                                    onClick={handleDeleteSelectedClick}
+                                    className="bg-red-900/60 hover:bg-red-800 text-red-100 font-medium py-1.5 px-3 rounded-md flex items-center text-sm border border-red-800"
+                                >
+                                    <Trash2 size={16} className="mr-2" /> Eliminar ({selectedChannels.length})
+                                </button>
+                            )}
+
+                             <button
                                 onClick={() => setShowTutorialModal(true)}
-                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md flex items-center"
+                                className="text-gray-400 hover:text-blue-400 p-2 rounded-full hover:bg-gray-700 transition-colors"
+                                title="¿Cómo ordenar los canales?"
                             >
-                                ¿Cómo ordenar los canales de mi lista?
+                                <HelpCircle size={20} />
                             </button>
                         </div>
                     </div>
                 </div>
             )}
 
-            <div ref={tableContainerRef} className="overflow-auto rounded-lg shadow-lg max-h-[60vh] bg-gray-900 border border-gray-700">
+            <div ref={tableContainerRef} className="overflow-auto rounded-lg shadow-lg max-h-[70vh] bg-gray-900 border border-gray-700">
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
                     {/* Header GRID */}
                      <div 
