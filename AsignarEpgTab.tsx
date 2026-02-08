@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { Upload, Download, Copy, Zap, ArrowLeftCircle, ChevronsUpDown, Settings as SettingsIcon, X, Tv, Image, Type } from 'lucide-react';
+import { Upload, Download, Copy, Zap, ArrowLeftCircle, ChevronsUpDown, Settings as SettingsIcon, X, Tv, Image, Type, List } from 'lucide-react';
 import { useAsignarEpg } from './useAsignarEpg';
 import { useChannels } from './useChannels';
 import { useVirtualizer } from '@tanstack/react-virtual';
