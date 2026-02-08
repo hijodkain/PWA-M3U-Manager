@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ExternalLink, XCircle, PlusCircle, Trash2 } from 'lucide-react';
+import { ExternalLink, PlusCircle, Trash2, Filter, List, Cloud } from 'lucide-react';
 import { useSettings } from './useSettings';
 
 interface SettingsTabProps {
@@ -16,7 +16,6 @@ const generateRandomString = (length: number) => {
         .replace(/=/g, '');
 };
 
-// Helper function to generate the code challenge from the verifier
 const generateCodeChallenge = async (verifier: string) => {
     const encoder = new TextEncoder();
     const data = encoder.encode(verifier);
@@ -27,15 +26,14 @@ const generateCodeChallenge = async (verifier: string) => {
         .replace(/=/g, '');
 };
 
+type SettingsSubTab = 'dropbox' | 'epg' | 'filters';
+
 const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
     const {
         dropboxAppKey,
         dropboxRefreshToken,
         saveDropboxSettings,
         clearDropboxSettings,
-        savedUrls,
-        addSavedUrl,
-        deleteSavedUrl,
         savedEpgUrls,
         addSavedEpgUrl,
         deleteSavedEpgUrl,
@@ -46,452 +44,275 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
         resetChannelPrefixesAndSuffixes,
     } = settingsHook;
 
+    const [activeSubTab, setActiveSubTab] = useState<SettingsSubTab>('dropbox');
     const [appKey, setAppKey] = useState(dropboxAppKey);
-    const [newUrlName, setNewUrlName] = useState('');
-    const [newUrl, setNewUrl] = useState('');
-    const [newEpgUrlName, setNewEpgUrlName] = useState('');
     const [newEpgUrl, setNewEpgUrl] = useState('');
-    const [authStatus, setAuthStatus] = useState('');
-    const [newPrefix, setNewPrefix] = useState('');
-    const [newSuffix, setNewSuffix] = useState('');
+    const [newEpgName, setNewEpgName] = useState('');
+    const [localPrefixes, setLocalPrefixes] = useState(channelPrefixes.join(', '));
+    const [localSuffixes, setLocalSuffixes] = useState(channelSuffixes.join(', '));
 
     useEffect(() => {
         setAppKey(dropboxAppKey);
     }, [dropboxAppKey]);
 
-    const handleDropboxConnect = async () => {
+    useEffect(() => {
+        setLocalPrefixes(channelPrefixes.join(', '));
+        setLocalSuffixes(channelSuffixes.join(', '));
+    }, [channelPrefixes, channelSuffixes]);
+
+    const handleDropboxAuth = async () => {
         if (!appKey) {
-            setAuthStatus('Por favor, introduce tu App Key de Dropbox primero.');
+            alert('Por favor, ingresa el App Key de Dropbox.');
             return;
         }
 
-        try {
-            const verifier = generateRandomString(32);
-            const challenge = await generateCodeChallenge(verifier);
-            const state = generateRandomString(16);
+        const codeVerifier = generateRandomString(128);
+        const codeChallenge = await generateCodeChallenge(codeVerifier);
+        const state = generateRandomString(16);
 
-            // Save the verifier, appKey, and state in localStorage to use after redirect
-            localStorage.setItem('dropbox_pkce_verifier', verifier);
-            localStorage.setItem('dropbox_app_key_temp', appKey);
-            localStorage.setItem('dropbox_oauth_state', state);
+        localStorage.setItem('dropbox_code_verifier', codeVerifier);
+        localStorage.setItem('dropbox_auth_state', state);
+        localStorage.setItem('dropbox_temp_app_key', appKey);
 
-            const redirectUri = window.location.origin + window.location.pathname;
-            const authUrlParams = new URLSearchParams({
-                client_id: appKey,
-                response_type: 'code',
-                token_access_type: 'offline',
-                code_challenge: challenge,
-                code_challenge_method: 'S256',
-                redirect_uri: redirectUri,
-                state: state,
-                scope: 'files.content.write sharing.write sharing.read',
-            });
+        const redirectUri = window.location.origin + '/';
+        const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${appKey}&response_type=code&code_challenge=${codeChallenge}&code_challenge_method=S256&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&token_access_type=offline`;
 
-            const authUrl = `https://www.dropbox.com/oauth2/authorize?${authUrlParams.toString()}`;
-            
-            window.location.href = authUrl;
-        } catch (error) {
-            console.error("Error during Dropbox auth initialization", error);
-            setAuthStatus('Error al iniciar la autenticación con Dropbox.');
-        }
+        window.location.href = authUrl;
     };
 
-    const handleDropboxDisconnect = () => {
-        clearDropboxSettings();
-        setAuthStatus('Desconectado de Dropbox.');
-    };
-
-    const handleAddUrl = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (newUrlName && newUrl) {
-            addSavedUrl(newUrlName, newUrl);
-            setNewUrlName('');
-            setNewUrl('');
-        }
-    };
-
-    const handleAddEpgUrl = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (newEpgUrlName && newEpgUrl) {
-            addSavedEpgUrl(newEpgUrlName, newEpgUrl);
-            setNewEpgUrlName('');
+    const handleSaveEpgUrl = () => {
+        if (newEpgName && newEpgUrl) {
+            addSavedEpgUrl(newEpgName, newEpgUrl);
+            setNewEpgName('');
             setNewEpgUrl('');
         }
     };
 
-    const handleAddPrefix = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (newPrefix.trim() && !channelPrefixes.includes(newPrefix.trim())) {
-            updateChannelPrefixes([...channelPrefixes, newPrefix.trim()]);
-            setNewPrefix('');
-        }
+    const handleSaveFilters = () => {
+        const prefixes = localPrefixes.split(',').map(s => s.trim()).filter(Boolean);
+        const suffixes = localSuffixes.split(',').map(s => s.trim()).filter(Boolean);
+        
+        updateChannelPrefixes(prefixes);
+        updateChannelSuffixes(suffixes);
+        alert('Filtros guardados correctamente');
     };
 
-    const handleRemovePrefix = (prefixToRemove: string) => {
-        updateChannelPrefixes(channelPrefixes.filter(prefix => prefix !== prefixToRemove));
-    };
-
-    const handleAddSuffix = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (newSuffix.trim() && !channelSuffixes.includes(newSuffix.trim())) {
-            updateChannelSuffixes([...channelSuffixes, newSuffix.trim()]);
-            setNewSuffix('');
-        }
-    };
-
-    const handleRemoveSuffix = (suffixToRemove: string) => {
-        updateChannelSuffixes(channelSuffixes.filter(suffix => suffix !== suffixToRemove));
-    };
-
-    // This effect runs on component mount and handles the redirect back from Dropbox
-    useEffect(() => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const authCode = urlParams.get('code');
-        const receivedState = urlParams.get('state');
-
-        if (authCode && receivedState) {
-            const verifier = localStorage.getItem('dropbox_pkce_verifier');
-            const tempAppKey = localStorage.getItem('dropbox_app_key_temp');
-            const savedState = localStorage.getItem('dropbox_oauth_state');
-
-            if (receivedState !== savedState) {
-                setAuthStatus('Error: El estado de la autorización no coincide. Inténtalo de nuevo.');
-                console.error("OAuth state mismatch");
-                // Clean up URL
-                window.history.replaceState({}, document.title, window.location.pathname);
-                return;
-            }
-
-            if (verifier && tempAppKey) {
-                setAuthStatus('Obteniendo token de refresco...');
-                
-                fetch('https://api.dropboxapi.com/oauth2/token', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: new URLSearchParams({
-                        client_id: tempAppKey,
-                        grant_type: 'authorization_code',
-                        code: authCode,
-                        code_verifier: verifier,
-                        redirect_uri: window.location.origin + window.location.pathname
-                    })
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        response.json().then(err => console.error('Token exchange error:', err));
-                        throw new Error('Fallo al obtener el token de refresco.');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    saveDropboxSettings(tempAppKey, data.refresh_token);
-                    setAuthStatus('¡Conectado a Dropbox con éxito!');
-                })
-                .catch(error => {
-                    console.error("Error fetching refresh token", error);
-                    setAuthStatus(`Error: ${error.message}`);
-                })
-                .finally(() => {
-                    // Clean up localStorage and URL
-                    localStorage.removeItem('dropbox_pkce_verifier');
-                    localStorage.removeItem('dropbox_app_key_temp');
-                    localStorage.removeItem('dropbox_oauth_state');
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                });
-            }
-        }
-    }, [saveDropboxSettings]);
+    const SidebarButton = ({ icon, active, onClick, tooltip }: { icon: React.ReactNode, active: boolean, onClick: () => void, tooltip: string }) => (
+        <button
+            onClick={onClick}
+            className={`p-3 rounded-lg transition-all duration-200 group relative flex items-center justify-center ${active ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
+            title={tooltip}
+        >
+            {icon}
+        </button>
+    );
 
     return (
-        <div className="bg-gray-800 p-6 rounded-lg shadow-lg text-white space-y-8">
-            
-            <div>
-                <h2 className="text-xl font-bold mb-4">Configuración de Dropbox</h2>
+        <div className="flex h-[calc(100vh-80px)] bg-gray-900 overflow-hidden">
+            {/* --- SIDEBAR --- */}
+            <div className="w-16 flex flex-col items-center py-6 bg-gray-800 border-r border-gray-700 gap-4 z-10 shrink-0">
+                <SidebarButton 
+                    icon={<img src="/Dropbox_Icon.svg" className="w-6 h-6" style={{ filter: activeSubTab !== 'dropbox' ? 'grayscale(100%) brightness(150%)' : '' }} />} 
+                    active={activeSubTab === 'dropbox'} 
+                    onClick={() => setActiveSubTab('dropbox')}
+                    tooltip="Configurar Dropbox" 
+                />
+                <SidebarButton 
+                    icon={<List size={24} />} 
+                    active={activeSubTab === 'epg'} 
+                    onClick={() => setActiveSubTab('epg')} 
+                    tooltip="Fuentes EPG"
+                />
+                <SidebarButton 
+                    icon={<Filter size={24} />} 
+                    active={activeSubTab === 'filters'} 
+                    onClick={() => setActiveSubTab('filters')} 
+                    tooltip="Filtros Smart Search"
+                />
+            </div>
+
+            {/* --- CONTENT --- */}
+            <div className="flex-1 bg-gray-900 p-6 md:p-10 overflow-y-auto w-full">
                 
-                {!dropboxRefreshToken && (
-                    <div className="bg-blue-900/30 border border-blue-700 rounded-lg p-4 mb-6">
-                        <h3 className="font-semibold text-blue-300 mb-3 flex items-center">
-                            <ExternalLink size={16} className="mr-2" />
-                            Guía de conexión con Dropbox
-                        </h3>
-                        <ol className="text-sm text-gray-300 space-y-2 list-decimal list-inside">
-                            <li>
-                                <strong>Ve a la Consola de Apps de Dropbox:</strong>{' '}
-                                <a 
-                                    href="https://www.dropbox.com/developers/apps" 
-                                    target="_blank" 
-                                    rel="noopener noreferrer" 
-                                    className="text-blue-400 hover:underline"
+                {/* 1. DROPBOX */}
+                {activeSubTab === 'dropbox' && (
+                    <div className="max-w-2xl mx-auto space-y-6 animate-fadeIn">
+                        <div className="mb-8 border-b border-gray-800 pb-4">
+                            <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
+                                <Cloud className="text-blue-500" /> Configuración de Dropbox
+                            </h2>
+                            <p className="text-gray-400">Conecta tu cuenta para sincronizar tus listas automáticamente.</p>
+                        </div>
+
+                        {dropboxRefreshToken ? (
+                            <div className="bg-green-900/10 border border-green-900/50 rounded-xl p-8 text-center">
+                                <div className="inline-block p-4 rounded-full bg-green-900/20 mb-4">
+                                    <Cloud size={48} className="text-green-500" />
+                                </div>
+                                <h3 className="text-xl font-bold text-white mb-2">Conectado Correctamente</h3>
+                                <p className="text-gray-400 mb-6">Tu cuenta de Dropbox está vinculada.</p>
+                                <button
+                                    onClick={clearDropboxSettings}
+                                    className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg transition-colors"
                                 >
-                                    Dropbox App Console
-                                </a>
-                            </li>
-                            <li>
-                                <strong>Crea una nueva aplicación:</strong>
-                                <ul className="ml-6 mt-1 space-y-1 list-disc">
-                                    <li>Haz clic en "Create app"</li>
-                                    <li>Selecciona "Scoped access"</li>
-                                    <li>Tipo de acceso: "App folder" (más seguro)</li>
-                                    <li>Dale un nombre único (ej: MiGestorM3U)</li>
-                                </ul>
-                            </li>
-                            <li>
-                                <strong>Configura los permisos (pestaña "Permissions"):</strong>
-                                <ul className="ml-6 mt-1 space-y-1 list-disc">
-                                    <li>Marca: <code className="bg-gray-800 px-1 rounded">files.content.write</code></li>
-                                    <li>Marca: <code className="bg-gray-800 px-1 rounded">sharing.write</code></li>
-                                    <li>Marca: <code className="bg-gray-800 px-1 rounded">sharing.read</code></li>
-                                    <li>Haz clic en "Submit" al final de la página</li>
-                                </ul>
-                            </li>
-                            <li>
-                                <strong>Añade la URI de Redirección (pestaña "Settings"):</strong>
-                                <ul className="ml-6 mt-1 space-y-1 list-disc">
-                                    <li>Busca "Redirect URIs" y haz clic en "Add"</li>
-                                    <li>Añade: <code className="bg-gray-800 px-1 rounded">https://m3umanager.cat</code></li>
-                                    <li>Para desarrollo local: <code className="bg-gray-800 px-1 rounded">http://localhost:3000</code></li>
-                                </ul>
-                            </li>
-                            <li>
-                                <strong>Copia tu App Key</strong> (en la pestaña "Settings") y pégala abajo
-                            </li>
-                        </ol>
+                                    Desconectar
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="bg-gray-800 rounded-xl p-8 border border-gray-700 shadow-xl">
+                                <label className="block text-sm font-medium text-gray-300 mb-2">Dropbox App Key</label>
+                                <input
+                                    type="text"
+                                    value={appKey}
+                                    onChange={(e) => setAppKey(e.target.value)}
+                                    placeholder="Ingresa tu App Key"
+                                    className="w-full bg-gray-900 border border-gray-600 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none mb-6"
+                                />
+                                <button
+                                    onClick={handleDropboxAuth}
+                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition-all flex items-center justify-center gap-2"
+                                >
+                                    <ExternalLink size={18} /> Conectar con Dropbox
+                                </button>
+                                <p className="text-xs text-center text-gray-500 mt-4">
+                                    Necesitarás crear una App en la consola de desarrolladores de Dropbox.
+                                </p>
+                            </div>
+                        )}
                     </div>
                 )}
 
-                <div className="flex flex-col gap-4 md:w-1/2">
-                    {dropboxRefreshToken ? (
-                        <div>
-                            <p className="text-green-400 font-semibold">✓ Conectado a Dropbox</p>
-                            <p className="text-xs text-gray-400 mt-1">App Key: {dropboxAppKey}</p>
-                            <p className="text-xs text-gray-500 mt-1">
-                                Permisos activos: Subir archivos • Crear enlaces compartidos • Listar enlaces
-                            </p>
-                            <button
-                                onClick={handleDropboxDisconnect}
-                                className="mt-4 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md flex items-center justify-center w-full md:w-auto self-start"
-                            >
-                                <XCircle size={18} className="mr-2" />
-                                Desconectar
-                            </button>
+                {/* 2. FUENTES EPG */}
+                {activeSubTab === 'epg' && (
+                    <div className="max-w-3xl mx-auto space-y-6 animate-fadeIn">
+                        <div className="mb-8 border-b border-gray-800 pb-4">
+                            <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
+                                <List className="text-purple-500" /> Fuentes EPG
+                            </h2>
+                            <p className="text-gray-400">Añade URLs para cargar datos de guía de programación.</p>
                         </div>
-                    ) : (
-                        <>
-                            <div>
-                                <label htmlFor="dropbox-app-key" className="block text-sm font-medium text-gray-300 mb-2">
-                                    Dropbox App Key
-                                </label>
+
+                        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 mb-6">
+                            <h3 className="font-bold text-white mb-4">Añadir Nueva Fuente</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                                 <input
-                                    id="dropbox-app-key"
                                     type="text"
-                                    placeholder="Pega tu App Key aquí"
-                                    value={appKey}
-                                    onChange={(e) => setAppKey(e.target.value)}
-                                    className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                                    value={newEpgName}
+                                    onChange={(e) => setNewEpgName(e.target.value)}
+                                    placeholder="Nombre (ej: EPG España)"
+                                    className="bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-white outline-none focus:border-purple-500"
+                                />
+                                <div className="md:col-span-2 flex gap-2">
+                                    <input
+                                        type="text"
+                                        value={newEpgUrl}
+                                        onChange={(e) => setNewEpgUrl(e.target.value)}
+                                        placeholder="URL (https://...)"
+                                        className="flex-grow bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-white outline-none focus:border-purple-500"
+                                    />
+                                    <button
+                                        onClick={handleSaveEpgUrl}
+                                        disabled={!newEpgName || !newEpgUrl}
+                                        className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white p-2 rounded-lg"
+                                    >
+                                        <PlusCircle size={24} />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-gray-800 rounded-xl overflow-hidden border border-gray-700 shadow-xl">
+                            <table className="w-full text-left">
+                                <thead className="bg-gray-900/50 text-gray-400 text-xs uppercase">
+                                    <tr>
+                                        <th className="px-6 py-4">Nombre</th>
+                                        <th className="px-6 py-4">URL</th>
+                                        <th className="px-6 py-4 text-right">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-700">
+                                    {savedEpgUrls.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={3} className="px-6 py-8 text-center text-gray-500">
+                                                No hay fuentes guardadas
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        savedEpgUrls.map((epg, idx) => (
+                                            <tr key={idx} className="hover:bg-gray-700/30 transition-colors">
+                                                <td className="px-6 py-4 text-white font-medium">{epg.name}</td>
+                                                <td className="px-6 py-4 text-gray-400 text-sm truncate max-w-xs">{epg.url}</td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <button
+                                                        onClick={() => deleteSavedEpgUrl(epg.url)}
+                                                        className="text-gray-500 hover:text-red-400 transition-colors"
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
+                {/* 3. FILTROS SMART SEARCH */}
+                {activeSubTab === 'filters' && (
+                    <div className="max-w-2xl mx-auto space-y-6 animate-fadeIn">
+                        <div className="mb-8 border-b border-gray-800 pb-4">
+                            <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
+                                <Filter className="text-yellow-500" /> Filtros de Búsqueda Inteligente
+                            </h2>
+                            <p className="text-gray-400">Configura qué textos ignorar al comparar nombres de canales.</p>
+                        </div>
+
+                        <div className="bg-gray-800 rounded-xl p-8 border border-gray-700 shadow-xl space-y-6">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-2">
+                                    Prefijos a ignorar (separados por comas)
+                                </label>
+                                <textarea
+                                    value={localPrefixes}
+                                    onChange={(e) => setLocalPrefixes(e.target.value)}
+                                    rows={3}
+                                    placeholder="Ej: ES|, UK|, (HD), [4K]"
+                                    className="w-full bg-gray-900 border border-gray-600 rounded-lg p-3 text-white text-sm font-mono focus:ring-2 focus:ring-yellow-500 outline-none"
                                 />
                             </div>
-                            <button
-                                onClick={handleDropboxConnect}
-                                disabled={!appKey}
-                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md flex items-center justify-center w-full md:w-auto self-start disabled:bg-gray-600"
-                            >
-                                <ExternalLink size={18} className="mr-2" />
-                                Conectar a Dropbox
-                            </button>
-                        </>
-                    )}
-                    {authStatus && <p className="text-sm text-yellow-400 mt-2">{authStatus}</p>}
-                </div>
-            </div>
-
-            <hr className="my-8 border-gray-600" />
-
-            <div>
-                <h2 className="text-xl font-bold mb-4">Playlists Guardadas</h2>
-                
-                <form onSubmit={handleAddUrl} className="bg-gray-700 p-4 rounded-lg mb-6 space-y-4 md:space-y-0 md:flex md:items-end md:gap-4">
-                    <div className="flex-grow">
-                        <label htmlFor="playlist-name" className="block text-sm font-medium text-gray-300 mb-1">Nombre</label>
-                        <input
-                            id="playlist-name"
-                            type="text"
-                            placeholder="Ej: Lista de Casa"
-                            value={newUrlName}
-                            onChange={(e) => setNewUrlName(e.target.value)}
-                            className="w-full bg-gray-600 border border-gray-500 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                    </div>
-                    <div className="flex-grow-[2]">
-                        <label htmlFor="playlist-url" className="block text-sm font-medium text-gray-300 mb-1">URL</label>
-                        <input
-                            id="playlist-url"
-                            type="url"
-                            placeholder="https://..."
-                            value={newUrl}
-                            onChange={(e) => setNewUrl(e.target.value)}
-                            className="w-full bg-gray-600 border border-gray-500 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                    </div>
-                    <button type="submit" className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md flex items-center justify-center w-full md:w-auto">
-                        <PlusCircle size={18} className="mr-2" />
-                        Añadir
-                    </button>
-                </form>
-
-                <div className="space-y-3">
-                    {savedUrls.length > 0 ? (
-                        savedUrls.map(item => (
-                            <div key={item.id} className="bg-gray-700 p-3 rounded-md flex items-center justify-between gap-4">
-                                <div className="flex-1 min-w-0">
-                                    <p className="font-semibold truncate">{item.name}</p>
-                                    <p className="text-xs text-gray-400 truncate">{item.url}</p>
-                                </div>
-                                <button onClick={() => deleteSavedUrl(item.id)} className="text-red-400 hover:text-red-600 p-2">
-                                    <Trash2 size={20} />
-                                </button>
+                            
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-2">
+                                    Sufijos a ignorar (separados por comas)
+                                </label>
+                                <textarea
+                                    value={localSuffixes}
+                                    onChange={(e) => setLocalSuffixes(e.target.value)}
+                                    rows={3}
+                                    placeholder="Ej: HD, FHD, 4K, HEVC"
+                                    className="w-full bg-gray-900 border border-gray-600 rounded-lg p-3 text-white text-sm font-mono focus:ring-2 focus:ring-yellow-500 outline-none"
+                                />
                             </div>
-                        ))
-                    ) : (
-                        <p className="text-gray-400">No tienes ninguna URL guardada.</p>
-                    )}
-                </div>
-            </div>
 
-            <hr className="my-8 border-gray-600" />
-
-            <div>
-                <h2 className="text-xl font-bold mb-4">Fuentes EPG Guardadas</h2>
-                
-                <form onSubmit={handleAddEpgUrl} className="bg-gray-700 p-4 rounded-lg mb-6 space-y-4 md:space-y-0 md:flex md:items-end md:gap-4">
-                    <div className="flex-grow">
-                        <label htmlFor="epg-name" className="block text-sm font-medium text-gray-300 mb-1">Nombre</label>
-                        <input
-                            id="epg-name"
-                            type="text"
-                            placeholder="Ej: EPG Principal"
-                            value={newEpgUrlName}
-                            onChange={(e) => setNewEpgUrlName(e.target.value)}
-                            className="w-full bg-gray-600 border border-gray-500 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                    </div>
-                    <div className="flex-grow-[2]">
-                        <label htmlFor="epg-url" className="block text-sm font-medium text-gray-300 mb-1">URL del XMLTV</label>
-                        <input
-                            id="epg-url"
-                            type="url"
-                            placeholder="https://..."
-                            value={newEpgUrl}
-                            onChange={(e) => setNewEpgUrl(e.target.value)}
-                            className="w-full bg-gray-600 border border-gray-500 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                    </div>
-                    <button type="submit" className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md flex items-center justify-center w-full md:w-auto">
-                        <PlusCircle size={18} className="mr-2" />
-                        Añadir
-                    </button>
-                </form>
-
-                <div className="space-y-3">
-                    {savedEpgUrls.length > 0 ? (
-                        savedEpgUrls.map(item => (
-                            <div key={item.id} className="bg-gray-700 p-3 rounded-md flex items-center justify-between gap-4">
-                                <div className="flex-1 min-w-0">
-                                    <p className="font-semibold truncate">{item.name}</p>
-                                    <p className="text-xs text-gray-400 truncate">{item.url}</p>
-                                </div>
-                                <button onClick={() => deleteSavedEpgUrl(item.id)} className="text-red-400 hover:text-red-600 p-2">
-                                    <Trash2 size={20} />
-                                </button>
-                            </div>
-                        ))
-                    ) : (
-                        <p className="text-gray-400">No tienes ninguna fuente EPG guardada.</p>
-                    )}
-                </div>
-            </div>
-
-            {/* Sección de Prefijos y Sufijos de Canales */}
-            <div>
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-bold">Filtros de Nombres de Canales</h2>
-                    <button
-                        onClick={resetChannelPrefixesAndSuffixes}
-                        className="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-md text-sm"
-                    >
-                        Restablecer por defecto
-                    </button>
-                </div>
-                <p className="text-gray-400 text-sm mb-6">
-                    Configura los prefijos y sufijos que se eliminarán automáticamente del nombre del canal cuando hagas clic en él para buscar en la pestaña de Reparación.
-                </p>
-
-                {/* Prefijos */}
-                <div className="mb-6">
-                    <h3 className="text-lg font-semibold mb-3">Prefijos (se eliminan del inicio)</h3>
-                    <form onSubmit={handleAddPrefix} className="flex gap-2 mb-4">
-                        <input
-                            type="text"
-                            value={newPrefix}
-                            onChange={(e) => setNewPrefix(e.target.value)}
-                            placeholder="Ej: HD , FHD , 4K "
-                            className="flex-1 bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-blue-500 focus:border-blue-500"
-                        />
-                        <button
-                            type="submit"
-                            className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md flex items-center"
-                        >
-                            <PlusCircle size={18} className="mr-2" />
-                            Agregar
-                        </button>
-                    </form>
-                    <div className="flex flex-wrap gap-2">
-                        {channelPrefixes.map(prefix => (
-                            <div key={prefix} className="bg-gray-700 px-3 py-1 rounded-full flex items-center gap-2">
-                                <span className="text-sm">"{prefix}"</span>
+                            <div className="flex gap-4 pt-4">
                                 <button
-                                    onClick={() => handleRemovePrefix(prefix)}
-                                    className="text-red-400 hover:text-red-600"
+                                    onClick={handleSaveFilters}
+                                    className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
                                 >
-                                    <XCircle size={14} />
+                                    Guardar Cambios
                                 </button>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Sufijos */}
-                <div>
-                    <h3 className="text-lg font-semibold mb-3">Sufijos (se eliminan del final)</h3>
-                    <form onSubmit={handleAddSuffix} className="flex gap-2 mb-4">
-                        <input
-                            type="text"
-                            value={newSuffix}
-                            onChange={(e) => setNewSuffix(e.target.value)}
-                            placeholder="Ej:  HD,  4K,  (HD),  [FHD]"
-                            className="flex-1 bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:ring-blue-500 focus:border-blue-500"
-                        />
-                        <button
-                            type="submit"
-                            className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md flex items-center"
-                        >
-                            <PlusCircle size={18} className="mr-2" />
-                            Agregar
-                        </button>
-                    </form>
-                    <div className="flex flex-wrap gap-2">
-                        {channelSuffixes.map(suffix => (
-                            <div key={suffix} className="bg-gray-700 px-3 py-1 rounded-full flex items-center gap-2">
-                                <span className="text-sm">"{suffix}"</span>
                                 <button
-                                    onClick={() => handleRemoveSuffix(suffix)}
-                                    className="text-red-400 hover:text-red-600"
+                                    onClick={resetChannelPrefixesAndSuffixes}
+                                    className="px-6 py-3 border border-gray-600 text-gray-400 hover:text-white hover:border-gray-500 rounded-lg transition-colors"
                                 >
-                                    <XCircle size={14} />
+                                    Restaurar
                                 </button>
                             </div>
-                        ))}
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
         </div>
     );
