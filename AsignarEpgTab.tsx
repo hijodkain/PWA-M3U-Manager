@@ -362,10 +362,12 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                                     onClick={() => handleEpgSourceClick(epgCh)}
                                                 >
                                                     <EpgChannelItem
-                                                        channel={epgCh}
-                                                        assignedChannelsCount={0} 
+                                                        epgChannel={epgCh}
                                                         isSelected={isSelected}
-                                                        onSelectClick={() => {}}
+                                                        onClick={() => handleEpgSourceClick(epgCh)}
+                                                        showCheckbox={true}
+                                                        onCheckboxChange={(id, shift) => toggleEpgChannelSelection(id, shift)}
+                                                        assignmentMode={assignmentMode}
                                                     />
                                                 </div>
                                             );
