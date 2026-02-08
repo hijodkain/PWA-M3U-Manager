@@ -504,6 +504,11 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
 
                              <span className={`text-sm ${selectedChannels.length > 0 ? 'text-yellow-400 font-semibold' : 'text-gray-500'}`}>
                                 {selectedChannels.length} / {filteredChannels.length} <span className="text-xs font-normal text-gray-500">seleccionados</span>
+                                {(channelsHook.originalFileName || channelsHook.fileName) && (
+                                     <span className="ml-2 pl-2 border-l border-gray-600 text-gray-400 font-normal italic">
+                                        {channelsHook.originalFileName || channelsHook.fileName}
+                                    </span>
+                                )}
                             </span>
                         </div>
 
