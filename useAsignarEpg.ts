@@ -274,12 +274,24 @@ export const useAsignarEpg = (
                 }
 
                 const updated = { ...channel };
-
-                // En modo automático, siempre asignar tvgId (modo estándar)
-                updated.tvgId = exactMatch.id;
                 
-                // Copiar logo si está disponible
-                if (exactMatch.logo) {
+                // Verificar modos activos (igual que handleEpgSourceClick)
+                const isOttMode = attributesToCopy.has('tvgName');
+                const isTivimateMode = attributesToCopy.has('tvgId');
+                const copyLogo = attributesToCopy.has('tvgLogo');
+
+                // Modo OTT: asignar el channel ID solo a tvgName
+                if (isOttMode) {
+                    updated.tvgName = exactMatch.id;
+                }
+                
+                // Modo TiviMate: asignar el channel ID a tvgId
+                if (isTivimateMode) {
+                    updated.tvgId = exactMatch.id;
+                }
+                
+                // Copiar logo si está seleccionado y disponible
+                if (copyLogo && exactMatch.logo) {
                     updated.tvgLogo = exactMatch.logo;
                 }
 
@@ -287,8 +299,17 @@ export const useAsignarEpg = (
             });
         });
 
-        alert(`EPG asignado automáticamente a ${matches.size} de ${channelsWithoutEpg.length} canales`);
-    }, [epgChannels, normalizeChannelName, setChannels, saveStateToHistory]);
+        const assignedTypes = [];
+        if (attributesToCopy.has('tvgId')) assignedTypes.push('ID');
+        if (attributesToCopy.has('tvgName')) assignedTypes.push('Nombre EPG');
+        if (attributesToCopy.has('tvgLogo')) assignedTypes.push('Logo');
+
+        if (assignedTypes.length === 0) {
+            alert(`Se encontraron ${matches.size} coincidencias, pero NO se asignó nada porque no hay opciones seleccionadas en "Preparar para" (ni modo TiviMate, ni OTT, ni copiar logo).`);
+        } else {
+            alert(`EPG asignado automáticamente a ${matches.size} de ${channelsWithoutEpg.length} canales. Se asignó: ${assignedTypes.join(', ')}.`);
+        }
+    }, [epgChannels, normalizeChannelName, setChannels, saveStateToHistory, attributesToCopy]);
 
     // Función para buscar canales EPG similares automáticamente
     const findSimilarEpgChannels = useCallback((channelName: string) => {
