@@ -2,7 +2,7 @@ import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { Upload, Download, Plus, Trash2, GripVertical, ShieldCheck, ShieldX, ShieldQuestion, Undo2, Redo2 } from 'lucide-react';
+import { Upload, Download, Plus, Trash2, GripVertical, ShieldCheck, ShieldX, ShieldQuestion, Undo2, Redo2, HelpCircle } from 'lucide-react';
 import { useChannels } from './useChannels';
 import { useSettings } from './useSettings';
 import { useAppMode } from './AppModeContext';
