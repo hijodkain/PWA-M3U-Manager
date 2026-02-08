@@ -100,6 +100,9 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
     });
 
     const mainListVirtualItems = mainListRowVirtualizer.getVirtualItems();
+    
+    // --- Computed Values ---
+    const isAllInGroupSelected = filteredReparacionChannels.length > 0 && filteredReparacionChannels.every(c => selectedReparacionChannels.has(c.id));
 
     const attributeLabels: { key: AttributeKey; label: string }[] = [
         { key: 'url', label: 'Stream' },
