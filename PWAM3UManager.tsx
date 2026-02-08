@@ -54,75 +54,111 @@ export default function PWAM3UManager() {
         }
     };
 
-    const getTabLabel = (tab: Tab) => {
-        switch (tab) {
-            case 'inicio': return null;
-            case 'editor': return <span className="hidden sm:inline ml-2">Editor</span>;
-            case 'reparacion': return <span className="hidden sm:inline ml-2">Reparar</span>;
-            case 'asignar-epg': return <span className="hidden sm:inline ml-2">EPG</span>;
-            case 'save': return null;
-            case 'settings': return null;
-            case 'ayuda': return null;
-            default: return null;
-        }
+    const getTabContent = (tab: Tab) => {
+        // Desktop: Icon + Text (Always)
+        // Mobile Rules:
+        // - Editor, Reparar: Icon + Text
+        // - EPG: Text Only
+        // - Others: Icon Only
+        
+        const isSelected = activeTab === tab;
+        const baseClasses = "flex items-center gap-2";
+
+        // Icon Rendering
+        const renderIcon = () => {
+             const Icon = tabs.find(t => t.id === tab)?.icon;
+             if (!Icon) return null;
+             
+             // EPG Special Case: Hidden on Mobile
+             if (tab === 'asignar-epg') {
+                 return <Icon className="h-5 w-5 hidden sm:block" />;
+             }
+             return <Icon className="h-5 w-5" />;
+        };
+
+        // Text Rendering
+        const renderText = () => {
+            const label = tabs.find(t => t.id === tab)?.label;
+            
+            // Cases where text is shown on mobile
+            if (tab === 'editor' || tab === 'reparacion' || tab === 'asignar-epg') {
+                return <span>{label}</span>;
+            }
+            
+            // Default: Hidden on mobile, inline on sm+
+            return <span className="hidden sm:inline">{label}</span>;
+        };
+
+        return (
+            <div className={baseClasses}>
+                {renderIcon()}
+                {renderText()}
+            </div>
+        );
     };
 
-    const tabs: { id: Tab; icon: React.ElementType; label?: string }[] = [
+    const tabs: { id: Tab; icon: React.ElementType; label: string }[] = [
         { id: 'inicio', icon: Home, label: 'Inicio' },
         { id: 'editor', icon: Edit, label: 'Editor' },
-        { id: 'reparacion', icon: Wrench, label: 'Reparación' },
-        { id: 'asignar-epg', icon: List, label: 'Asignar EPG' },
+        { id: 'reparacion', icon: Wrench, label: 'Reparar' },
+        { id: 'asignar-epg', icon: List, label: 'EPG' },
         { id: 'save', icon: Save, label: 'Guardar' },
-        { id: 'settings', icon: Settings, label: 'Configuración' },
+        { id: 'settings', icon: Settings, label: 'Ajustes' },
         { id: 'ayuda', icon: HelpCircle, label: 'Ayuda' },
     ];
 
     return (
-        <div className="bg-gray-900 text-white min-h-screen font-sans">
-             <div className="sticky top-0 z-50 bg-gray-900 shadow-md border-b border-gray-800">
+        <div className="bg-gray-900 text-white min-h-screen font-sans flex flex-col">
+            
+            {/* 1. Static Header (Scrolls away) */}
+             <div className="bg-gray-900 border-b border-gray-800">
                 <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between py-3">
                         <div className="flex items-center">
                             <img src="/logo.svg" alt="Logo" className="h-8 w-8 mr-3" />
                              <div>
-                                <h1 className="text-xl font-bold text-blue-400 hidden md:block">M3U Manager</h1>
+                                <h1 className="text-xl font-bold text-blue-400">M3U Manager</h1>
+                                <p className="text-xs text-gray-400 hidden sm:block">Gestión inteligente de listas IPTV</p>
                             </div>
                         </div>
-                         <div className="overflow-x-auto no-scrollbar ml-4">
-                            <nav className="flex space-x-2 sm:space-x-4" aria-label="Tabs">
-                                {tabs.map((tab) => (
-                                    <button
-                                        key={tab.id}
-                                        onClick={() => setActiveTab(tab.id)}
-                                        className={`${activeTab === tab.id
-                                                ? 'bg-blue-600 text-white'
-                                                : 'text-gray-400 hover:text-white hover:bg-gray-800'
-                                            } flex items-center justify-center px-3 py-2 rounded-md font-medium text-sm transition-colors focus:outline-none`}
-                                        title={tab.label}
-                                    >
-                                        <tab.icon className={`h-5 w-5 ${getTabLabel(tab.id) ? '' : ''}`} />
-                                        {getTabLabel(tab.id)}
-                                    </button>
-                                ))}
-                            </nav>
-                        </div>
-                        <div className="ml-4">
+                        <div>
                             <button
                                 onClick={toggleMode}
-                                className={`px-3 py-1.5 rounded text-xs font-semibold whitespace-nowrap transition-all ${
+                                className={`px-4 py-1.5 rounded-full text-xs font-bold tracking-wide transition-all shadow-lg ${
                                     mode === 'pro'
-                                        ? 'bg-purple-600 hover:bg-purple-700 text-white'
-                                        : 'bg-green-600 hover:bg-green-700 text-white'
+                                        ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-purple-900/50'
+                                        : 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-emerald-900/50'
                                 }`}
                             >
-                                {mode === 'pro' ? 'Pro' : 'Lite'}
+                                {mode === 'pro' ? 'MODO PRO' : 'MODO LITE'}
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
+
+            {/* 2. Sticky Navigation Bar */}
+            <div className="sticky top-0 z-50 bg-gray-900/95 backdrop-blur-sm shadow-xl border-b border-gray-800">
+                <div className="max-w-full mx-auto px-1 sm:px-6 lg:px-8">
+                     <nav className="flex items-center justify-between sm:justify-start space-x-1 sm:space-x-2 py-2 overflow-x-auto no-scrollbar" aria-label="Tabs">
+                        {tabs.map((tab) => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`${activeTab === tab.id
+                                        ? 'bg-blue-600/20 text-blue-400 border border-blue-500/50'
+                                        : 'text-gray-400 hover:text-white hover:bg-gray-800 border border-transparent'
+                                    } px-2 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all focus:outline-none whitespace-nowrap`}
+                            >
+                                {getTabContent(tab.id)}
+                            </button>
+                        ))}
+                    </nav>
+                </div>
+            </div>
             
-            <div className="p-4 sm:p-6 lg:p-8 max-w-full mx-auto">
+            {/* 3. Main Content */}
+            <div className="flex-grow p-0 sm:p-6 lg:p-8 max-w-full mx-auto w-full overflow-x-hidden">
                 {renderTabContent()}
             </div>
         </div>
