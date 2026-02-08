@@ -460,7 +460,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                 ))}
                             </select>
                             
-                            <button onClick={() => toggleSelectAllReparacionGroup(filteredReparacionChannels)} className="px-2 py-1.5 bg-gray-600 hover:bg-gray-500 rounded text-xs text-white whitespace-nowrap">
+                            <button onClick={() => toggleSelectAllReparacionGroup()} className="px-2 py-1.5 bg-gray-600 hover:bg-gray-500 rounded text-xs text-white whitespace-nowrap">
                                 {isAllInGroupSelected ? 'Deseleccionar Grupo' : 'Seleccionar Grupo'}
                             </button>
                         </div>
@@ -478,7 +478,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     key={ch.id}
                                     channel={ch}
                                     isSelected={isChSelected}
-                                    onBodyClick={() => toggleReparacionSelection(ch.id)}
+                                    onBodyClick={() => toggleReparacionSelection(ch.id, virtualItem.index, false, false, false)}
                                     // Make sure toggleReparacionSelection handles the "uncheck if clicked again" logic if user requested.
                                     // Context: "Toggle de selección: Canal seleccionado se deselecciona al hacer clic de nuevo"
                                     // toggleReparacionSelection likely adds/removes from Set. Perfect.
