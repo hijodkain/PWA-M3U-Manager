@@ -261,19 +261,91 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
 
     const handleDragEnd = (event: any) => {
         const { active, over } = event;
-        if (over && active.id !== over.id) {
+        
+        if (!over) {
+            setActiveId(null);
+            return;
+        }
+
+        if (active.id !== over.id) {
             setChannels((items) => {
-                // Encontrar índices en el array completo de canales
-                const oldIndex = items.findIndex((item) => item.id === active.id);
-                const newIndex = items.findIndex((item) => item.id === over.id);
-                
-                if (oldIndex === -1 || newIndex === -1) return items;
-                
-                // Usar arrayMove para reordenar
-                const reordered = arrayMove(items, oldIndex, newIndex);
-                
-                // Recalcular todos los números de orden
-                return reordered.map((c, i) => ({ ...c, order: i + 1 }));
+                const isMultiDrag = selectedChannels.includes(active.id) && selectedChannels.length > 1;
+
+                if (isMultiDrag) {
+                    // Mover múltiples canales seleccionados
+                    const activeIndex = items.findIndex((i) => i.id === active.id);
+                    const overIndex = items.findIndex((i) => i.id === over.id);
+                    
+                    if (activeIndex === -1 || overIndex === -1) return items;
+
+                    // Si soltamos sobre un ítem que es parte de la selección, no hacemos nada
+                    if (selectedChannels.includes(over.id)) return items;
+
+                    const storedSelectedItems = items.filter(item => selectedChannels.includes(item.id));
+                    // Mantener el orden relativo original de la selección
+                    // Opcional: ordenar por su orden actual si se desea
+                    // storedSelectedItems.sort((a, b) => a.order - b.order); 
+
+                    const itemsWithoutSelection = items.filter(item => !selectedChannels.includes(item.id));
+                    
+                    // Encontrar el índice de destino en el array limpio
+                    // El índice 'over' que nos da dnd-kit es sobre el array visual, 
+                    // pero al mutar el array necesitamos el índice en 'itemsWithoutSelection'.
+                    // Sin embargo, una simplificación es buscar el ítem 'over' en 'itemsWithoutSelection'
+                    let targetIndex = itemsWithoutSelection.findIndex(item => item.id === over.id);
+                    
+                    // Si estamos arrastrando hacia abajo, el target debe ser después del ítem over
+                    // Pero dnd-kit logic standard is "replace". 
+                    // Mejor estrategia simple: insertar en la posición donde está el 'over' en la lista filtrada.
+                    
+                    // Ajuste fino: si arrastramos "hacia abajo" visualmente en relación al grupo,
+                    // a veces se prefiere insertar después. 
+                    // Pero keep it simple: insert before the 'over' item in the filtered list based on visualization.
+                    
+                    // Si el target no está en la lista sin selección (raro si ya chequeamos que over no es seleccionado)
+                    if (targetIndex === -1) return items;
+
+                     // Insertar
+                     const newItems = [...itemsWithoutSelection];
+                     // Decisión: Insertar ANTES o DESPUÉS. 
+                     // Dnd-kit sortable standard: si vamos de arriba a abajo, insertamos después. De abajo a arriba, antes.
+                     // Pero en multiselect es complejo determinar "dirección" de todo el bloque.
+                     // Asumiremos inserción en la posición del target (desplaza target a la derecha/abajo).
+                     
+                     // Si el overIndex > activeIndex (movimiento general hacia abajo), puede que queramos insertar después.
+                     // Pero activeIndex es de UN item del grupo.
+                     // Simplificación: Insertar en targetIndex. 
+                     // Si el usuario arrastra justo debajo, el 'over' será el siguiente item.
+                     
+                     // Corrección: para que se sienta natural como "Sortable":
+                     // Si activeItem.order < overItem.order -> insert after overItem?
+                     // Standard Finder/Explorer behavior: Drop ON moves into folder. Drop BETWEEN moves.
+                     // Sortable list: Drop OVER replaces position.
+                     
+                     // Vamos a usar la lógica simple: insertar en la posición del overID en la lista filtrada.
+                     // Si arrastramos de arriba a abajo, esto pone los elementos ENCIMA del overID.
+                     // Si queremos ponerlos DEBAJO, el usuario tendría que hacer hover en el siguiente elemento.
+                     const overItem = items.find(i => i.id === over.id);
+                     const activeItem = items.find(i => i.id === active.id);
+                     
+                     // Ajuste para UX natural:
+                     // Si el elemento sobre el que estamos tiene un orden mayor, insertamos DESPUÉS
+                     // SOLO si targetIndex no es el final.
+                     // Pero es arriesgado. Mantengamos inserción directa en índice.
+                     newItems.splice(targetIndex, 0, ...storedSelectedItems);
+
+                     return newItems.map((c, i) => ({ ...c, order: i + 1 }));
+
+                } else {
+                    // Mover un solo canal (comportamiento original)
+                    const oldIndex = items.findIndex((item) => item.id === active.id);
+                    const newIndex = items.findIndex((item) => item.id === over.id);
+                    
+                    if (oldIndex === -1 || newIndex === -1) return items;
+                    
+                    const reordered = arrayMove(items, oldIndex, newIndex);
+                    return reordered.map((c, i) => ({ ...c, order: i + 1 }));
+                }
             });
             saveStateToHistory();
         }

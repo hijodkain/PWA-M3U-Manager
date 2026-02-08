@@ -1,3 +1,23 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer utilities {
+  .marquee-content {
+    display: inline-block;
+    padding-right: 100%; /* Space to loop seamlessly if we duplicated content, or just delay */
+  }
+  
+  .group:hover .marquee-scroll {
+    animation: marquee 8s linear infinite;
+    /* Only animate if content is larger than container? Impossible with pure CSS without distinct classes. 
+       We will apply this class universally and let users see. 
+       Or better: Use JS to detect overflow.
+       Let's stick to the user request. */
+  }
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
+}

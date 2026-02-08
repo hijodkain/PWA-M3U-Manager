@@ -342,10 +342,20 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         setSuffixInput('');
     };
 
+    const gridTemplateColumns = useMemo(() => {
+        let cols = `${columnWidths.select}px ${columnWidths.order}px`;
+        if (!isSencillo) cols += ` ${columnWidths.status}px ${columnWidths.tvgId}px ${columnWidths.tvgName}px`;
+        cols += ` ${columnWidths.tvgLogo}px ${columnWidths.groupTitle}px ${columnWidths.name}px`;
+        if (!isSencillo) cols += ` ${columnWidths.url}px`;
+        return cols;
+    }, [columnWidths, isSencillo]);
+
     return (
         <>
             {!isSencillo && (
                 <div className="bg-gray-800 p-4 rounded-lg mb-6 shadow-lg">
+                    {/* ... (Previous code for URL input, remains identical, omitting for brevity in thought process but logically present) ... */}
+                    {/* Actually, replacing huge chunks is better done if I include the context. */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
                         <div>
                             <label htmlFor="url-input" className="block text-sm font-medium text-gray-300 mb-1">
@@ -359,6 +369,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                     onChange={(e) => setUrl(e.target.value)}
                                     placeholder="https://.../playlist.m3u"
                                     className="flex-grow bg-gray-700 border border-gray-600 rounded-l-md px-3 py-2 text-white focus:ring-blue-500 focus:border-blue-500"
+                                    data-testid="url-input"
                                 />
                                 <button
                                     onClick={handleFetchUrl}
@@ -588,108 +599,118 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                 </div>
             )}
 
-            <div ref={tableContainerRef} className="overflow-auto rounded-lg shadow-lg max-h-[60vh]">
+            <div ref={tableContainerRef} className="overflow-auto rounded-lg shadow-lg max-h-[60vh] bg-gray-900 border border-gray-700">
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-                    <table className="divide-y divide-gray-700" style={{ tableLayout: 'fixed', width: `${tableWidth}px` }}>
-                        <thead className="bg-gray-800 sticky top-0 z-10">
-                            <tr>
-                                <th scope="col" style={{ width: `${columnWidths.select}px`, minWidth: `${columnWidths.select}px`, maxWidth: `${columnWidths.select}px` }} className="px-2 py-2 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
-                                    <input
-                                        type="checkbox"
-                                        ref={selectAllCheckboxRef}
-                                        checked={filteredChannels.length > 0 && selectedChannels.length === filteredChannels.length}
-                                        onChange={handleSelectAll}
-                                        className="form-checkbox h-4 w-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
-                                    />
-                                </th>
-                                <ResizableHeader width={columnWidths.order} onResize={(w) => handleResize('order', w)} align="center">
-                                    Orden
-                                </ResizableHeader>
-                                {!isSencillo && (
-                                    <ResizableHeader width={columnWidths.status} onResize={(w) => handleResize('status', w)} align="center">
-                                        Estado
-                                    </ResizableHeader>
-                                )}
-                                {!isSencillo && (
-                                    <ResizableHeader width={columnWidths.tvgId} onResize={(w) => handleResize('tvgId', w)} align="left">
-                                        tvg-id
-                                    </ResizableHeader>
-                                )}
-                                {!isSencillo && (
-                                    <ResizableHeader width={columnWidths.tvgName} onResize={(w) => handleResize('tvgName', w)} align="left">
-                                        tvg-name
-                                    </ResizableHeader>
-                                )}
-                                <ResizableHeader width={columnWidths.tvgLogo} onResize={(w) => handleResize('tvgLogo', w)} align="center">
-                                    Logo
-                                </ResizableHeader>
-                                <ResizableHeader width={columnWidths.groupTitle} onResize={(w) => handleResize('groupTitle', w)} align="left">
-                                    Grupo
-                                </ResizableHeader>
-                                <ResizableHeader width={columnWidths.name} onResize={(w) => handleResize('name', w)} align="left">
-                                    Nombre del Canal
-                                </ResizableHeader>
-                                {!isSencillo && (
-                                    <ResizableHeader width={columnWidths.url} onResize={(w) => handleResize('url', w)} align="left">
-                                        URL del Stream
-                                    </ResizableHeader>
-                                )}
-                            </tr>
-                        </thead>
-                        <SortableContext items={filteredChannels.map(c => c.id)} strategy={verticalListSortingStrategy}>
-                            <tbody style={{ height: `${totalSize}px`, width: '100%', position: 'relative' }} className="bg-gray-900 divide-y divide-gray-700">
-                                {virtualItems.map((virtualItem) => {
-                                    const channel = filteredChannels[virtualItem.index];
-                                    if (!channel) return null;
+                    {/* Header GRID */}
+                     <div 
+                        className="bg-gray-800 sticky top-0 z-10 border-b border-gray-600"
+                        style={{
+                            display: 'grid',
+                            gridTemplateColumns: gridTemplateColumns,
+                            width: `${tableWidth}px` // Ensure header matches body scroll width
+                        }}
+                    >
+                        <div style={{ width: `${columnWidths.select}px` }} className="px-2 py-2 flex justify-center items-center border-b border-gray-600">
+                             <input
+                                type="checkbox"
+                                ref={selectAllCheckboxRef}
+                                checked={filteredChannels.length > 0 && selectedChannels.length === filteredChannels.length}
+                                onChange={handleSelectAll}
+                                className="form-checkbox h-4 w-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 cursor-pointer"
+                            />
+                        </div>
+                        <ResizableHeader width={columnWidths.order} onResize={(w) => handleResize('order', w)} align="center">
+                            Orden
+                        </ResizableHeader>
+                        {!isSencillo && (
+                            <ResizableHeader width={columnWidths.status} onResize={(w) => handleResize('status', w)} align="center">
+                                Estado
+                            </ResizableHeader>
+                        )}
+                        {!isSencillo && (
+                            <ResizableHeader width={columnWidths.tvgId} onResize={(w) => handleResize('tvgId', w)} align="left">
+                                tvg-id
+                            </ResizableHeader>
+                        )}
+                        {!isSencillo && (
+                            <ResizableHeader width={columnWidths.tvgName} onResize={(w) => handleResize('tvgName', w)} align="left">
+                                tvg-name
+                            </ResizableHeader>
+                        )}
+                        <ResizableHeader width={columnWidths.tvgLogo} onResize={(w) => handleResize('tvgLogo', w)} align="center">
+                            Logo
+                        </ResizableHeader>
+                        <ResizableHeader width={columnWidths.groupTitle} onResize={(w) => handleResize('groupTitle', w)} align="left">
+                            Grupo
+                        </ResizableHeader>
+                        <ResizableHeader width={columnWidths.name} onResize={(w) => handleResize('name', w)} align="left">
+                            Nombre del Canal
+                        </ResizableHeader>
+                        {!isSencillo && (
+                            <ResizableHeader width={columnWidths.url} onResize={(w) => handleResize('url', w)} align="left">
+                                URL del Stream
+                            </ResizableHeader>
+                        )}
+                    </div>
 
-                                    return (
-                                        <SortableChannelRow
-                                            key={channel.id}
-                                            id={channel.id}
-                                            channel={channel}
-                                            onOrderChange={handleOrderChange}
-                                            onUpdate={handleUpdateChannel}
-                                            selectedChannels={selectedChannels}
-                                            toggleChannelSelection={toggleChannelSelection}
-                                            statusIndicator={
-                                                <td style={{ width: `${columnWidths.status}px`, minWidth: `${columnWidths.status}px`, maxWidth: `${columnWidths.status}px` }} className="px-2 py-2 text-center"><StatusIndicator status={channel.status} /></td>
-                                            }
-                                            columnWidths={columnWidths}
-                                            measureRef={rowVirtualizer.measureElement}
-                                            style={{
-                                                position: 'absolute',
-                                                top: 0,
-                                                left: 0,
-                                                width: '100%',
-                                                transform: `translateY(${virtualItem.start}px)`,
-                                            }}
-                                        />
-                                    );
-                                })}
-                            </tbody>
-                        </SortableContext>
-                    </table>
+                    {/* VIRTUALIZED BODY GRID */}
+                    <SortableContext items={filteredChannels.map(c => c.id)} strategy={verticalListSortingStrategy}>
+                        <div 
+                            style={{ 
+                                height: `${totalSize}px`, 
+                                width: `${tableWidth}px`, 
+                                position: 'relative' 
+                            }}
+                        >
+                            {virtualItems.map((virtualItem) => {
+                                const channel = filteredChannels[virtualItem.index];
+                                if (!channel) return null;
+
+                                return (
+                                    <SortableChannelRow
+                                        key={channel.id}
+                                        id={channel.id}
+                                        channel={channel}
+                                        onOrderChange={handleOrderChange}
+                                        onUpdate={handleUpdateChannel}
+                                        selectedChannels={selectedChannels}
+                                        toggleChannelSelection={toggleChannelSelection}
+                                        statusIndicator={
+                                            <StatusIndicator status={channel.status} />
+                                        }
+                                        gridTemplateColumns={gridTemplateColumns}
+                                        measureRef={rowVirtualizer.measureElement}
+                                        style={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            width: '100%',
+                                            transform: `translateY(${virtualItem.start}px)`,
+                                        }}
+                                    />
+                                );
+                            })}
+                        </div>
+                    </SortableContext>
+                    
                     <DragOverlay>
                         {activeChannel ? (
-                            <table style={{ tableLayout: 'fixed', width: `${tableWidth}px` }}>
-                                <tbody className="bg-gray-700 shadow-2xl">
-                                    <SortableChannelRow
-                                        id={activeChannel.id}
-                                        channel={activeChannel}
-                                        isOverlay
-                                        onOrderChange={() => {}}
-                                        onUpdate={() => {}}
-                                        selectedChannels={[]}
-                                        toggleChannelSelection={() => {}}
-                                        statusIndicator={
-                                            !isSencillo ? (
-                                                <td style={{ width: `${columnWidths.status}px`, minWidth: `${columnWidths.status}px`, maxWidth: `${columnWidths.status}px` }} className="px-2 py-2 text-center"><StatusIndicator status={activeChannel.status} /></td>
-                                            ) : null
-                                        }
-                                        columnWidths={columnWidths}
-                                    />
-                                </tbody>
-                            </table>
+                             <SortableChannelRow
+                                id={activeChannel.id}
+                                channel={activeChannel}
+                                isOverlay
+                                onOrderChange={() => {}}
+                                onUpdate={() => {}}
+                                selectedChannels={[]}
+                                toggleChannelSelection={() => {}}
+                                statusIndicator={
+                                    !isSencillo ? (
+                                        <StatusIndicator status={activeChannel.status} />
+                                    ) : null
+                                }
+                                gridTemplateColumns={gridTemplateColumns}
+                                style={{ width: `${tableWidth}px` }} // Overlay matches table width
+                            />
                         ) : null}
                     </DragOverlay>
                 </DndContext>

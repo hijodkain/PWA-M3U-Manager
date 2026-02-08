@@ -3,9 +3,10 @@ import React, { useState } from 'react';
 interface EditableCellProps {
     value: string;
     onSave: (value: string) => void;
+    className?: string;
 }
 
-const EditableCell: React.FC<EditableCellProps> = ({ value, onSave }) => {
+const EditableCell: React.FC<EditableCellProps> = ({ value, onSave, className = "truncate" }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [text, setText] = useState(value);
 
@@ -13,7 +14,7 @@ const EditableCell: React.FC<EditableCellProps> = ({ value, onSave }) => {
     setText(value);
     setIsEditing(true);
   };
-
+    // ... logic remains same
   const handleBlur = () => {
     if (text !== value) {
       onSave(text);
@@ -45,7 +46,7 @@ const EditableCell: React.FC<EditableCellProps> = ({ value, onSave }) => {
   }
 
   return (
-    <div onDoubleClick={handleDoubleClick} className="truncate cursor-pointer px-1 py-0.5">
+    <div onDoubleClick={handleDoubleClick} className={`${className} cursor-pointer px-1 py-0.5`}>
       {value}
     </div>
   );
