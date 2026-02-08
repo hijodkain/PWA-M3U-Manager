@@ -211,7 +211,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                         )}
                     </div>
                     {/* Botón Lupa (Search Toggle) */}
-                    {!isSencillo && channels.length > 0 && (
+                    {channels.length > 0 && (
                         <button 
                             onClick={() => setShowMainSearch(!showMainSearch)}
                             className={`p-1.5 rounded transition-colors ${showMainSearch ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-700'}`}
@@ -237,7 +237,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 )}
                 
                 {/* Buscador (Condicional) */}
-                {showMainSearch && !isSencillo && (
+                {showMainSearch && (
                     <div className="mb-3 animate-fadeIn">
                         <SmartSearchInput
                             searchTerm={mainListSearch}
