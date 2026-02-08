@@ -682,10 +682,9 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                         measureRef={rowVirtualizer.measureElement}
                                         style={{
                                             position: 'absolute',
-                                            top: 0,
+                                            top: `${virtualItem.start}px`, // Use top instead of transform for virtualization
                                             left: 0,
                                             width: '100%',
-                                            transform: `translateY(${virtualItem.start}px)`,
                                         }}
                                     />
                                 );

@@ -46,19 +46,30 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
 
     const dndKitTransform = transform ? CSS.Transform.toString(transform) : undefined;
 
+    // Fix for "disappearing items":
+    // Combine virtualizer style (positioning) with dnd-kit style (transform).
+    // If we used translateY in virtualizerStyle, dndKitTransform would overwrite it.
+    // Now EditorTab passes 'top' instead of 'transform' for virtualization, so we can use transform safely.
+    // Also ensuring zIndex management is correct.
+
     const style: React.CSSProperties = {
         ...virtualizerStyle,
         transform: dndKitTransform && !isOverlay ? dndKitTransform : virtualizerStyle?.transform,
         transition: isDragging ? transition : undefined,
-        opacity: isDragging && !isOverlay ? 0.5 : 1,
-        zIndex: isDragging && !isOverlay ? 1 : 0,
+        opacity: isDragging && !isOverlay ? 0.3 : 1, // Slight visibility for the placeholder
+        zIndex: isDragging && !isOverlay ? 1 : 'auto',
         display: 'grid',
         gridTemplateColumns: gridTemplateColumns,
         alignItems: 'center',
+        // Visual indicator that this is the placeholder space
+        border: isDragging && !isOverlay ? '1px dashed #4b5563' : undefined,
     };
 
     const rowListeners = isOverlay ? {} : listeners;
     const isSelected = selectedChannels.includes(channel.id);
+
+    // State for local editing of Logo
+    const [isEditingLogo, setIsEditingLogo] = React.useState(false);
 
     // Marquee helper: container with overflow hidden, child with animation on hover
     // Using simple truncate for now as base, and hover effect via CSS classes defined globally or locally.
@@ -133,20 +144,47 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
             )}
 
             {/* Logo */}
-            <div className="px-2 py-2 text-center flex items-center justify-center overflow-hidden">
-                 {channel.tvgLogo ? (
+            <div 
+                className="px-2 py-2 text-center flex items-center justify-center overflow-hidden h-full"
+                onDoubleClick={() => setIsEditingLogo(true)}
+                title="Doble clic para editar URL del logo"
+            >
+                 {isEditingLogo ? (
+                    <input 
+                        type="text" 
+                        defaultValue={channel.tvgLogo}
+                        autoFocus
+                        onBlur={(e) => {
+                            onUpdate(channel.id, 'tvgLogo', e.target.value);
+                            setIsEditingLogo(false);
+                        }}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                onUpdate(channel.id, 'tvgLogo', e.currentTarget.value);
+                                setIsEditingLogo(false);
+                            }
+                            if (e.key === 'Escape') {
+                                setIsEditingLogo(false);
+                            }
+                        }}
+                        className="w-full text-xs bg-gray-900 text-white border border-blue-500 rounded px-1 py-0.5"
+                        onClick={(e) => e.stopPropagation()}
+                    />
+                 ) : channel.tvgLogo ? (
                     <img
                         src={channel.tvgLogo}
                         alt="logo"
-                        className="h-8 w-auto object-contain rounded-sm"
+                        className="h-8 w-auto object-contain rounded-sm cursor-pointer hover:opacity-80 transition-opacity"
                         onError={(e) => {
                             e.currentTarget.style.display = 'none';
                             const parent = e.currentTarget.parentElement;
-                            if (parent) parent.innerHTML = '<span class="text-gray-500 text-xs">Sin Logo</span>';
+                            if (parent && !parent.querySelector('span')) {
+                                parent.innerHTML += '<span class="text-gray-500 text-xs">Sin Logo</span>';
+                            }
                         }}
                     />
                 ) : (
-                    <span className="text-gray-500 text-xs">Sin Logo</span>
+                    <span className="text-gray-500 text-xs cursor-text select-text">Sin Logo</span>
                 )}
             </div>
 
