@@ -61,6 +61,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
     const { savedEpgUrls } = settingsHook;
     const [mainListSearch, setMainListSearch] = useState('');
     const [selectedGroup, setSelectedGroup] = useState('all');
+    const [loadedEpgSourceName, setLoadedEpgSourceName] = useState('');
     
     // UI State for toggles
     const [ottModeActive, setOttModeActive] = useState(false);
