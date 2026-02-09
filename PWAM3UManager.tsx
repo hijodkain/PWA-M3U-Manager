@@ -140,7 +140,7 @@ export default function PWAM3UManager() {
             {/* 2. Sticky Navigation Bar */}
             <div className="sticky top-0 z-50 bg-gray-900/95 backdrop-blur-sm shadow-xl border-b border-gray-800">
                 <div className="max-w-full mx-auto px-1 sm:px-6 lg:px-8">
-                     <nav className="flex items-center justify-between sm:justify-start space-x-1 sm:space-x-2 py-2 overflow-x-auto no-scrollbar" aria-label="Tabs">
+                     <nav className="flex items-center justify-center space-x-1 sm:space-x-2 py-2 overflow-x-auto no-scrollbar" aria-label="Tabs">
                         {tabs.map((tab) => (
                             <button
                                 key={tab.id}

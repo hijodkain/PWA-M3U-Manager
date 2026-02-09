@@ -230,7 +230,7 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                 {/* 1. CARGA (Load Screen) */}
                 {activeSubTab === 'load' && (
                     <div className="max-w-3xl mx-auto space-y-4 md:space-y-8 animate-fadeIn">
-                         <div className="mb-4 md:mb-8">
+                         <div className="mb-4 md:mb-8 text-center">
                             <h1 className="text-xl md:text-3xl font-bold text-white mb-2">Cargar Lista Principal</h1>
                             <p className="text-sm md:text-base text-gray-400">Desde URL, archivo local o conecta tu Dropbox.</p>
                         </div>
