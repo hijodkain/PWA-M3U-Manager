@@ -126,6 +126,90 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
 
     // Clear Main List Logic
     const handleClearMainListClick = () => setShowClearConfirm(true);
+
+    const handleDeleteCurrentRepairList = async () => {
+         if (!reparacionListName) return;
+         
+         const stored = localStorage.getItem('medicinaLists');
+         const savedMedicinaLists = stored ? JSON.parse(stored) : [];
+         const currentList = savedMedicinaLists.find((l: any) => l.name === reparacionListName);
+         
+         if (!currentList) {
+             // Es una lista cargada temporalmente o no guardada, solo limpiamos UI
+             setReparacionListName('');
+             setReparacionUrl('');
+             return; 
+         }
+
+         if (!confirm(`¿Estás seguro de eliminar la lista reparadora "${reparacionListName}" de tus guardados?`)) return;
+
+         let movedToTrash = false;
+         
+         // Lógica de borrado Dropbox
+         if (settingsHook.dropboxRefreshToken && confirm('¿Quieres mover también el archivo original a la carpeta "Listas Eliminadas" de Dropbox?')) {
+             try {
+                 const tokenRes = await fetch('https://api.dropboxapi.com/oauth2/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        grant_type: 'refresh_token',
+                        refresh_token: settingsHook.dropboxRefreshToken,
+                        client_id: settingsHook.dropboxAppKey,
+                    }),
+                });
+                
+                if (tokenRes.ok) {
+                    const tokenData = await tokenRes.json();
+                    const accessToken = tokenData.access_token;
+                    
+                    const trashFolder = '/Listas Eliminadas';
+                    const filename = reparacionListName.endsWith('.m3u') || reparacionListName.endsWith('.m3u8') ? reparacionListName : `${reparacionListName}.m3u`;
+                    
+                    // Al estar en ReparacionTab, sabemos que es lista reparadora
+                    const originFolder = '/Listas Reparadoras'; 
+                    const pathInFolder = `${originFolder}/${filename}`;
+                    const pathInRoot = `/${filename}`;
+                    const destinationPath = `${trashFolder}/${filename}`;
+
+                    const tryMove = async (fromPath: string) => {
+                        const res = await fetch('/api/dropbox_move', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ accessToken, fromPath, toPath: destinationPath })
+                        });
+                        if (res.status === 404) throw new Error('Not found');
+                        if (!res.ok) throw new Error('Error API');
+                        return await res.json();
+                    };
+
+                    try {
+                        await tryMove(pathInFolder);
+                        movedToTrash = true;
+                    } catch (e) {
+                         try {
+                            await tryMove(pathInRoot);
+                            movedToTrash = true;
+                        } catch (e2) {
+                             alert('No se encontró el archivo en Dropbox para moverlo. Se borrará solo de la PWA.');
+                        }
+                    }
+
+                    if (movedToTrash) alert('Archivo movido a papelera en Dropbox.');
+                }
+             } catch (error) {
+                 console.error('Error borrando en Dropbox', error);
+             }
+         }
+
+         // Borrar de LocalStorage
+         const updated = savedMedicinaLists.filter((l: any) => l.name !== reparacionListName);
+         setSavedMedicinaLists(updated);
+         localStorage.setItem('medicinaLists', JSON.stringify(updated));
+         
+         // Limpiar vista
+         setReparacionListName('');
+         setReparacionUrl('');
+    };
     
     const handleConfirmClear = (action: 'clear' | 'save' | 'cancel') => {
         setShowClearConfirm(false);
