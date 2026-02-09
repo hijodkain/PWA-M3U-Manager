@@ -238,7 +238,11 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
     };
 
     const handleSearchDropbox = async () => {
-        if (!settingsHook.dropboxRefreshToken) return;
+        if (!settingsHook.dropboxRefreshToken) {
+            alert("Debes conectar tu cuenta de Dropbox en Ajustes primero.");
+            if (onNavigateToSettings) onNavigateToSettings();
+            return;
+        }
         
         setIsSearchingDropbox(true);
         setDropboxSearchResults([]);
@@ -812,15 +816,14 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                                 Mis Listas de Dropbox
                             </h2>
                             <div className="flex gap-2">
-                                {dropboxRefreshToken && (
-                                    <button 
-                                        onClick={handleSearchDropbox}
-                                        disabled={isSearchingDropbox}
-                                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition-all"
-                                    >
-                                        <Search className="w-4 h-4" /> Buscar en mi Dropbox
-                                    </button>
-                                )}
+                                <button 
+                                    onClick={handleSearchDropbox}
+                                    disabled={isSearchingDropbox}
+                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition-all ${dropboxRefreshToken ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-75'}`}
+                                    title={dropboxRefreshToken ? "Buscar archivos .m3u en tu Dropbox" : "Conecta Dropbox para buscar"}
+                                >
+                                    <Search className="w-4 h-4" /> Buscar en mi Dropbox
+                                </button>
                                 <span className="bg-blue-900/30 text-blue-400 px-3 py-1.5 rounded-lg text-sm font-medium border border-blue-900/50">
                                     {savedDropboxLists.length} listas
                                 </span>
@@ -939,15 +942,14 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                                 Mis Listas Reparadoras
                             </h2>
                             <div className="flex gap-2">
-                                {dropboxRefreshToken && (
-                                    <button 
-                                        onClick={handleSearchDropbox}
-                                        disabled={isSearchingDropbox}
-                                        className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition-all"
-                                    >
-                                        <Search className="w-4 h-4" /> Buscar en mi Dropbox
-                                    </button>
-                                )}
+                                <button 
+                                    onClick={handleSearchDropbox}
+                                    disabled={isSearchingDropbox}
+                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition-all ${dropboxRefreshToken ? 'bg-purple-600 hover:bg-purple-700 text-white' : 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-75'}`}
+                                    title={dropboxRefreshToken ? "Buscar archivos .m3u en tu Dropbox" : "Conecta Dropbox para buscar"}
+                                >
+                                    <Search className="w-4 h-4" /> Buscar en mi Dropbox
+                                </button>
                                 <span className="bg-purple-900/30 text-purple-400 px-3 py-1.5 rounded-lg text-sm font-medium border border-purple-900/50">
                                     {savedMedicinaLists.length} listas
                                 </span>

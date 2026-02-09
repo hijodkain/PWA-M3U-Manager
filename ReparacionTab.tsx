@@ -100,6 +100,15 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
     });
 
     const mainListVirtualItems = mainListRowVirtualizer.getVirtualItems();
+
+    // Check if is mobile
+    const [isMobile, setIsMobile] = useState(false);
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
     
     // --- Computed Values ---
     const isAllInGroupSelected = filteredReparacionChannels.length > 0 && filteredReparacionChannels.every(c => selectedReparacionChannels.has(c.id));
@@ -187,10 +196,50 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
 
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-11 gap-4 h-[calc(100vh-140px)]">
+        <div className={`grid grid-cols-1 lg:grid-cols-11 gap-4 h-[calc(100vh-140px)] ${isMobile ? 'overflow-y-auto block' : ''}`}>
             
+            {/* --- BLOQUE MOVIL: ATRIBUTOS ARRIBA --- */}
+            {isMobile && (
+                <div className="bg-gray-800 p-3 rounded-lg border border-gray-700 mb-4 sticky top-0 z-10 shadow-lg">
+                    <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-bold text-xs uppercase text-gray-400">Atributos a copiar</h4>
+                        <div className="flex gap-2">
+                            {!isSencillo && (
+                                <button
+                                    onClick={handleAddSelectedFromReparacion}
+                                    disabled={selectedReparacionChannels.size === 0}
+                                    className="text-xs py-1 px-3 bg-green-600 hover:bg-green-700 text-white rounded shadow-sm disabled:opacity-50"
+                                >
+                                    + Añadir
+                                </button>
+                            )}
+                            <button
+                                onClick={undo}
+                                disabled={history.length === 0}
+                                className="text-xs py-1 px-3 bg-yellow-600 hover:bg-yellow-700 text-white rounded disabled:opacity-50"
+                            >
+                                <RotateCcw size={12} />
+                            </button>
+                        </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                         {attributeLabels
+                            .filter(({ key }) => isSencillo ? (key !== 'tvgId' && key !== 'tvgName') : true)
+                            .map(({ key, label }) => (
+                            <button
+                                key={key}
+                                onClick={() => toggleAttributeToCopy(key)}
+                                className={`text-[10px] py-1.5 px-2 rounded flex items-center justify-center gap-1 transition-colors flex-grow ${attributesToCopy.has(key) ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                            >
+                                {attributesToCopy.has(key) ? <CheckSquare size={12} /> : <Copy size={12} />} {label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* --- PANEL IZQUIERDO (Lista Principal) --- */}
-            <div className="lg:col-span-4 bg-gray-800 p-4 rounded-lg flex flex-col h-full border border-gray-700 min-h-0">
+            <div className={`lg:col-span-4 bg-gray-800 p-4 rounded-lg flex flex-col border border-gray-700 ${isMobile ? 'h-[400px] mb-4' : 'h-full'}`}>
                 
                 {/* Header Lista Principal */}
                 <div className="flex justify-between items-center mb-3 pb-2 border-b border-gray-700">
@@ -331,7 +380,8 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 </div>
             </div>
 
-            {/* --- PANEL CENTRAL: Acciones --- */}
+            {/* --- PANEL CENTRAL: Acciones (SOLO DESKTOP) --- */}
+            {!isMobile && (
             <div className="lg:col-span-1 flex flex-col items-center justify-start gap-3 bg-gray-800 p-3 rounded-lg border border-gray-700">
                  <div className="text-center w-full">
                     <h4 className="font-bold text-xs uppercase text-gray-400 mb-2">Atributos</h4>
@@ -371,9 +421,10 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                     </button>
                 </div>
             </div>
+            )}
 
             {/* --- PANEL DERECHO (Lista Reparadora) --- */}
-            <div className="lg:col-span-6 bg-gray-800 p-4 rounded-lg flex flex-col h-full border border-gray-700 min-h-0">
+            <div className={`lg:col-span-6 bg-gray-800 p-4 rounded-lg flex flex-col border border-gray-700 min-h-0 ${isMobile ? 'h-[400px]' : 'h-full'}`}>
                 
                 {/* Header Lista Reparadora */}
                 <div className="mb-4">
