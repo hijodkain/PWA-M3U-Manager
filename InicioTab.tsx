@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, Download, AlertCircle, Share2, Trash2, Link as LinkIcon, FileText, Settings, RefreshCw, Plus, Cloud, Database, FilePlus, List, Filter, Check, X, CheckSquare, Square } from 'lucide-react';
+import { Upload, Download, AlertCircle, Share2, Trash2, Link as LinkIcon, FileText, Settings, RefreshCw, Plus, Cloud, Database, FilePlus, List, Filter, Check, X, CheckSquare, Square, Search } from 'lucide-react';
 import { useChannels } from './useChannels';
 import { useSettings } from './useSettings';
 
@@ -50,6 +50,11 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
     const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
     const [isUploading, setIsUploading] = useState(false);
     const [uploadStatus, setUploadStatus] = useState('');
+
+    // Estados para búsqueda en Dropbox
+    const [isSearchingDropbox, setIsSearchingDropbox] = useState(false);
+    const [dropboxSearchResults, setDropboxSearchResults] = useState<Array<{name: string, path_lower: string, id: string}>>([]);
+    const [showDropboxSearchModal, setShowDropboxSearchModal] = useState(false);
 
     // --- Effects ---
     useEffect(() => {
@@ -230,6 +235,125 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
             setIsUploading(false);
             setUploadStatus('');
         }
+    };
+
+    const handleSearchDropbox = async () => {
+        if (!settingsHook.dropboxRefreshToken) return;
+        
+        setIsSearchingDropbox(true);
+        setDropboxSearchResults([]);
+        setShowDropboxSearchModal(true);
+
+        try {
+            const accessToken = await getDropboxAccessToken();
+            
+            const response = await fetch('https://api.dropboxapi.com/2/files/search_v2', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    query: ".m3u", // Busca cualquier cosa con m3u
+                    options: {
+                        filename_only: true,
+                        file_extensions: ['m3u', 'm3u8'],
+                        max_results: 20
+                    }
+                })
+            });
+
+            if (!response.ok) throw new Error('Error buscando en Dropbox');
+            const data = await response.json();
+            
+            const files = data.matches.map((match: any) => ({
+                name: match.metadata.metadata.name,
+                path_lower: match.metadata.metadata.path_lower,
+                id: match.metadata.metadata.id
+            }));
+            
+            setDropboxSearchResults(files);
+
+        } catch (e) {
+            console.error(e);
+            alert('Error buscando lista en Dropbox');
+        } finally {
+            setIsSearchingDropbox(false);
+        }
+    };
+
+    const handleAddFromDropboxSearch = async (file: {name: string, path_lower: string, id: string}) => {
+         try {
+             setIsSearchingDropbox(true);
+             const accessToken = await getDropboxAccessToken();
+            
+            // Generar link compartido para este archivo
+            const shareResponse = await fetch('https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ path: file.path_lower }),
+            });
+
+            let sharedUrl = '';
+            if (shareResponse.ok) {
+                const shareData = await shareResponse.json();
+                sharedUrl = shareData.url.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('dl=0', 'dl=1');
+            } else {
+                 const listLinks = await fetch('https://api.dropboxapi.com/2/sharing/list_shared_links', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: file.path_lower }),
+                });
+                if(listLinks.ok) {
+                    const existing = await listLinks.json();
+                     if (existing.links?.length > 0) {
+                         sharedUrl = existing.links[0].url.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('dl=0', 'dl=1');
+                     }
+                }
+            }
+            
+            if (sharedUrl) {
+                if (activeSubTab === 'dropbox-lists') {
+                    // Añadir a Mis Listas Dropbox
+                    const newList = {
+                        id: Date.now().toString(),
+                        name: file.name,
+                        url: sharedUrl,
+                        addedAt: new Date().toISOString()
+                    };
+                    const updated = [...savedDropboxLists, newList];
+                    setSavedDropboxLists(updated);
+                    localStorage.setItem('dropboxLists', JSON.stringify(updated));
+                    alert('Añadida a tus listas principales');
+                } else if (activeSubTab === 'repair-lists') {
+                     // Añadir a Mis Listas Reparadoras
+                     const newList = {
+                        id: Date.now().toString(),
+                        name: file.name,
+                        url: sharedUrl,
+                        addedAt: new Date().toISOString(), // Optional for parsing but good context
+                        content: '' // No content loaded yet, will load on use
+                    };
+                    // @ts-ignore - addedAt is extra but harmless
+                    const updated = [...savedMedicinaLists, newList];
+                    setSavedMedicinaLists(updated);
+                    localStorage.setItem('medicinaLists', JSON.stringify(updated));
+                    alert('Añadida a tus listas reparadoras');
+                }
+                
+                setShowDropboxSearchModal(false);
+            } else {
+                alert('No se pudo generar enlace para este archivo');
+            }
+
+         } catch (e) {
+             alert((e as Error).message);
+         } finally {
+             setIsSearchingDropbox(false);
+         }
     };
 
     // --- Parsing Helpers ---
@@ -687,10 +811,67 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                                 <img src="/Dropbox_Icon.svg" className="w-8 h-8" />
                                 Mis Listas de Dropbox
                             </h2>
-                            <span className="bg-blue-900/30 text-blue-400 px-3 py-1 rounded-full text-sm font-medium">
-                                {savedDropboxLists.length} listas
-                            </span>
+                            <div className="flex gap-2">
+                                {dropboxRefreshToken && (
+                                    <button 
+                                        onClick={handleSearchDropbox}
+                                        disabled={isSearchingDropbox}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition-all"
+                                    >
+                                        <Search className="w-4 h-4" /> Buscar en mi Dropbox
+                                    </button>
+                                )}
+                                <span className="bg-blue-900/30 text-blue-400 px-3 py-1.5 rounded-lg text-sm font-medium border border-blue-900/50">
+                                    {savedDropboxLists.length} listas
+                                </span>
+                            </div>
                         </div>
+
+                        {/* Modal para resultados de búsqueda */}
+                        {showDropboxSearchModal && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+                                <div className="bg-gray-800 rounded-xl max-w-lg w-full max-h-[80vh] flex flex-col shadow-2xl border border-gray-700">
+                                    <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-900/50 rounded-t-xl">
+                                        <h3 className="font-bold text-white flex items-center gap-2">
+                                            <Cloud size={18} className="text-blue-400" /> Archivos .m3u encontrados
+                                        </h3>
+                                        <button onClick={() => setShowDropboxSearchModal(false)} className="text-gray-400 hover:text-white">
+                                            <X size={20} />
+                                        </button>
+                                    </div>
+                                    
+                                    <div className="p-4 overflow-y-auto flex-1 custom-scrollbar">
+                                        {isSearchingDropbox && dropboxSearchResults.length === 0 ? (
+                                            <div className="text-center py-8">
+                                                <RefreshCw className="animate-spin mb-3 mx-auto text-blue-500" size={24} />
+                                                <p className="text-gray-400">Buscando en tu Dropbox...</p>
+                                            </div>
+                                        ) : dropboxSearchResults.length > 0 ? (
+                                            <div className="space-y-2">
+                                                {dropboxSearchResults.map(file => (
+                                                    <div key={file.id} className="flex justify-between items-center p-3 bg-gray-700/50 rounded-lg hover:bg-gray-700 border border-gray-600/50">
+                                                        <div className="flex items-center gap-3 overflow-hidden">
+                                                            <FileText size={20} className="text-blue-400 flex-shrink-0" />
+                                                            <span className="text-sm text-gray-200 truncate">{file.name}</span>
+                                                        </div>
+                                                        <button 
+                                                            onClick={() => handleAddFromDropboxSearch(file)}
+                                                            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-bold transition-colors ml-3 whitespace-nowrap"
+                                                        >
+                                                            Añadir
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-8 text-gray-400">
+                                                No se encontraron archivos .m3u
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {savedDropboxLists.length === 0 ? (
                             <div className="text-center py-16 bg-gray-800/50 rounded-xl border-2 border-dashed border-gray-800">
@@ -757,10 +938,23 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                                 <Database size={28} />
                                 Mis Listas Reparadoras
                             </h2>
-                            <span className="bg-purple-900/30 text-purple-400 px-3 py-1 rounded-full text-sm font-medium">
-                                {savedMedicinaLists.length} listas
-                            </span>
+                            <div className="flex gap-2">
+                                {dropboxRefreshToken && (
+                                    <button 
+                                        onClick={handleSearchDropbox}
+                                        disabled={isSearchingDropbox}
+                                        className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition-all"
+                                    >
+                                        <Search className="w-4 h-4" /> Buscar en mi Dropbox
+                                    </button>
+                                )}
+                                <span className="bg-purple-900/30 text-purple-400 px-3 py-1.5 rounded-lg text-sm font-medium border border-purple-900/50">
+                                    {savedMedicinaLists.length} listas
+                                </span>
+                            </div>
                         </div>
+
+                         {/* Reutilizamos el mismo modal para resultados de búsqueda, que ya renderiza si showDropboxSearchModal es true */}
 
                         {savedMedicinaLists.length === 0 ? (
                             <div className="text-center py-16 bg-gray-800/50 rounded-xl border-2 border-dashed border-gray-800">
