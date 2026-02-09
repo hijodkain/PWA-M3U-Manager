@@ -361,7 +361,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                         </button>
                     </div>
                 )}
-                <div className="mt-auto w-full">
+                <div className="w-full mt-2">
                     <button
                         onClick={undo}
                         disabled={history.length === 0}

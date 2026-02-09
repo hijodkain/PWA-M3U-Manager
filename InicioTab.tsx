@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, Download, AlertCircle, Share2, Trash2, Link as LinkIcon, FileText, Settings, RefreshCw, Plus, Cloud, Database, FilePlus, List } from 'lucide-react';
+import { Upload, Download, AlertCircle, Share2, Trash2, Link as LinkIcon, FileText, Settings, RefreshCw, Plus, Cloud, Database, FilePlus, List, Filter, Check, X, CheckSquare, Square } from 'lucide-react';
 import { useChannels } from './useChannels';
 import { useSettings } from './useSettings';
 
@@ -45,6 +45,12 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [triggerLoad, setTriggerLoad] = useState(false);
 
+    // Estados para Preview y Upload (Nueva funcionalidad)
+    const [previewContent, setPreviewContent] = useState<{content: string, name: string, groups: string[]} | null>(null);
+    const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadStatus, setUploadStatus] = useState('');
+
     // --- Effects ---
     useEffect(() => {
         const handler = (e: Event) => {
@@ -72,6 +78,170 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
             setShowSuccessModal(true);
         }
     }, [triggerLoad, url, handleFetchUrl]);
+
+    // --- Dropbox Helpers ---
+    const getDropboxAccessToken = async () => {
+        const response = await fetch('https://api.dropboxapi.com/oauth2/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                grant_type: 'refresh_token',
+                refresh_token: settingsHook.dropboxRefreshToken,
+                client_id: settingsHook.dropboxAppKey,
+            }),
+        });
+
+        if (!response.ok) throw new Error('No se pudo obtener el token de acceso de Dropbox.');
+        const data = await response.json();
+        return data.access_token;
+    };
+
+    const handleUploadSelectionToDropbox = async (onlySelectedGroups: boolean) => {
+        if (!previewContent || !settingsHook.dropboxRefreshToken) return;
+
+        setIsUploading(true);
+        setUploadStatus('Preparando subida...');
+
+        try {
+            let contentToUpload = previewContent.content;
+            let filename = previewContent.name;
+
+            if (onlySelectedGroups) {
+                if (selectedGroups.size === 0) {
+                    alert("Selecciona al menos un grupo");
+                    setIsUploading(false);
+                    return;
+                }
+
+                // Filtrar contenido
+                setUploadStatus('Filtrando canales...');
+                const lines = previewContent.content.split('\n');
+                let newContent = ['#EXTM3U'];
+                let currentItem: string[] = [];
+                let includeCurrent = false;
+
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (line.startsWith('#EXTINF')) {
+                        // Nuevo item, procesar anterior
+                        if (includeCurrent && currentItem.length > 0) {
+                            newContent.push(...currentItem);
+                        }
+                        
+                        // Reset para nuevo item
+                        currentItem = [line];
+                        const groupMatch = line.match(/group-title="([^"]*)"/);
+                        const group = groupMatch ? groupMatch[1] : 'Sin Grupo';
+                        includeCurrent = selectedGroups.has(group);
+                    } else if (line.startsWith('#') && !line.startsWith('#EXTM3U')) {
+                        // Metadata extra
+                        currentItem.push(line);
+                    } else if (line.length > 0) {
+                        // URL
+                        currentItem.push(line);
+                        // Fin del item logico (asumiendo formato standard)
+                        if (includeCurrent) {
+                            newContent.push(...currentItem);
+                        }
+                        currentItem = [];
+                        includeCurrent = false;
+                    }
+                }
+                contentToUpload = newContent.join('\n');
+                filename = `${filename}_filtrada.m3u`;
+            } else {
+                 filename = filename.endsWith('.m3u') ? filename : `${filename}.m3u`;
+            }
+
+            setUploadStatus('Obteniendo token...');
+            const accessToken = await getDropboxAccessToken();
+
+            setUploadStatus('Subiendo archivo...');
+            const response = await fetch('https://content.dropboxapi.com/2/files/upload', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Dropbox-API-Arg': JSON.stringify({
+                        path: `/${filename}`,
+                        mode: 'add',
+                        autorename: true,
+                        mute: false
+                    }),
+                    'Content-Type': 'application/octet-stream',
+                },
+                body: contentToUpload,
+            });
+
+            if (!response.ok) throw new Error('Falló la subida a Dropbox');
+            
+            const data = await response.json();
+            
+            // Crear link compartido
+            setUploadStatus('Generando enlace...');
+            const shareResponse = await fetch('https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ path: data.path_display }),
+            });
+
+            let sharedUrl = '';
+            if (shareResponse.ok) {
+                const shareData = await shareResponse.json();
+                sharedUrl = shareData.url.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('dl=0', 'dl=1');
+            } else {
+                 // Intentar obtener existente
+                 const listLinks = await fetch('https://api.dropboxapi.com/2/sharing/list_shared_links', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: data.path_display }),
+                });
+                if(listLinks.ok) {
+                    const existing = await listLinks.json();
+                     if (existing.links?.length > 0) {
+                         sharedUrl = existing.links[0].url.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('dl=0', 'dl=1');
+                     }
+                }
+            }
+
+            if (sharedUrl) {
+                // Guardar en mis listas dropbox
+                const newList = {
+                    id: Date.now().toString(),
+                    name: filename,
+                    url: sharedUrl,
+                    addedAt: new Date().toISOString()
+                };
+                const currentDropboxLists = JSON.parse(localStorage.getItem('dropboxLists') || '[]');
+                const updated = [...currentDropboxLists, newList];
+                setSavedDropboxLists(updated);
+                localStorage.setItem('dropboxLists', JSON.stringify(updated));
+                alert('¡Subido a Dropbox y añadido a tus listas!');
+                setPreviewContent(null); // Reset UI
+            } else {
+                alert('Subido a Dropbox pero no se pudo generar enlace.');
+            }
+
+        } catch (e: any) {
+            alert(`Error: ${e.message}`);
+        } finally {
+            setIsUploading(false);
+            setUploadStatus('');
+        }
+    };
+
+    // --- Parsing Helpers ---
+    const parseGroups = (content: string) => {
+        const groupSet = new Set<string>();
+        const lines = content.split('\n');
+        lines.forEach(line => {
+             const match = line.match(/group-title="([^"]*)"/);
+             if (match) groupSet.add(match[1]);
+        });
+        return Array.from(groupSet).sort();
+    };
 
     // --- Handlers ---
 
@@ -107,7 +277,6 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
             if (!response.ok) throw new Error('Falló descarga');
             const content = await response.text();
             
-            // Generate basic name if needed
             let name = 'Lista Reparadora';
              try {
                 const urlParts = new URL(medicinaUrl).pathname.split('/');
@@ -119,12 +288,10 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
             if (!rawName) return;
             
             name = rawName.replace(/\s+/g, '-');
-            const newList = { id: Date.now().toString(), name, url: medicinaUrl, content };
-            const updated = [...savedMedicinaLists, newList];
-            setSavedMedicinaLists(updated);
-            localStorage.setItem('medicinaLists', JSON.stringify(updated));
+            const groups = parseGroups(content);
+            
+            setPreviewContent({ content, name, groups });
             setMedicinaUrl('');
-            alert('Guardada OK');
         } catch (e) {
             setMedicinaError('Error al guardar lista. Verifica la URL.');
         } finally {
@@ -143,22 +310,30 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
             if (!rawName) return;
 
             const name = rawName.replace(/\s+/g, '-');
-            const newList = {
-                id: Date.now().toString(),
-                name,
-                url: 'local',
-                content
-            };
-            const updated = [...savedMedicinaLists, newList];
-            setSavedMedicinaLists(updated);
-            localStorage.setItem('medicinaLists', JSON.stringify(updated));
-            alert('Guardada correctamente');
+            const groups = parseGroups(content);
+            
+            setPreviewContent({ content, name, groups });
         } catch (err) {
             setMedicinaError('Error al leer el archivo.');
         } finally {
             setIsMedicinaLoading(false);
             e.target.value = '';
         }
+    };
+
+    const handleSavePreviewLocally = () => {
+        if (!previewContent) return;
+        const newList = {
+            id: Date.now().toString(),
+            name: previewContent.name,
+            url: 'local',
+            content: previewContent.content
+        };
+        const updated = [...savedMedicinaLists, newList];
+        setSavedMedicinaLists(updated);
+        localStorage.setItem('medicinaLists', JSON.stringify(updated));
+        alert('Guardada localmente');
+        setPreviewContent(null);
     };
 
     const handleDeleteList = (type: 'dropbox' | 'medicina', id: string) => {
@@ -229,10 +404,13 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                 
                 {/* 1. CARGA (Load Screen) */}
                 {activeSubTab === 'load' && (
-                    <div className="max-w-3xl mx-auto space-y-4 md:space-y-8 animate-fadeIn">
-                         <div className="mb-4 md:mb-8 text-center">
-                            <h1 className="text-xl md:text-3xl font-bold text-white mb-2">Cargar Lista Principal</h1>
-                            <p className="text-sm md:text-base text-gray-400">Desde URL, archivo local o conecta tu Dropbox.</p>
+                    <div className="max-w-3xl mx-auto space-y-4 md:space-y-8 animate-fadeIn pt-10">
+                         <div className="mb-6 text-center">
+                            <div className="inline-block p-4 rounded-full bg-blue-900/20 mb-4">
+                                <Download size={32} className="text-blue-400" />
+                            </div>
+                            <h2 className="text-2xl font-bold text-white">Cargar Lista Principal</h2>
+                            <p className="text-gray-400 text-sm">Desde URL, archivo local o conecta tu Dropbox.</p>
                         </div>
 
                         {/* Connection Status Card */}
@@ -261,6 +439,43 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
 
                         {/* Load Area */}
                         <div className="bg-gray-800/50 rounded-xl p-8 border border-gray-700 shadow-xl">
+                            {dropboxRefreshToken && savedDropboxLists.length > 0 && (
+                                <div className="mb-6 animate-fadeIn">
+                                    <label className="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wider">
+                                        Tus listas en Dropbox
+                                    </label>
+                                    <div className="relative group">
+                                        <select
+                                            className="w-full bg-gray-900 border border-gray-700 rounded-lg pl-4 pr-10 py-3 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none appearance-none cursor-pointer hover:bg-gray-800 transition-colors"
+                                            onChange={(e) => {
+                                                const listId = e.target.value;
+                                                const list = savedDropboxLists.find(l => l.id === listId);
+                                                if (list) {
+                                                    loadList(list);
+                                                }
+                                            }}
+                                            value=""
+                                        >
+                                            <option value="" disabled>Selecciona una lista para cargar automáticamente...</option>
+                                            {savedDropboxLists.map(list => (
+                                                <option key={list.id} value={list.id}>
+                                                    {list.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-gray-500 group-hover:text-blue-400 transition-colors">
+                                            <Cloud size={18} />
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="relative flex py-5 items-center">
+                                        <div className="flex-grow border-t border-gray-700"></div>
+                                        <span className="flex-shrink-0 mx-4 text-gray-500 text-xs uppercase tracking-widest">O usa una URL externa</span>
+                                        <div className="flex-grow border-t border-gray-700"></div>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="flex gap-2 mb-8">
                                 <div className="relative flex-grow">
                                     <LinkIcon size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
@@ -305,54 +520,162 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                 {/* 2. AÑADIR REPARADORA (Add Repair Screen) */}
                 {activeSubTab === 'add-repair' && (
                     <div className="max-w-2xl mx-auto space-y-6 animate-fadeIn pt-10">
-                        <div className="mb-6 text-center">
-                            <div className="inline-block p-4 rounded-full bg-purple-900/20 mb-4">
-                                <FilePlus size={32} className="text-purple-400" />
-                            </div>
-                            <h2 className="text-2xl font-bold text-white">Añadir Lista Reparadora</h2>
-                            <p className="text-gray-400 text-sm">Estas listas se usan para extraer canales y reparar los rotos de tu lista principal.</p>
-                        </div>
-
-                        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg">
-                            <label className="block text-sm font-medium text-gray-300 mb-2">Desde URL</label>
-                            <div className="flex gap-2 mb-6">
-                                <input
-                                    type="text"
-                                    value={medicinaUrl}
-                                    onChange={(e) => setMedicinaUrl(e.target.value)}
-                                    placeholder="https://proveedor.com/lista.m3u"
-                                    className="flex-grow bg-gray-900 border border-gray-600 rounded-md px-4 py-2 text-white focus:ring-purple-500 focus:border-purple-500"
-                                />
-                                <button
-                                    onClick={handleMedicinaUrlLoad}
-                                    disabled={isMedicinaLoading || !medicinaUrl}
-                                    className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-6 rounded-md disabled:bg-gray-600"
-                                >
-                                    {isMedicinaLoading ? '...' : 'Guardar'}
-                                </button>
-                            </div>
-
-                            <div className="relative flex py-2 items-center mb-6">
-                                <div className="flex-grow border-t border-gray-700"></div>
-                                <span className="flex-shrink-0 mx-4 text-gray-500 text-xs uppercase">O archivo local</span>
-                                <div className="flex-grow border-t border-gray-700"></div>
-                            </div>
-                            
-                            <div className="flex justify-center">
-                                <label className="cursor-pointer bg-gray-700 hover:bg-gray-600 text-white py-3 px-6 rounded-lg w-full text-center border border-gray-500 border-dashed transition-all">
-                                    <span className="flex items-center justify-center gap-2">
-                                        <Upload size={18} /> Subir archivo .m3u
-                                    </span>
-                                    <input type="file" className="hidden" onChange={handleMedicinaFileUpload} accept=".m3u,.m3u8" />
-                                </label>
-                            </div>
-
-                            {medicinaError && (
-                                <div className="mt-4 p-3 bg-red-900/30 border border-red-900/50 rounded text-red-400 text-sm flex items-center gap-2">
-                                    <AlertCircle size={16} /> {medicinaError}
+                        {previewContent ? (
+                            <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg space-y-6">
+                                <div className="text-center border-b border-gray-700 pb-4">
+                                    <h3 className="text-xl font-bold text-white mb-1">Previsualización de Lista</h3>
+                                    <p className="text-gray-400 text-sm">{previewContent.name}</p>
+                                    <div className="mt-2 text-xs bg-gray-900 inline-block px-3 py-1 rounded text-gray-300">
+                                        {previewContent.groups.length} grupos detectados
+                                    </div>
                                 </div>
-                            )}
-                        </div>
+
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                          <label className="text-sm font-medium text-gray-300 flex items-center gap-2">
+                                              <Filter size={16} className="text-purple-400" />
+                                              Filtrar categorías para subir
+                                          </label>
+                                          <div className="flex gap-2">
+                                              <button 
+                                                onClick={() => setSelectedGroups(new Set(previewContent.groups))}
+                                                className="text-xs text-blue-400 hover:text-blue-300"
+                                              >
+                                                  Todas
+                                              </button>
+                                              <button 
+                                                onClick={() => setSelectedGroups(new Set())}
+                                                className="text-xs text-gray-500 hover:text-gray-300"
+                                              >
+                                                  Ninguna
+                                              </button>
+                                          </div>
+                                    </div>
+                                    
+                                    <div className="max-h-60 overflow-y-auto bg-gray-900 rounded p-4 border border-gray-700 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        {previewContent.groups.map(group => (
+                                            <div key={group} 
+                                                 onClick={() => {
+                                                     const next = new Set(selectedGroups);
+                                                     if (next.has(group)) next.delete(group);
+                                                     else next.add(group);
+                                                     setSelectedGroups(next);
+                                                 }}
+                                                 className={`flex items-center gap-2 p-2 rounded cursor-pointer transition-colors ${selectedGroups.has(group) ? 'bg-purple-900/30 border border-purple-500/30' : 'hover:bg-gray-800 border border-transparent'}`}
+                                            >
+                                                {selectedGroups.has(group) ? <CheckSquare size={16} className="text-purple-400 shrink-0" /> : <Square size={16} className="text-gray-600 shrink-0" />}
+                                                <span className={`text-sm truncate ${selectedGroups.has(group) ? 'text-white' : 'text-gray-400'}`}>{group || 'Sin Grupo'}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-3 border-t border-gray-700 pt-6">
+                                    {/* Opciones de Dropbox */}
+                                    {settingsHook.dropboxRefreshToken ? (
+                                        <div className="grid grid-cols-2 gap-3">
+                                             <button
+                                                onClick={() => handleUploadSelectionToDropbox(true)}
+                                                disabled={isUploading}
+                                                className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white py-3 rounded-lg text-sm font-medium flex items-center justify-center gap-2 shadow-lg shadow-purple-900/20"
+                                            >
+                                                {isUploading ? <RefreshCw className="animate-spin" size={16} /> : <Filter size={16} />}
+                                                Subir Selección
+                                            </button>
+                                            <button
+                                                onClick={() => handleUploadSelectionToDropbox(false)}
+                                                disabled={isUploading}
+                                                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white py-3 rounded-lg text-sm font-medium flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20"
+                                            >
+                                                {isUploading ? <RefreshCw className="animate-spin" size={16} /> : <Cloud size={16} />}
+                                                Subir Completa
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="p-3 bg-yellow-900/20 text-yellow-500 text-sm text-center rounded border border-yellow-900/30">
+                                            Conecta Dropbox en Ajustes para subir listas
+                                        </div>
+                                    )}
+
+                                    {/* Opción Local Standard */}
+                                    <button
+                                        onClick={handleSavePreviewLocally}
+                                        disabled={isUploading}
+                                        className="w-full bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-lg text-sm font-medium flex items-center justify-center gap-2"
+                                    >
+                                        <Database size={16} />
+                                        Guardar en Local (Solo PWA)
+                                    </button>
+
+                                    {/* Cancelar */}
+                                    <button
+                                        onClick={() => setPreviewContent(null)}
+                                        disabled={isUploading}
+                                        className="w-full text-gray-500 hover:text-white py-2 text-xs"
+                                    >
+                                        Cancelar operación
+                                    </button>
+                                </div>
+                                
+                                {uploadStatus && (
+                                    <div className="text-center text-sm text-purple-300 animate-pulse">
+                                        {uploadStatus}
+                                    </div>
+                                )}
+
+                            </div>
+                        ) : (
+                            <>
+                                <div className="mb-6 text-center">
+                                    <div className="inline-block p-4 rounded-full bg-purple-900/20 mb-4">
+                                        <FilePlus size={32} className="text-purple-400" />
+                                    </div>
+                                    <h2 className="text-2xl font-bold text-white">Añadir Lista Reparadora</h2>
+                                    <p className="text-gray-400 text-sm">Carga una lista para usarla como fuente de reparación o subirla a tu nube.</p>
+                                </div>
+
+                                <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg">
+                                    <label className="block text-sm font-medium text-gray-300 mb-2">Desde URL</label>
+                                    <div className="flex gap-2 mb-6">
+                                        <input
+                                            type="text"
+                                            value={medicinaUrl}
+                                            onChange={(e) => setMedicinaUrl(e.target.value)}
+                                            placeholder="https://proveedor.com/lista.m3u"
+                                            className="flex-grow bg-gray-900 border border-gray-600 rounded-md px-4 py-2 text-white focus:ring-purple-500 focus:border-purple-500"
+                                        />
+                                        <button
+                                            onClick={handleMedicinaUrlLoad}
+                                            disabled={isMedicinaLoading || !medicinaUrl}
+                                            className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-6 rounded-md disabled:bg-gray-600"
+                                        >
+                                            {isMedicinaLoading ? '...' : 'Analizar'}
+                                        </button>
+                                    </div>
+
+                                    <div className="relative flex py-2 items-center mb-6">
+                                        <div className="flex-grow border-t border-gray-700"></div>
+                                        <span className="flex-shrink-0 mx-4 text-gray-500 text-xs uppercase">O archivo local</span>
+                                        <div className="flex-grow border-t border-gray-700"></div>
+                                    </div>
+                                    
+                                    <div className="flex justify-center">
+                                        <label className="cursor-pointer bg-gray-700 hover:bg-gray-600 text-white py-3 px-6 rounded-lg w-full text-center border border-gray-500 border-dashed transition-all">
+                                            <span className="flex items-center justify-center gap-2">
+                                                <Upload size={18} /> Subir archivo .m3u
+                                            </span>
+                                            <input type="file" className="hidden" onChange={handleMedicinaFileUpload} accept=".m3u,.m3u8" />
+                                        </label>
+                                    </div>
+
+                                    {medicinaError && (
+                                        <div className="mt-4 p-3 bg-red-900/30 border border-red-900/50 rounded text-red-400 text-sm flex items-center gap-2">
+                                            <AlertCircle size={16} /> {medicinaError}
+                                        </div>
+                                    )}
+                                </div>
+                            </>
+                        )}
                     </div>
                 )}
 
