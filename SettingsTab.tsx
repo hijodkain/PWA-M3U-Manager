@@ -160,6 +160,25 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
                             </div>
                         ) : (
                             <div className="bg-gray-800 rounded-xl p-8 border border-gray-700 shadow-xl">
+                                {/* Instrucciones Paso a Paso */}
+                                <div className="mb-6 p-4 bg-blue-900/20 border border-blue-900/50 rounded-lg text-sm text-gray-300 space-y-3">
+                                    <h4 className="font-bold text-blue-400 mb-2">Pasos para conectar:</h4>
+                                    <ol className="list-decimal list-inside space-y-2">
+                                        <li>Ir a <a href="https://www.dropbox.com/developers/apps/create" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline hover:text-blue-300">Dropbox Developers</a> y crear App (Scoped access &gt; Full Dropbox).</li>
+                                        <li>En la pestaña <strong>Permissions</strong>, activar: <code className="bg-gray-700 px-1 rounded text-xs text-blue-200">files.content.read</code>, <code className="bg-gray-700 px-1 rounded text-xs text-blue-200">files.content.write</code> y <code className="bg-gray-700 px-1 rounded text-xs text-blue-200">sharing.write</code>. ¡Pulsa Submit!</li>
+                                        <li>En <strong>Settings</strong> &gt; <strong>OAuth 2</strong>, añadir esta Redirect URI:
+                                            <div className="mt-1 flex items-center gap-2">
+                                                <code className="bg-black/50 px-2 py-1 rounded text-xs text-yellow-500 font-mono select-all block">
+                                                    {typeof window !== 'undefined' ? window.location.origin : '...'}
+                                                    /
+                                                </code>
+                                                <span className="text-xs text-gray-500">(Cópialo exacto)</span>
+                                            </div>
+                                        </li>
+                                        <li>Copia el <strong>App Key</strong> y pégalo aquí abajo:</li>
+                                    </ol>
+                                </div>
+
                                 <label className="block text-sm font-medium text-gray-300 mb-2">Dropbox App Key</label>
                                 <input
                                     type="text"
