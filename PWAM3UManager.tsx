@@ -64,14 +64,14 @@ export default function PWAM3UManager() {
 
                     const redirectUri = window.location.origin + '/';
                     
-                    const response = await fetch('https://api.dropbox.com/oauth2/token', {
+                    // Usar nuestro endpoint API local para evitar problemas de CORS con Dropbox
+                    const response = await fetch('/api/dropbox_auth', {
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'Content-Type': 'application/json', // Cambiado a JSON para nuestro endpoint
                         },
-                        body: new URLSearchParams({
+                        body: JSON.stringify({
                             code,
-                            grant_type: 'authorization_code',
                             client_id: appKey,
                             code_verifier: codeVerifier,
                             redirect_uri: redirectUri,
