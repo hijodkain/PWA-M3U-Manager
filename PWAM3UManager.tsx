@@ -23,6 +23,108 @@ export default function PWAM3UManager() {
     const reparacionHook = useReparacion(channelsHook.channels, channelsHook.setChannels, channelsHook.saveStateToHistory, settingsHook);
     const epgHook = useAsignarEpg(channelsHook.channels, channelsHook.setChannels, channelsHook.saveStateToHistory, settingsHook);
 
+    // Manejar el retorno de la autenticación de Dropbox
+    useEffect(() => {
+        const handleDropboxCallback = async () => {
+            const searchParams = new URLSearchParams(window.location.search);
+            const code = searchParams.get('code');
+            const state = searchParams.get('state');
+
+            if (code && state) {
+                // Limpiar la URL inmediatamente para evitar procesar el código dos veces o compartirlo
+                window.history.replaceState({}, document.title, window.location.pathname);
+
+                const storedState = localStorage.getItem('dropbox_auth_state');
+                const codeVerifier = localStorage.getItem('dropbox_code_verifier');
+                const appKey = localStorage.getItem('dropbox_temp_app_key');
+
+                if (!storedState || !codeVerifier || !appKey) {
+                    console.warn('Callback de Dropbox detectado pero faltan datos de sesión local.');
+                    return;
+                }
+
+                if (state !== storedState) {
+                    alert('Error de seguridad: El estado de autenticación (state) no coincide. Por favor, intenta conectar de nuevo.');
+                    return;
+                }
+
+                try {
+                    // Indicador visual de carga
+                    const notification = document.createElement('div');
+                    notification.id = 'dropbox-loading-notification';
+                    notification.className = 'fixed top-4 right-4 bg-blue-600 text-white px-6 py-4 rounded-lg shadow-xl z-50 flex items-center gap-3 animate-pulse';
+                    notification.innerHTML = `
+                        <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Finalizando conexión con Dropbox...</span>
+                    `;
+                    document.body.appendChild(notification);
+
+                    const redirectUri = window.location.origin + '/';
+                    
+                    const response = await fetch('https://api.dropbox.com/oauth2/token', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: new URLSearchParams({
+                            code,
+                            grant_type: 'authorization_code',
+                            client_id: appKey,
+                            code_verifier: codeVerifier,
+                            redirect_uri: redirectUri,
+                        }),
+                    });
+
+                    const data = await response.json();
+                    
+                    // Eliminar notificación
+                    const loadingEl = document.getElementById('dropbox-loading-notification');
+                    if (loadingEl) loadingEl.remove();
+
+                    if (data.error) {
+                        throw new Error(data.error_description || JSON.stringify(data.error));
+                    }
+
+                    if (data.refresh_token) {
+                        settingsHook.saveDropboxSettings(appKey, data.refresh_token);
+                        
+                        // Mensaje de éxito
+                        const successMsg = document.createElement('div');
+                        successMsg.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-4 rounded-lg shadow-xl z-50 animate-bounce';
+                        successMsg.textContent = '¡Dropbox conectado exitosamente!';
+                        document.body.appendChild(successMsg);
+                        setTimeout(() => successMsg.remove(), 3000);
+
+                        setActiveTab('settings');
+                    } else {
+                        alert('Conexión autorizada, pero no se recibió refresh_token. Es posible que ya estuvieras conectado. Intenta usar la aplicación, si falla, vuelve a conectar.');
+                        // Aún así guardamos la key, y si hay access token podríamos usarlo, pero la app espera refresh token.
+                        // En este caso asumimos éxito parcial.
+                        settingsHook.saveDropboxSettings(appKey, data.refresh_token || ''); 
+                        setActiveTab('settings');
+                    }
+
+                    // Limpiar storage temporal
+                    localStorage.removeItem('dropbox_auth_state');
+                    localStorage.removeItem('dropbox_code_verifier');
+                    localStorage.removeItem('dropbox_temp_app_key');
+
+                } catch (error: any) {
+                    const loadingEl = document.getElementById('dropbox-loading-notification');
+                    if (loadingEl) loadingEl.remove();
+                    
+                    console.error('Error Dropbox Auth:', error);
+                    alert(`Error al conectar con Dropbox: ${error.message || error}`);
+                }
+            }
+        };
+
+        handleDropboxCallback();
+    }, []);
+
     const renderTabContent = () => {
         switch (activeTab) {
             case 'inicio':
