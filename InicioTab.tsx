@@ -194,12 +194,15 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
             const accessToken = await getDropboxAccessToken();
 
             setUploadStatus('Subiendo archivo...');
+            const folder = activeSubTab === 'add-repair' ? 'Listas Reparadoras' : 'Listas Principales';
+            const uploadPath = `/${folder}/${filename}`;
+
             const response = await fetch('https://content.dropboxapi.com/2/files/upload', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
                     'Dropbox-API-Arg': JSON.stringify({
-                        path: `/${filename}`,
+                        path: uploadPath,
                         mode: 'add',
                         autorename: true,
                         mute: false
@@ -994,7 +997,7 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                                                 <td className="px-6 py-4 text-right">
                                                     <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
                                                         <button 
-                                                            onClick={() => handleDeleteList('medicina', list.id)} 
+                                                            onClick={() => handleDeleteList('medicina', list.id, list.name)} 
                                                             className="p-2 hover:bg-red-900/30 rounded-md text-gray-400 hover:text-red-400"
                                                         >
                                                             <Trash2 size={16} />

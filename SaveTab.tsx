@@ -78,12 +78,36 @@ const SaveTab: React.FC<SaveTabProps> = ({ channelsHook, settingsHook }) => {
             const accessToken = await getDropboxAccessToken();
 
             setUploadStatus('Subiendo a Dropbox...');
+            
+            // Definir la ruta basada en el tipo de lista (Carpeta organizada)
+            const folder = 'Listas Principales';
+            // Si es actualización (isNewFile=false) y no tenemos path guardado, asumimos raíz o intentamos mantener lógica previa.
+            // Pero para simplificar y organizar, vamos a intentar empujar a la carpeta organizada si es "Nueva".
+            // Si es Update, usamos el originalFileName tal cual (que puede no tener path y estar en root).
+            // NOTA: Para mover archivos legacy a carpetas, se requeriría una migración. 
+            // Aquí solo aplicamos carpeta a NUEVOS archivos o si forzamos el path.
+            
+            let uploadPath = `/${filenameToUse}`;
+            if (isNewFile) {
+                // Las nuevas listas van siempre a la carpeta organizada
+                uploadPath = `/${folder}/${filenameToUse}`;
+            } else {
+                // Si es update, si originalFileName ya tiene path (slash), lo usará. 
+                // Si es legacy (sin slash), estará en root.
+                // Podríamos forzar moverlo, pero es arriesgado en update. Lo dejamos como está para updates.
+                if (!filenameToUse.startsWith('/')) {
+                     uploadPath = `/${filenameToUse}`;
+                } else {
+                    uploadPath = filenameToUse;
+                }
+            }
+
             const response = await fetch('https://content.dropboxapi.com/2/files/upload', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
                     'Dropbox-API-Arg': JSON.stringify({
-                        path: `/${filenameToUse}`,
+                        path: uploadPath,
                         mode: isNewFile ? 'add' : 'overwrite', // Si es nuevo añade, si es update sobrescribe
                         autorename: true,
                         mute: false,

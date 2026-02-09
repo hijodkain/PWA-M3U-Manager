@@ -434,7 +434,16 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                              {reparacionListName ? (
                                 <div className="flex items-center gap-2 bg-blue-900/30 p-2 rounded border border-blue-500/30">
                                     <span className="font-bold text-blue-300 truncate">L. reparadora: {reparacionListName}</span>
-                                    <button onClick={clearReparacion} className="text-red-400 hover:text-red-300 p-1 hover:bg-blue-900/50 rounded">
+                                    {/* Botón Borrar Lista Definitivamente (Papelera) */}
+                                    <button 
+                                        onClick={handleDeleteCurrentRepairList} 
+                                        className="text-red-400 hover:text-red-200 p-1 hover:bg-red-900/40 rounded transition-colors ml-1"
+                                        title="Eliminar esta lista (PWA + Dropbox)"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                    {/* Botón Cerrar (Solo quitar de vista) */}
+                                    <button onClick={clearReparacion} className="text-gray-400 hover:text-white p-1 hover:bg-gray-700 rounded transition-colors" title="Cerrar lista">
                                         <X size={16} />
                                     </button>
                                 </div>
