@@ -104,12 +104,43 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
     const handleUploadSelectionToDropbox = async (onlySelectedGroups: boolean) => {
         if (!previewContent || !settingsHook.dropboxRefreshToken) return;
 
+        // Preguntar fecha de caducidad
+        const expirationInput = prompt(
+            "¿Cuándo caduca esta lista? (DD/MM/AAAA)\n\n" +
+            "• Si introduces fecha: Se añadirá _EXP_DD_MM_YY al nombre.\n" +
+            "• Si lo dejas vacío: Se añadirá _SUBIDA_DD_MM_YY (fecha de hoy)."
+        );
+
+        // Generar sufijo de fecha
+        let dateSuffix = '';
+        const now = new Date();
+        const todayStr = `${String(now.getDate()).padStart(2, '0')}_${String(now.getMonth() + 1).padStart(2, '0')}_${String(now.getFullYear()).slice(-2)}`;
+
+        if (expirationInput && expirationInput.trim().length > 0) {
+            // Intentar parsear entrada
+            const parts = expirationInput.trim().split(/[\/\-\.]/);
+            if (parts.length >= 2) {
+                const d = parts[0].padStart(2, '0');
+                const m = parts[1].padStart(2, '0');
+                let y = parts[2] || String(now.getFullYear());
+                if (y.length === 4) y = y.slice(-2);
+                dateSuffix = `EXP_${d}_${m}_${y}`;
+            } else {
+                // Fallback si no se entiende
+                dateSuffix = `SUBIDA_${todayStr}`;
+            }
+        } else {
+            // Vacío o CANCEL -> Fecha subir
+            dateSuffix = `SUBIDA_${todayStr}`;
+        }
+
         setIsUploading(true);
         setUploadStatus('Preparando subida...');
 
         try {
             let contentToUpload = previewContent.content;
-            let filename = previewContent.name;
+            // Limpiar nombre base y extensión
+            let baseName = previewContent.name.replace(/\.m3u8?$/i, '');
 
             if (onlySelectedGroups) {
                 if (selectedGroups.size === 0) {
@@ -153,10 +184,11 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                     }
                 }
                 contentToUpload = newContent.join('\n');
-                filename = `${filename}_filtrada.m3u`;
-            } else {
-                 filename = filename.endsWith('.m3u') ? filename : `${filename}.m3u`;
-            }
+                baseName = `${baseName}_filtrada`;
+            } 
+            
+            // Construir nombre final con sufijo de fecha
+            const filename = `${baseName}_${dateSuffix}.m3u`;
 
             setUploadStatus('Obteniendo token...');
             const accessToken = await getDropboxAccessToken();
@@ -212,18 +244,29 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
             }
 
             if (sharedUrl) {
-                // Guardar en mis listas dropbox
                 const newList = {
                     id: Date.now().toString(),
                     name: filename,
                     url: sharedUrl,
                     addedAt: new Date().toISOString()
                 };
-                const currentDropboxLists = JSON.parse(localStorage.getItem('dropboxLists') || '[]');
-                const updated = [...currentDropboxLists, newList];
-                setSavedDropboxLists(updated);
-                localStorage.setItem('dropboxLists', JSON.stringify(updated));
-                alert('¡Subido a Dropbox y añadido a tus listas!');
+
+                if (activeSubTab === 'add-repair') {
+                     // Guardar en mis listas reparadoras
+                     const currentLists = JSON.parse(localStorage.getItem('medicinaLists') || '[]');
+                     const updated = [...currentLists, newList];
+                     setSavedMedicinaLists(updated);
+                     localStorage.setItem('medicinaLists', JSON.stringify(updated));
+                     alert('¡Subido a Dropbox y añadido a tus listas reparadoras!');
+                } else {
+                    // Guardar en mis listas dropbox (Default)
+                    const currentLists = JSON.parse(localStorage.getItem('dropboxLists') || '[]');
+                    const updated = [...currentLists, newList];
+                    setSavedDropboxLists(updated);
+                    localStorage.setItem('dropboxLists', JSON.stringify(updated));
+                    alert('¡Subido a Dropbox y añadido a tus listas principales!');
+                }
+
                 setPreviewContent(null); // Reset UI
             } else {
                 alert('Subido a Dropbox pero no se pudo generar enlace.');
@@ -830,51 +873,7 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                             </div>
                         </div>
 
-                        {/* Modal para resultados de búsqueda */}
-                        {showDropboxSearchModal && (
-                            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-                                <div className="bg-gray-800 rounded-xl max-w-lg w-full max-h-[80vh] flex flex-col shadow-2xl border border-gray-700">
-                                    <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-900/50 rounded-t-xl">
-                                        <h3 className="font-bold text-white flex items-center gap-2">
-                                            <Cloud size={18} className="text-blue-400" /> Archivos .m3u encontrados
-                                        </h3>
-                                        <button onClick={() => setShowDropboxSearchModal(false)} className="text-gray-400 hover:text-white">
-                                            <X size={20} />
-                                        </button>
-                                    </div>
-                                    
-                                    <div className="p-4 overflow-y-auto flex-1 custom-scrollbar">
-                                        {isSearchingDropbox && dropboxSearchResults.length === 0 ? (
-                                            <div className="text-center py-8">
-                                                <RefreshCw className="animate-spin mb-3 mx-auto text-blue-500" size={24} />
-                                                <p className="text-gray-400">Buscando en tu Dropbox...</p>
-                                            </div>
-                                        ) : dropboxSearchResults.length > 0 ? (
-                                            <div className="space-y-2">
-                                                {dropboxSearchResults.map(file => (
-                                                    <div key={file.id} className="flex justify-between items-center p-3 bg-gray-700/50 rounded-lg hover:bg-gray-700 border border-gray-600/50">
-                                                        <div className="flex items-center gap-3 overflow-hidden">
-                                                            <FileText size={20} className="text-blue-400 flex-shrink-0" />
-                                                            <span className="text-sm text-gray-200 truncate">{file.name}</span>
-                                                        </div>
-                                                        <button 
-                                                            onClick={() => handleAddFromDropboxSearch(file)}
-                                                            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-bold transition-colors ml-3 whitespace-nowrap"
-                                                        >
-                                                            Añadir
-                                                        </button>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <div className="text-center py-8 text-gray-400">
-                                                No se encontraron archivos .m3u
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+                        {/* Modal para resultados de búsqueda movido al final del componente */}
 
                         {savedDropboxLists.length === 0 ? (
                             <div className="text-center py-16 bg-gray-800/50 rounded-xl border-2 border-dashed border-gray-800">
@@ -1012,6 +1011,52 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                 )}
 
             </div>
+
+            {/* Modal para resultados de búsqueda (Global) */}
+            {showDropboxSearchModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+                    <div className="bg-gray-800 rounded-xl max-w-lg w-full max-h-[80vh] flex flex-col shadow-2xl border border-gray-700">
+                        <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-900/50 rounded-t-xl">
+                            <h3 className="font-bold text-white flex items-center gap-2">
+                                <Cloud size={18} className="text-blue-400" /> Archivos .m3u encontrados
+                            </h3>
+                            <button onClick={() => setShowDropboxSearchModal(false)} className="text-gray-400 hover:text-white">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        
+                        <div className="p-4 overflow-y-auto flex-1 custom-scrollbar">
+                            {isSearchingDropbox && dropboxSearchResults.length === 0 ? (
+                                <div className="text-center py-8">
+                                    <RefreshCw className="animate-spin mb-3 mx-auto text-blue-500" size={24} />
+                                    <p className="text-gray-400">Buscando en tu Dropbox...</p>
+                                </div>
+                            ) : dropboxSearchResults.length > 0 ? (
+                                <div className="space-y-2">
+                                    {dropboxSearchResults.map(file => (
+                                        <div key={file.id} className="flex justify-between items-center p-3 bg-gray-700/50 rounded-lg hover:bg-gray-700 border border-gray-600/50">
+                                            <div className="flex items-center gap-3 overflow-hidden">
+                                                <FileText size={20} className="text-blue-400 flex-shrink-0" />
+                                                <span className="text-sm text-gray-200 truncate">{file.name}</span>
+                                            </div>
+                                            <button 
+                                                onClick={() => handleAddFromDropboxSearch(file)}
+                                                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-bold transition-colors ml-3 whitespace-nowrap"
+                                            >
+                                                Añadir
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-8 text-gray-400">
+                                    No se encontraron archivos .m3u
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Modal Éxito */}
             {showSuccessModal && (
