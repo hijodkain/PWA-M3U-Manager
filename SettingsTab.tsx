@@ -66,7 +66,10 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
             return;
         }
 
-        const codeVerifier = generateRandomString(128);
+        // PKCE: code_verifier debe tener entre 43 y 128 caracteres.
+        // 64 bytes aleatorios codificados en base64url resultan en aprox 86 caracteres.
+        // Usar 128 bytes resultaba en ~171 caracteres, excediendo el límite de Dropbox.
+        const codeVerifier = generateRandomString(64);
         const codeChallenge = await generateCodeChallenge(codeVerifier);
         const state = generateRandomString(16);
 
