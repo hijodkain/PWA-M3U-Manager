@@ -168,13 +168,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
             await handleReparacionFileUpload({ target: { files: [file] } } as any);
         } else {
             setReparacionUrl(list.url);
-            // Need to trigger load. Assuming a button or useEffect in hook handles it?
-            // Hook handles fetch ONLY when handleReparacionUrlLoad is called.
-            // But hook reads reparacionUrl from state. We just set it. 
-            // We need to wait for state update?
-            // Hack: call directly with url arg if possible, BUT hook doesn't support arg.
-            // Option: Call it in timeout.
-            setTimeout(() => handleReparacionUrlLoad(), 100); 
+            handleReparacionUrlLoad(list.url);
         }
     };
 
@@ -196,7 +190,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         <div className="grid grid-cols-1 lg:grid-cols-11 gap-4 h-[calc(100vh-140px)]">
             
             {/* --- PANEL IZQUIERDO (Lista Principal) --- */}
-            <div className="lg:col-span-4 bg-gray-800 p-4 rounded-lg flex flex-col h-full border border-gray-700">
+            <div className="lg:col-span-4 bg-gray-800 p-4 rounded-lg flex flex-col h-full border border-gray-700 min-h-0">
                 
                 {/* Header Lista Principal */}
                 <div className="flex justify-between items-center mb-3 pb-2 border-b border-gray-700">
@@ -301,7 +295,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 </div>
 
                 {/* Lista de Canales */}
-                <div ref={mainListParentRef} className="flex-1 overflow-auto pr-1">
+                <div ref={mainListParentRef} className="flex-1 overflow-y-auto min-h-0 pr-1">
                     <div style={{ height: `${mainListRowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
                         {mainListVirtualItems.map((virtualItem) => {
                             const ch = filteredMainChannels[virtualItem.index];
@@ -379,7 +373,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
             </div>
 
             {/* --- PANEL DERECHO (Lista Reparadora) --- */}
-            <div className="lg:col-span-6 bg-gray-800 p-4 rounded-lg flex flex-col h-full border border-gray-700">
+            <div className="lg:col-span-6 bg-gray-800 p-4 rounded-lg flex flex-col h-full border border-gray-700 min-h-0">
                 
                 {/* Header Lista Reparadora */}
                 <div className="mb-4">
@@ -471,7 +465,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 )}
                 
                 {/* Lista canales reparadores */}
-                <div ref={reparacionListParentRef} className="flex-1 overflow-auto pr-1">
+                <div ref={reparacionListParentRef} className="flex-1 overflow-y-auto min-h-0 pr-1">
                      <div style={{ height: `${reparacionListRowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
                         {reparacionListRowVirtualizer.getVirtualItems().map((virtualItem) => {
                             const ch = filteredReparacionChannels[virtualItem.index];

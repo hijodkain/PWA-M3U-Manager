@@ -436,13 +436,14 @@ export const useReparacion = (
         worker.postMessage(content);
     }, []);
 
-    const handleReparacionUrlLoad = async () => {
-        if (!reparacionUrl) return;
+    const handleReparacionUrlLoad = async (urlOverride?: string) => {
+        const urlToLoad = urlOverride || reparacionUrl;
+        if (!urlToLoad) return;
         setIsCurationLoading(true);
         setCurationError(null);
         try {
             // Detectar si es una URL blob (generada por YouTube Live)
-            if (reparacionUrl.startsWith('blob:')) {
+            if (urlToLoad.startsWith('blob:')) {
                 // Para URLs blob, usar el contenido guardado en localStorage
                 const youtubeContent = localStorage.getItem('youtube_m3u_content');
                 if (youtubeContent) {
@@ -450,7 +451,7 @@ export const useReparacion = (
                     return;
                 } else {
                     // Si no hay contenido guardado, intentar fetch directo de la URL blob
-                    const response = await fetch(reparacionUrl);
+                    const response = await fetch(urlToLoad);
                     if (!response.ok) {
                         throw new Error(`Error al cargar la lista: ${response.statusText}`);
                     }
@@ -461,7 +462,7 @@ export const useReparacion = (
             }
             
             // Para URLs normales, usar el proxy como antes
-            const proxyUrl = `/api/proxy?url=${encodeURIComponent(reparacionUrl)}`;
+            const proxyUrl = `/api/proxy?url=${encodeURIComponent(urlToLoad)}`;
             const response = await fetch(proxyUrl);
             if (!response.ok) {
                 throw new Error(`Error al descargar la lista: ${response.statusText}`);
