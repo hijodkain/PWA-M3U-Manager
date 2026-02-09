@@ -164,22 +164,49 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
                         ) : (
                             <div className="bg-gray-800 rounded-xl p-8 border border-gray-700 shadow-xl">
                                 {/* Instrucciones Paso a Paso */}
-                                <div className="mb-6 p-4 bg-blue-900/20 border border-blue-900/50 rounded-lg text-sm text-gray-300 space-y-3">
-                                    <h4 className="font-bold text-blue-400 mb-2">Pasos para conectar:</h4>
-                                    <ol className="list-decimal list-inside space-y-2">
-                                        <li>Ir a <a href="https://www.dropbox.com/developers/apps/create" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline hover:text-blue-300">Dropbox Developers</a> y crear App (Scoped access &gt; Full Dropbox).</li>
-                                        <li>En la pestaña <strong>Permissions</strong>, activar: <code className="bg-gray-700 px-1 rounded text-xs text-blue-200">files.content.read</code>, <code className="bg-gray-700 px-1 rounded text-xs text-blue-200">files.content.write</code> y <code className="bg-gray-700 px-1 rounded text-xs text-blue-200">sharing.write</code>. ¡Pulsa Submit!</li>
-                                        <li>En <strong>Settings</strong> &gt; <strong>OAuth 2</strong>, añadir esta Redirect URI:
-                                            <div className="mt-1 flex items-center gap-2">
-                                                <code className="bg-black/50 px-2 py-1 rounded text-xs text-yellow-500 font-mono select-all block">
+                                <div className="mb-6 p-4 bg-blue-900/20 border border-blue-900/50 rounded-lg text-sm text-gray-300 space-y-4">
+                                    <h4 className="font-bold text-blue-400 mb-2 border-b border-blue-900/30 pb-2">Guía de Conexión (Importante: Configurar Exactamente así)</h4>
+                                    
+                                    <div className="space-y-4">
+                                        <div>
+                                            <span className="font-bold text-white block mb-1">Paso 1: Crear App</span>
+                                            <ol className="list-decimal list-inside space-y-1 ml-2 text-gray-400">
+                                                <li>Ve a <a href="https://www.dropbox.com/developers/apps/create" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline hover:text-blue-300">Dropbox Developers Console</a>.</li>
+                                                <li>Elige API: <strong>Scoped Access</strong>.</li>
+                                                <li>Elige Type: <strong className="text-red-400">Full Dropbox</strong> (No "App Folder").</li>
+                                                <li>Ponle un nombre único (ej: "M3U_Manager_TuNombre") y crea la App.</li>
+                                            </ol>
+                                        </div>
+
+                                        <div>
+                                            <span className="font-bold text-white block mb-1">Paso 2: Permisos (Permissions Tab)</span>
+                                            <p className="text-xs mb-2">Marca TODAS estas casillas y pulsa <strong>Submit</strong> al final:</p>
+                                            <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                                                <div className="flex items-center gap-2"><div className="w-3 h-3 bg-green-500/50 rounded-sm"></div> files.content.read</div>
+                                                <div className="flex items-center gap-2"><div className="w-3 h-3 bg-green-500/50 rounded-sm"></div> files.content.write</div>
+                                                <div className="flex items-center gap-2"><div className="w-3 h-3 bg-green-500/50 rounded-sm"></div> sharing.write</div>
+                                                <div className="flex items-center gap-2"><div className="w-3 h-3 bg-green-500/50 rounded-sm"></div> sharing.read</div>
+                                                <div className="flex items-center gap-2"><div className="w-3 h-3 bg-green-500/50 rounded-sm"></div> files.metadata.read</div>
+                                                <div className="flex items-center gap-2"><div className="w-3 h-3 bg-green-500/50 rounded-sm"></div> files.metadata.write</div>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <span className="font-bold text-white block mb-1">Paso 3: Redirect URI (Settings Tab)</span>
+                                            <p className="mb-1">En "OAuth 2" &gt; "Redirect URIs", añade exacta:</p>
+                                            <div className="flex items-center gap-2">
+                                                <code className="bg-black/50 px-2 py-1 rounded text-xs text-yellow-500 font-mono select-all flex-grow">
                                                     {typeof window !== 'undefined' ? window.location.origin : '...'}
                                                     /
                                                 </code>
-                                                <span className="text-xs text-gray-500">(Cópialo exacto)</span>
+                                                <span className="text-xs text-gray-500 whitespace-nowrap">&larr; Copiar y "Add"</span>
                                             </div>
-                                        </li>
-                                        <li>Copia el <strong>App Key</strong> y pégalo aquí abajo:</li>
-                                    </ol>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="mt-4 pt-4 border-t border-blue-900/30 text-center">
+                                         <p className="font-bold text-white animate-pulse">👇 Copia el "App Key" y pégalo aquí 👇</p>
+                                    </div>
                                 </div>
 
                                 <label className="block text-sm font-medium text-gray-300 mb-2">Dropbox App Key</label>

@@ -323,10 +323,10 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
             )}
 
             {/* --- PANEL IZQUIERDO (Lista Principal) --- */}
-            <div className={`lg:col-span-4 bg-gray-800 p-4 rounded-lg flex flex-col border border-gray-700 ${isMobile ? 'h-[400px] mb-4' : 'h-full'}`}>
+            <div className={`lg:col-span-4 bg-gray-800 p-4 rounded-lg flex flex-col border border-gray-700 min-h-0 ${isMobile ? 'h-[400px] mb-4' : 'h-full'}`}>
                 
                 {/* Header Lista Principal */}
-                <div className="flex justify-between items-center mb-3 pb-2 border-b border-gray-700">
+                <div className="flex justify-between items-center mb-3 pb-2 border-b border-gray-700 shrink-0">
                     <div className="flex items-center gap-2 overflow-hidden">
                         <h3 className="font-bold text-lg truncate text-white">
                             {channels.length > 0 ? `Mi lista: ${fileName}` : 'Lista Principal'}
