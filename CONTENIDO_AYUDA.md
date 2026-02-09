@@ -39,4 +39,12 @@ Sigue estos sencillos pasos:
     *   Serás redirigido a la página de autorización de Dropbox. Acepta para permitir el acceso.
     *   ¡Y listo! La aplicación se conectará y guardará la autorización de forma segura en tu navegador.
 
-Ahora podrás subir tus listas a Dropbox desde la pestaña "Guardar y Exportar" con un solo clic.
+Ahora podrás subir tus listas a Dropbox desde la pestaña "Guardarr" con un solo clic.
+
+## Cómo Ordenar Mi lista
+En la pestaña Editor puedes modificar la posicion de los canales indidualmente o en bloque si previamente los has seleccionado. Los puedes resituar agarrando por los 3 puntos que tiene a la izquierda y soltandolo en su nueva posicion. Tambien puedes cambiar el número de Orden y se le asignará esa posicion ( y las siguientes si hay más canales seleccionados). Puedes selecciona todos los canales que quieres al principio de tu lista y asignale el 1, todos aparecerán al principio de la lista y luego arrastrando y soltando ajusta las posiciones a tu gusto. Puedes editar cada campo de un canal haciendo doble click sobre el. Si hay varios selecionados al editar uno ese campo se replicará en todos los canales seleccionados. 
+
+## Editar los nombres de los canales.
+A veces los canales vienen con nombres como ES: LA 1 4K, ES: La 2 HD,.... puedes quitarle a todos el prefijo si selecionas todos los canales y en la Edicion de atributos que se despliega arriba tras soleccionarlos escribe el texto ES: en la caja de prefijos y se eliminará ese prefijo de todos los canales que lo contengan, si no lo contienen no sufrirán ningun cambio. Puedes hacer lo mismo con el sufijo 4K, por ejemplo, escribiendo 4K en sufijos. 
+
+## Cómo 

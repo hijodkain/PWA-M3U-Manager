@@ -366,7 +366,7 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
             }
             
             if (sharedUrl) {
-                if (activeSubTab === 'dropbox-lists') {
+                if (activeSubTab === 'dropbox-lists' || activeSubTab === 'load') {
                     // Añadir a Mis Listas Dropbox
                     const newList = {
                         id: Date.now().toString(),
@@ -378,7 +378,7 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                     setSavedDropboxLists(updated);
                     localStorage.setItem('dropboxLists', JSON.stringify(updated));
                     alert('Añadida a tus listas principales');
-                } else if (activeSubTab === 'repair-lists') {
+                } else if (activeSubTab === 'repair-lists' || activeSubTab === 'add-repair') {
                      // Añadir a Mis Listas Reparadoras
                      const newList = {
                         id: Date.now().toString(),
@@ -635,13 +635,22 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                 
                 {/* 1. CARGA (Load Screen) */}
                 {activeSubTab === 'load' && (
-                    <div className="max-w-3xl mx-auto space-y-4 md:space-y-8 animate-fadeIn pt-10">
-                         <div className="mb-6 text-center">
-                            <div className="inline-block p-4 rounded-full bg-blue-900/20 mb-4">
-                                <Download size={32} className="text-blue-400" />
+                    <div className="max-w-4xl mx-auto space-y-4 md:space-y-8 animate-fadeIn">
+                         <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-2xl font-bold flex items-center gap-3 text-white">
+                                <Download size={28} className="text-blue-400" />
+                                Cargar Lista Principal
+                            </h2>
+                             <div className="flex gap-2">
+                                <button 
+                                    onClick={handleSearchDropbox}
+                                    disabled={isSearchingDropbox}
+                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition-all ${dropboxRefreshToken ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-75'}`}
+                                    title={dropboxRefreshToken ? "Buscar archivos .m3u en tu Dropbox" : "Conecta Dropbox para buscar"}
+                                >
+                                    <Search className="w-4 h-4" /> Buscar en mi Dropbox
+                                </button>
                             </div>
-                            <h2 className="text-2xl font-bold text-white">Cargar Lista Principal</h2>
-                            <p className="text-gray-400 text-sm">Desde URL, archivo local o conecta tu Dropbox.</p>
                         </div>
 
                         {/* Connection Status Card */}
@@ -750,7 +759,7 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
 
                 {/* 2. AÑADIR REPARADORA (Add Repair Screen) */}
                 {activeSubTab === 'add-repair' && (
-                    <div className="max-w-2xl mx-auto space-y-6 animate-fadeIn pt-10">
+                    <div className="max-w-4xl mx-auto space-y-6 animate-fadeIn">
                         {previewContent ? (
                             <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg space-y-6">
                                 <div className="text-center border-b border-gray-700 pb-4">
@@ -857,12 +866,21 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                             </div>
                         ) : (
                             <>
-                                <div className="mb-6 text-center">
-                                    <div className="inline-block p-4 rounded-full bg-purple-900/20 mb-4">
-                                        <FilePlus size={32} className="text-purple-400" />
+                                <div className="flex items-center justify-between mb-6">
+                                    <h2 className="text-2xl font-bold flex items-center gap-3 text-white">
+                                        <FilePlus size={28} className="text-purple-400" />
+                                        Añadir Lista Reparadora
+                                    </h2>
+                                    <div className="flex gap-2">
+                                        <button 
+                                            onClick={handleSearchDropbox}
+                                            disabled={isSearchingDropbox}
+                                            className={`px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition-all ${dropboxRefreshToken ? 'bg-purple-600 hover:bg-purple-700 text-white' : 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-75'}`}
+                                            title={dropboxRefreshToken ? "Buscar archivos .m3u en tu Dropbox" : "Conecta Dropbox para buscar"}
+                                        >
+                                            <Search className="w-4 h-4" /> Buscar en mi Dropbox
+                                        </button>
                                     </div>
-                                    <h2 className="text-2xl font-bold text-white">Añadir Lista Reparadora</h2>
-                                    <p className="text-gray-400 text-sm">Carga una lista para usarla como fuente de reparación o subirla a tu nube.</p>
                                 </div>
 
                                 <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg">
