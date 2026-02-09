@@ -510,8 +510,65 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
         setPreviewContent(null);
     };
 
-    const handleDeleteList = (type: 'dropbox' | 'medicina', id: string) => {
-        if (!confirm('¿Eliminar lista?')) return;
+    const handleDeleteList = async (type: 'dropbox' | 'medicina', id: string, name?: string) => {
+        if (!confirm('¿Estás seguro de eliminar esta lista de la PWA?')) return;
+        
+        // Si tenemos nombre y token, intentamos mover a papelera de Dropbox
+        if (settingsHook.dropboxRefreshToken && name && confirm('¿Quieres mover también el archivo original a la carpeta "Listas Eliminadas" de Dropbox?')) {
+            try {
+                const accessToken = await getDropboxAccessToken();
+                const trashFolder = '/Listas Eliminadas';
+                const filename = name.endsWith('.m3u') || name.endsWith('.m3u8') ? name : `${name}.m3u`;
+                
+                // Determinar carpeta origen probable
+                const originFolder = type === 'medicina' ? '/Listas Reparadoras' : '/Listas Principales';
+                const pathInFolder = `${originFolder}/${filename}`;
+                const pathInRoot = `/${filename}`;
+                const destinationPath = `${trashFolder}/${filename}`;
+
+                // Función helper para intentar mover
+                const tryMove = async (fromPath: string) => {
+                    // Usar nuestro endpoint API local
+                    const res = await fetch('/api/dropbox_move', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ accessToken, fromPath, toPath: destinationPath })
+                    });
+                     // 404 manejado por la API retornando status 404
+                    if (res.status === 404) throw new Error('Not found');
+                    if (!res.ok) {
+                        const err = await res.json();
+                        throw new Error(err.error_summary || 'Error desconocido');
+                    }
+                    return await res.json();
+                };
+
+                let movedToTrash = false;
+                try {
+                    // Intento 1: En carpeta organizada
+                    await tryMove(pathInFolder);
+                    movedToTrash = true;
+                } catch (e) {
+                    // Intento 2: En raíz (legacy)
+                    try {
+                        await tryMove(pathInRoot);
+                        movedToTrash = true;
+                    } catch (e2) {
+                        console.warn('No se pudo encontrar el archivo en Dropbox para moverlo.', e2);
+                        alert(`No se pudo encontrar "${filename}" en Dropbox (ni en ${originFolder} ni en raíz). Se borrará solo de la PWA.`);
+                    }
+                }
+                
+                if (movedToTrash) {
+                    alert(`Archivo movido a "${trashFolder}" en Dropbox exitosamente.`);
+                }
+
+            } catch (error: any) {
+                console.error('Error al intentar mover a papelera Dropbox:', error);
+                alert('Hubo un error al intentar comunicar con Dropbox. Se procederá a borrar solo de la PWA.');
+            }
+        }
+
         if (type === 'dropbox') {
             const upd = savedDropboxLists.filter(l => l.id !== id);
             setSavedDropboxLists(upd);
