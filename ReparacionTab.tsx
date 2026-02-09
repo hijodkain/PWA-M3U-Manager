@@ -419,7 +419,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                 onChange={(e) => setReparacionUrl(e.target.value)}
                                 className="flex-1 min-w-[150px] bg-gray-900 border border-gray-600 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
                             />
-                            <button onClick={handleReparacionUrlLoad} className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm font-medium">
+                            <button onClick={() => handleReparacionUrlLoad()} className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm font-medium">
                                 Cargar
                             </button>
                             <div className="w-px h-6 bg-gray-600 mx-1"></div>
