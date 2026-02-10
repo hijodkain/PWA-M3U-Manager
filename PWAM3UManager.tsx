@@ -12,7 +12,26 @@ import AsignarEpgTab from './AsignarEpgTab';
 import SaveTab from './SaveTab';
 import SettingsTab from './SettingsTab';
 import HelpTab from './HelpTab';
-import { Home, Edit, Wrench, List, Settings, Save, HelpCircle } from 'lucide-react';
+import { Home, Edit, Wrench, Settings, Save, HelpCircle } from 'lucide-react';
+
+const EpgIcon = ({ className }: { className?: string }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+        <path d="M7 10h10" />
+        <path d="M7 14h10" />
+        <text x="50%" y="17" textAnchor="middle" fontSize="9" fontWeight="bold" stroke="none" fill="currentColor" style={{transformBox: 'fill-box', transformOrigin: 'center'}}>EPG</text>
+    </svg>
+);
+
+const TABS: { id: Tab; icon: React.ElementType; label: string }[] = [
+    { id: 'inicio', icon: Home, label: 'Inicio' },
+    { id: 'editor', icon: Edit, label: 'Editor' },
+    { id: 'reparacion', icon: Wrench, label: 'Reparar' },
+    { id: 'asignar-epg', icon: EpgIcon, label: 'EPG' },
+    { id: 'save', icon: Save, label: 'Guardar' },
+    { id: 'settings', icon: Settings, label: 'Ajustes' },
+    { id: 'ayuda', icon: HelpCircle, label: 'Ayuda' },
+];
 
 export default function PWAM3UManager() {
     const [activeTab, setActiveTab] = useState<Tab>('inicio');
@@ -157,38 +176,54 @@ export default function PWAM3UManager() {
     };
 
     const getTabContent = (tab: Tab) => {
-        // Desktop: Icon + Text (Always)
-        // Mobile Rules:
-        // - Editor, Reparar: Icon + Text
-        // - EPG: Text Only
-        // - Others: Icon Only
-        
         const isSelected = activeTab === tab;
         const baseClasses = "flex items-center gap-2";
 
-        // Icon Rendering
+        // Logic for Text Visibility based on specific user priority:
+        // 1. Ayuda, Inicio (Disappear first) -> Visible only on lg+
+        // 2. Guardar (Disappear second) -> Visible only on md+
+        // 3. Ajustes, Editor (Disappear third) -> Visible only on sm+
+        // 4. Reparación, EPG (Disappear last) -> Reparación sm+, EPG text always visible
+        
+        let textClass = "";
+        
+        switch(tab) {
+            case 'ayuda':
+            case 'inicio':
+                textClass = "hidden lg:inline";
+                break;
+            case 'save':
+                textClass = "hidden md:inline";
+                break;
+            case 'settings':
+            case 'editor':
+            case 'reparacion':
+                textClass = "hidden sm:inline";
+                break;
+            case 'asignar-epg':
+                textClass = "inline"; // Always show text "EPG"
+                break;
+            default:
+                textClass = "hidden sm:inline";
+        }
+
         const renderIcon = () => {
-             const Icon = tabs.find(t => t.id === tab)?.icon;
-             if (!Icon) return null;
+             const tabDef = TABS.find(t => t.id === tab);
+             if (!tabDef) return null;
+             const Icon = tabDef.icon;
              
-             // EPG Special Case: Hidden on Mobile
+             // EPG Special Case: Hide Icon on Mobile (show text only), Show Icon on Desktop
              if (tab === 'asignar-epg') {
+                 // Custom Logic: If small screen, hide icon. 
+                 // We use Tailwind 'hidden sm:block' to hide on mobile, show on sm+
                  return <Icon className="h-5 w-5 hidden sm:block" />;
              }
              return <Icon className="h-5 w-5" />;
         };
 
-        // Text Rendering
         const renderText = () => {
-            const label = tabs.find(t => t.id === tab)?.label;
-            
-            // Cases where text is shown on mobile
-            if (tab === 'editor' || tab === 'reparacion' || tab === 'asignar-epg') {
-                return <span>{label}</span>;
-            }
-            
-            // Default: Hidden on mobile, inline on sm+
-            return <span className="hidden sm:inline">{label}</span>;
+            const label = TABS.find(t => t.id === tab)?.label;
+            return <span className={textClass}>{label}</span>;
         };
 
         return (
@@ -198,16 +233,6 @@ export default function PWAM3UManager() {
             </div>
         );
     };
-
-    const tabs: { id: Tab; icon: React.ElementType; label: string }[] = [
-        { id: 'inicio', icon: Home, label: 'Inicio' },
-        { id: 'editor', icon: Edit, label: 'Editor' },
-        { id: 'reparacion', icon: Wrench, label: 'Reparar' },
-        { id: 'asignar-epg', icon: List, label: 'EPG' },
-        { id: 'save', icon: Save, label: 'Guardar' },
-        { id: 'settings', icon: Settings, label: 'Ajustes' },
-        { id: 'ayuda', icon: HelpCircle, label: 'Ayuda' },
-    ];
 
     return (
         <div className="bg-gray-900 text-white min-h-screen font-sans flex flex-col">
@@ -243,7 +268,7 @@ export default function PWAM3UManager() {
             <div className="sticky top-0 z-50 bg-gray-900/95 backdrop-blur-sm shadow-xl border-b border-gray-800">
                 <div className="max-w-full mx-auto px-1 sm:px-6 lg:px-8">
                      <nav className="flex items-center justify-center space-x-1 sm:space-x-2 py-2 overflow-x-auto no-scrollbar" aria-label="Tabs">
-                        {tabs.map((tab) => (
+                        {TABS.map((tab) => (
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
