@@ -64,8 +64,8 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
     const [loadedEpgSourceName, setLoadedEpgSourceName] = useState('');
 
     const SUGGESTED_EPGS = [
-        { name: 'EPG David Muma', url: 'https://raw.githubusercontent.com/davidmuma/EPG_DGO/main/guide.xml' },
-        { name: 'EPG.org (All Sources)', url: 'https://epgshare01.online/epg/epg_ripper_ALL_SOURCES1.xml.gz' }
+        { name: 'David_DobleM', url: 'https://raw.githubusercontent.com/davidmuma/EPG_dobleM/master/guiaiptv.xml' },
+        { name: 'Open-EPG.org', url: 'https://www.open-epg.com/generate/A5KxjtxpeF.xml' }
     ];
     
     // UI State for toggles
