@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { Upload, Download, Copy, Zap, ArrowLeftCircle, ChevronsUpDown, Settings as SettingsIcon, X, Tv, Image, Type, List } from 'lucide-react';
+import { Upload, Download, Copy, Zap, ArrowLeftCircle, ChevronsUpDown, Settings as SettingsIcon, X, Tv, Image, Type, List, Plus } from 'lucide-react';
 import { useAsignarEpg } from './useAsignarEpg';
 import { useChannels } from './useChannels';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -62,6 +62,11 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
     const [mainListSearch, setMainListSearch] = useState('');
     const [selectedGroup, setSelectedGroup] = useState('all');
     const [loadedEpgSourceName, setLoadedEpgSourceName] = useState('');
+
+    const SUGGESTED_EPGS = [
+        { name: 'EPG David Muma', url: 'https://raw.githubusercontent.com/davidmuma/EPG_DGO/main/guide.xml' },
+        { name: 'EPG.org (All Sources)', url: 'https://epgshare01.online/epg/epg_ripper_ALL_SOURCES1.xml.gz' }
+    ];
     
     // UI State for toggles
     const [ottModeActive, setOttModeActive] = useState(false);
@@ -138,20 +143,20 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
         <>
             <button 
                 onClick={() => handleToggle('ott')}
-                className={`flex flex-col items-center justify-center p-2 rounded-lg transition-all ${ottModeActive ? 'bg-orange-500 text-white' : 'bg-gray-700 text-gray-400 hover:text-white'}`}
+                className={`flex flex-col items-center justify-center p-2 rounded-lg transition-all ${ottModeActive ? 'bg-orange-900/40 border border-orange-500/50' : 'bg-gray-700/50 border border-transparent hover:bg-gray-700'}`}
                 title="Formato OTT"
             >
-                <Tv size={18} />
-                <span className="text-[10px] mt-1 font-bold">OTT</span>
+                <img src="/ott-logo.png" alt="OTT" className="w-5 h-5 object-contain" />
+                <span className={`text-[10px] mt-1 font-bold ${ottModeActive ? 'text-orange-400' : 'text-gray-400'}`}>OTT</span>
             </button>
 
             <button 
                 onClick={() => handleToggle('tivimate')}
-                className={`flex flex-col items-center justify-center p-2 rounded-lg transition-all ${tivimateModeActive ? 'bg-blue-500 text-white' : 'bg-gray-700 text-gray-400 hover:text-white'}`}
+                className={`flex flex-col items-center justify-center p-2 rounded-lg transition-all ${tivimateModeActive ? 'bg-blue-900/40 border border-blue-500/50' : 'bg-gray-700/50 border border-transparent hover:bg-gray-700'}`}
                 title="Formato TiviMate"
             >
-                <List size={18} />
-                <span className="text-[10px] mt-1 font-bold">TiviM</span>
+                <img src="/tivimate-logo.png" alt="TiviMate" className="w-5 h-5 object-contain" />
+                <span className={`text-[10px] mt-1 font-bold ${tivimateModeActive ? 'text-blue-400' : 'text-gray-400'}`}>TiviM</span>
             </button>
 
             <div className="w-px h-8 bg-gray-600 mx-1"></div>
@@ -324,6 +329,40 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                 Subir archivo .xml
                                 <input type="file" className="hidden" onChange={handleEpgFileUpload} accept=".xml" />
                             </label>
+
+                            {/* Suggested Sources */}
+                            <div className="mt-4 border-t border-gray-700 pt-4 text-left">
+                                <label className="text-[10px] font-bold text-gray-400 mb-2 block uppercase">Fuentes Sugeridas</label>
+                                <div className="space-y-1">
+                                    {SUGGESTED_EPGS.map((source, idx) => (
+                                        <div key={idx} className="flex items-center justify-between bg-gray-700/30 p-2 rounded hover:bg-gray-700/50 transition-colors group">
+                                            <div className="flex-1 min-w-0 mr-2">
+                                                <div className="text-xs font-medium text-gray-200">{source.name}</div>
+                                                <div className="text-[9px] text-gray-500 truncate">{source.url}</div>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                 <button 
+                                                    onClick={() => { navigator.clipboard.writeText(source.url); alert('URL copiada'); }}
+                                                    className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-600 rounded"
+                                                    title="Copiar URL"
+                                                >
+                                                    <Copy size={12} />
+                                                </button>
+                                                <button 
+                                                    onClick={() => {
+                                                        settingsHook.addSavedEpgUrl(source.name, source.url);
+                                                        alert('Añadida a tus fuentes EPG');
+                                                    }}
+                                                    className="p-1.5 text-blue-400 hover:text-blue-300 hover:bg-blue-900/30 rounded"
+                                                    title="Añadir a mis fuentes"
+                                                >
+                                                    <Plus size={12} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                     ) : (
                         <>
