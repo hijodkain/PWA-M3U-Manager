@@ -1,6 +1,26 @@
 # Bienvenido al Gestor de Listas M3U
 
-Esta aplicación te permite gestionar tus listas de canales M3U de forma sencilla y potente. Puedes cargar una lista desde una URL o un archivo local, editarla, limpiarla, asignarle una guía de programación (EPG) y guardarla de nuevo en tu ordenador o directamente en tu Dropbox.
+Esta aplicación te permite gestionar tus listas de canales M3U de forma segura, sencilla y potente.Segura porque no se sube nada a el servidor de la app, todo ocurre en tu dispositivo. Puedes descargar la App pulsando Añadir a pantalla de inicio en tu dispositivo o Instalar app desde el naveagador de tu portatil. Maneja tus listas desde tu propio dropbox y comparte el enlace con quien quieras. Solo necesitas conexion para subir o descargar listas desde o hacia tu nube Dropbox privada. 
+Puedes arreglar cada lista compartida a distancia, solo cárgala como principal en M3U Manager, ve a la pestaña Reparar, carga alguna lista de reparacion que tengas y sepas que funciona ( cualquier lista random que hayas encontrado por internet) selecciona el canal a reaparar en tu lista y el buscador inteligente buscará en la lista de reparación canales con el mismo nombre o parecido. cuando veas el canal que te es tan solo haz click sobre él y cambiará el stream roto de tu lista por el nuevo de la lista de reapración. (si quieres transferir el logo o cualquier otro atributo del canal de reapración al canal de tu lista solo tienes que haber selecionado el boton del atributo que quieras trasferir previamente.) Así de facíl. Luego ve a la pestaña Guardar, y pulsa actualizar en mi dropbox e inmediatamente estará disponible en todos los reproductores IPTV donde tengas esa lista. Sin cambiar el enlace, sin hacer nada más. Solo con actualizarla en el reproductor será suficiente. 
+
+## Puedo usar una cuenta de Dropbox gratuita con M3U Manager?
+
+Si, de hecho es muy recomendable que lo hagas así puesto que el enlace que se genera lleva datos que pueden ser sensibles,(y en manos alguien con conocimientos de hacking no tardaría mucho en poder acceder a tu cuenta. Por seguridad te recomiendo que no metas tus datos personales en esa cuenta, ni tu tarjeta de credito!. 
+
+## Como conecto mi dropbox a M3U Manager? 
+Ve a la pestaña Ajustes y sigue las instrucciones paso a paso. Obtendrás un API KEY (algo como esto: 013oeer0set7csz2) que tendrás que introducir en el hueco para ello. La primera vez te pedirá que vuelvas a acceder con tu usuario y contraseña a dropbox para autorizar a M3U Manager a acceder y darle un token de acceso. las siguientes veces que abras M3U Manager en ese dispositivo ya no será necesario que lo vuelvas a hacer, sencillamente verás en Inicio como estás conectado. 
+
+## No tengo ninguna lista en dropbox ni nada, como empiezO?
+solo tienes que pegar la URL de alguna lista que tengas y sepas que funciona en la pestaña Inicio, y se cargará. Puedes editarla, borrar canales, reordenarlos a tu gusto en el editor. Despues ve a la pestaña Guardar, pulsa el icono de subir que ves en el lateral, asignale un nombre para recordarlo (Primo_paco) y pulsa subir a mi Dropbox. y ya tienes esa lista en tu dropbox privada. 
+
+## Como se que enlace tiene cada lista de mi dropbox?
+Una vez tengas alguna lista subida, solo tienes que ir a Inicio y en el menu de la izquierda pulsar el icono de Dropbox que te llevará a tus listas principales de Dropbox. al lado de cada lista verás un icono de compartir, si lo pulsas se copiará a tu portapapeles la URL de esa lista, modificada para que puedas entroducirla en cualquier reproductor IPTV. Pásala a tu primo Paco por Whatsapp y que la meta en su IPTV player y ya está. 
+
+## Puedo hacer que se vea que estan pasando en cada canal?
+por supuesto, y con hacerlo una sola vez será suficiente! carga la lista que quieras sincronizar con la fuente EPG (electronic program guide) de tu proveedor. Ve a la pestaña Ajustes, pulsa el 2 icono lateral y añade la fuente de tu proveedor y ponle un nombre para reconocerla. Ve a la pestaña EPG, y verás tu lista de canales con los canales en rojo. Al lado verás que puedes cargar tu Fuente EPG. Cargalá y los canales que ya estén sincronizados con esa fuente EPG se volverán de color blanco. Los rojos deberás ir sincronizandolos uno por uno. Pulsa el canal a sincronizar, el buscador inteligente buscará el canal en la fuente EPG, cuando veas el correcto pulsalo y tu canal se actualiará para mostrar lo que estan pasando por ese canal. 
+OLvidaté de sincronizar en el reproductor que usas cada canal con el de la fuente EPG que uses!
+
+
 
 ## Guía de Pestañas
 
