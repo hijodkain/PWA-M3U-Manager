@@ -1,6 +1,6 @@
 # Bienvenido al Gestor de Listas M3U
 
-Esta aplicación te permite gestionar tus listas de canales M3U de forma segura, sencilla y potente.Segura porque no se sube nada a el servidor de la app, todo ocurre en tu dispositivo. Puedes descargar la App pulsando Añadir a pantalla de inicio en tu dispositivo o Instalar app desde el naveagador de tu portatil. Maneja tus listas desde tu propio dropbox y comparte el enlace con quien quieras. Solo necesitas conexion para subir o descargar listas desde o hacia tu nube Dropbox privada. 
+Esta aplicación te permite gestionar tus listas de canales M3U de forma segura, sencilla y potente. Segura porque no se sube nada a el servidor de la app, todo ocurre en tu dispositivo. Puedes descargar la App pulsando Añadir a pantalla de inicio en tu dispositivo o Instalar app desde el naveagador de tu portatil. Maneja tus listas desde tu propio dropbox y comparte el enlace con quien quieras. Solo necesitas conexion para subir o descargar listas desde o hacia tu nube Dropbox privada. 
 Puedes arreglar cada lista compartida a distancia, solo cárgala como principal en M3U Manager, ve a la pestaña Reparar, carga alguna lista de reparacion que tengas y sepas que funciona ( cualquier lista random que hayas encontrado por internet) selecciona el canal a reaparar en tu lista y el buscador inteligente buscará en la lista de reparación canales con el mismo nombre o parecido. cuando veas el canal que te es tan solo haz click sobre él y cambiará el stream roto de tu lista por el nuevo de la lista de reapración. (si quieres transferir el logo o cualquier otro atributo del canal de reapración al canal de tu lista solo tienes que haber selecionado el boton del atributo que quieras trasferir previamente.) Así de facíl. Luego ve a la pestaña Guardar, y pulsa actualizar en mi dropbox e inmediatamente estará disponible en todos los reproductores IPTV donde tengas esa lista. Sin cambiar el enlace, sin hacer nada más. Solo con actualizarla en el reproductor será suficiente. 
 
 ## Puedo usar una cuenta de Dropbox gratuita con M3U Manager?
@@ -14,11 +14,30 @@ Ve a la pestaña Ajustes y sigue las instrucciones paso a paso. Obtendrás un AP
 solo tienes que pegar la URL de alguna lista que tengas y sepas que funciona en la pestaña Inicio, y se cargará. Puedes editarla, borrar canales, reordenarlos a tu gusto en el editor. Despues ve a la pestaña Guardar, pulsa el icono de subir que ves en el lateral, asignale un nombre para recordarlo (Primo_paco) y pulsa subir a mi Dropbox. y ya tienes esa lista en tu dropbox privada. 
 
 ## Como se que enlace tiene cada lista de mi dropbox?
-Una vez tengas alguna lista subida, solo tienes que ir a Inicio y en el menu de la izquierda pulsar el icono de Dropbox que te llevará a tus listas principales de Dropbox. al lado de cada lista verás un icono de compartir, si lo pulsas se copiará a tu portapapeles la URL de esa lista, modificada para que puedas entroducirla en cualquier reproductor IPTV. Pásala a tu primo Paco por Whatsapp y que la meta en su IPTV player y ya está. 
+Una vez tengas alguna lista subida, solo tienes que ir a Inicio y en el menu de la izquierda pulsar el icono de Dropbox que te llevará a la sección tus listas principales de Dropbox. al lado de cada lista verás un icono de compartir, si lo pulsas se copiará a tu portapapeles la URL de esa lista, modificada para que puedas entroducirla directamente en cualquier reproductor IPTV. Pásala a tu primo Paco por Whatsapp y que la meta en su IPTV player y ya está. 
 
 ## Puedo hacer que se vea que estan pasando en cada canal?
 por supuesto, y con hacerlo una sola vez será suficiente! carga la lista que quieras sincronizar con la fuente EPG (electronic program guide) de tu proveedor. Ve a la pestaña Ajustes, pulsa el 2 icono lateral y añade la fuente de tu proveedor y ponle un nombre para reconocerla. Ve a la pestaña EPG, y verás tu lista de canales con los canales en rojo. Al lado verás que puedes cargar tu Fuente EPG. Cargalá y los canales que ya estén sincronizados con esa fuente EPG se volverán de color blanco. Los rojos deberás ir sincronizandolos uno por uno. Pulsa el canal a sincronizar, el buscador inteligente buscará el canal en la fuente EPG, cuando veas el correcto pulsalo y tu canal se actualiará para mostrar lo que estan pasando por ese canal. 
 OLvidaté de sincronizar en el reproductor que usas cada canal con el de la fuente EPG que uses!
+
+## No tengo proveedor de EPG, ¿Qué hago?
+
+es fácil encontrar listas EPG en internet, algunas son gratuitas y otras de pago. Te dejo las gratuitas que considero mejores, tan solo tienes que darle al signo + que tienen y se añadiran. Todas las listas que añadas serán seleccionables en la pestaña EPG, en el bloque Fuentes EPG. 
+
+## El buscador inteligente no encuentra apenas canales. ¿Qué hago?
+El buscador se sirve de eliminar prefijos y sufijos que puede tener tu lista de canales. por ejemplo, en tu lista tienes un canal que se llama: "ES: La 1 HD (REEMPLAZO). Cuando lo pulses ese texto se pasará al buscador inteligente. Si no encuentra el canal en la EPG prueba a añadir los prefijos y sufijos que crees que le sobran al nombre de tu canal para que coincida con el de la fuente EPG. En este caso podias incluir el prefijo "ES: " y el sufijo. "(REEMPLAZO). Ahora el buscador inteligente buscará solo "La 1 HD". y es más probable que lo encuentre. Estos Prefijos y sufijos se mantendrán para otras búsquedas, por lo que no hace falta que vuelvas a escribirlo. 
+
+## ¿qué botones tengo que tner pulsados en EPG para que funcionen la EPG con la lista? 
+el 1 boton, el de OTT, hará que el ID de la fuente EPG pase al tvg-name, y el de Tivimate hace que pase al atriubto tvg-id del canal de tu lista. Depende de la manera que tenga el software para reproducir la lista necesitaremos uno u otro. Si no sabes bien como lo hace tu reproductor deja selecionados ambos. Si vas a usar TiviMate deja marcado ese boton. La mayoria de reproductores le listas IPTV usan el mismo modo de TiviMate.
+
+## Tengo una mezcla de canales de varios paises y necesito usar varias fuentes EPG en mi reproductor IPTV para que funcione. que puedo hacer? 
+Los canales que no encuentres en una fuente EPG puedes buscarlos en otra, luego tendrás que añadir ambas al reproductor IPTV (siempre que tenga esa opcion). 
+
+## La URL de Fuente EPG de mi proveedor no la puedo cargar en M3U Manager, que hago? 
+Muchas veces la fuente EPG puede que no se cargue, esto suele pasar porque te dan un enlace terminado en .xml.gz. (https://proveedor.iptv....guia.xml.gz) esto es porque lo que hace ese enlace es servirte la guia en un archivo comprimido y M3U Manager al vivir en el navegador no puede descomprimir archivos. te recomiendo que intentes introducir esa URL en un navegador web como chrome o Firefox y lo mas probable es que se te descargue ese archivo, (guia.xml.gz) descomprimelo en tu ordenador y tendrás el archivo .xml que si puede procesar M3U Manager. Añadelo con el botón Añadir archivo.xml y ya puedes sincronizar los canales de tu lista con los de ese archivo. Luego puedes añadir la URL que te dió tu proveedor junto con tu lista y el reproductor IPTV los unirá. 
+
+## y los demás botones de la sección EPG,  ¿para qué sirven?
+si pulsas el botón "Logo Si" cambiarás el logo de tu canal por el de la  fuente EPG, usalo si tu canal no tiene logo, o está desfasado, o simplemente porque te gusta más el de la fuente EPG; tu elijes. 
 
 
 
@@ -59,7 +78,7 @@ Sigue estos sencillos pasos:
     *   Serás redirigido a la página de autorización de Dropbox. Acepta para permitir el acceso.
     *   ¡Y listo! La aplicación se conectará y guardará la autorización de forma segura en tu navegador.
 
-Ahora podrás subir tus listas a Dropbox desde la pestaña "Guardarr" con un solo clic.
+Ahora podrás subir tus listas a Dropbox desde la pestaña "Guardar" con un solo clic.
 
 ## Cómo Ordenar Mi lista
 En la pestaña Editor puedes modificar la posicion de los canales indidualmente o en bloque si previamente los has seleccionado. Los puedes resituar agarrando por los 3 puntos que tiene a la izquierda y soltandolo en su nueva posicion. Tambien puedes cambiar el número de Orden y se le asignará esa posicion ( y las siguientes si hay más canales seleccionados). Puedes selecciona todos los canales que quieres al principio de tu lista y asignale el 1, todos aparecerán al principio de la lista y luego arrastrando y soltando ajusta las posiciones a tu gusto. Puedes editar cada campo de un canal haciendo doble click sobre el. Si hay varios selecionados al editar uno ese campo se replicará en todos los canales seleccionados. 
