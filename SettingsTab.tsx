@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ExternalLink, PlusCircle, Trash2, Filter, List, Cloud } from 'lucide-react';
 import { useSettings } from './useSettings';
+import { setStorageItem } from './utils/storage';
 
 interface SettingsTabProps {
     settingsHook: ReturnType<typeof useSettings>;
@@ -73,9 +74,9 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
         const codeChallenge = await generateCodeChallenge(codeVerifier);
         const state = generateRandomString(16);
 
-        localStorage.setItem('dropbox_code_verifier', codeVerifier);
-        localStorage.setItem('dropbox_auth_state', state);
-        localStorage.setItem('dropbox_temp_app_key', appKey);
+        setStorageItem('dropbox_code_verifier', codeVerifier);
+        setStorageItem('dropbox_auth_state', state);
+        setStorageItem('dropbox_temp_app_key', appKey);
 
         const redirectUri = window.location.origin + '/';
         const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${appKey}&response_type=code&code_challenge=${codeChallenge}&code_challenge_method=S256&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&token_access_type=offline`;
