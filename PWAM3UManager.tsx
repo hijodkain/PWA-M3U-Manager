@@ -5,7 +5,9 @@ import { useReparacion } from './useReparacion';
 import { useAsignarEpg } from './useAsignarEpg';
 import { useSettings } from './useSettings';
 import { useAppMode } from './AppModeContext';
+import { getStorageItem, removeStorageItem } from './utils/storage';
 import InicioTab from './InicioTab';
+// ... rest of imports
 import EditorTab from './EditorTab';
 import ReparacionTab from './ReparacionTab';
 import AsignarEpgTab from './AsignarEpgTab';
@@ -53,9 +55,9 @@ export default function PWAM3UManager() {
                 // Limpiar la URL inmediatamente para evitar procesar el código dos veces o compartirlo
                 window.history.replaceState({}, document.title, window.location.pathname);
 
-                const storedState = localStorage.getItem('dropbox_auth_state');
-                const codeVerifier = localStorage.getItem('dropbox_code_verifier');
-                const appKey = localStorage.getItem('dropbox_temp_app_key');
+                const storedState = getStorageItem('dropbox_auth_state');
+                const codeVerifier = getStorageItem('dropbox_code_verifier');
+                const appKey = getStorageItem('dropbox_temp_app_key');
 
                 if (!storedState || !codeVerifier || !appKey) {
                     console.warn('Callback de Dropbox detectado pero faltan datos de sesión local.');
@@ -127,9 +129,9 @@ export default function PWAM3UManager() {
                     }
 
                     // Limpiar storage temporal
-                    localStorage.removeItem('dropbox_auth_state');
-                    localStorage.removeItem('dropbox_code_verifier');
-                    localStorage.removeItem('dropbox_temp_app_key');
+                    removeStorageItem('dropbox_auth_state');
+                    removeStorageItem('dropbox_code_verifier');
+                    removeStorageItem('dropbox_temp_app_key');
 
                 } catch (error: any) {
                     const loadingEl = document.getElementById('dropbox-loading-notification');

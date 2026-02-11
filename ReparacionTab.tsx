@@ -8,6 +8,7 @@ import { useSettings } from './useSettings';
 import { useAppMode } from './AppModeContext';
 import { AttributeKey } from './index';
 import { SmartSearchInput } from './SmartSearchInput';
+import { getStorageItem, setStorageItem } from './utils/storage';
 
 interface ReparacionTabProps {
     reparacionHook: ReturnType<typeof useReparacion>;
@@ -80,7 +81,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
 
     // Initial Load of Medicina Lists
     useEffect(() => {
-        const stored = localStorage.getItem('medicinaLists');
+        const stored = getStorageItem('medicinaLists');
         if (stored) setSavedMedicinaLists(JSON.parse(stored));
     }, []);
 

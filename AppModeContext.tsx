@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { getStorageItem, setStorageItem } from './utils/storage';
 
 type AppMode = 'sencillo' | 'pro';
 
@@ -16,7 +17,7 @@ export const AppModeProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // Cargar el modo guardado del localStorage
     useEffect(() => {
-        const savedMode = localStorage.getItem('appMode') as AppMode;
+        const savedMode = getStorageItem('appMode') as AppMode;
         if (savedMode === 'sencillo' || savedMode === 'pro') {
             setMode(savedMode);
         }
@@ -25,7 +26,7 @@ export const AppModeProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const toggleMode = () => {
         setMode((prevMode) => {
             const newMode = prevMode === 'pro' ? 'sencillo' : 'pro';
-            localStorage.setItem('appMode', newMode);
+            setStorageItem('appMode', newMode);
             return newMode;
         });
     };

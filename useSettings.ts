@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Channel } from './index';
+import { getStorageItem, setStorageItem, removeStorageItem } from './utils/storage';
 
 export interface SavedUrl {
     id: string;
@@ -9,6 +10,7 @@ export interface SavedUrl {
 
 const DB_APP_KEY = 'dropbox_app_key';
 const DB_REFRESH_TOKEN_KEY = 'dropbox_refresh_token';
+// ... rest of imports
 const SAVED_URLS_KEY = 'saved_urls';
 const SAVED_EPG_URLS_KEY = 'saved_epg_urls';
 const CHANNEL_PREFIXES_KEY = 'channel_prefixes';
@@ -32,25 +34,25 @@ export const useSettings = () => {
 
     useEffect(() => {
         try {
-            setDropboxAppKey(localStorage.getItem(DB_APP_KEY) || '');
-            setDropboxRefreshToken(localStorage.getItem(DB_REFRESH_TOKEN_KEY) || '');
+            setDropboxAppKey(getStorageItem(DB_APP_KEY) || '');
+            setDropboxRefreshToken(getStorageItem(DB_REFRESH_TOKEN_KEY) || '');
 
-            const savedUrlsJson = localStorage.getItem(SAVED_URLS_KEY);
+            const savedUrlsJson = getStorageItem(SAVED_URLS_KEY);
             if (savedUrlsJson) {
                 setSavedUrls(JSON.parse(savedUrlsJson));
             }
 
-            const savedEpgUrlsJson = localStorage.getItem(SAVED_EPG_URLS_KEY);
+            const savedEpgUrlsJson = getStorageItem(SAVED_EPG_URLS_KEY);
             if (savedEpgUrlsJson) {
                 setSavedEpgUrls(JSON.parse(savedEpgUrlsJson));
             }
 
-            const savedPrefixesJson = localStorage.getItem(CHANNEL_PREFIXES_KEY);
+            const savedPrefixesJson = getStorageItem(CHANNEL_PREFIXES_KEY);
             if (savedPrefixesJson) {
                 setChannelPrefixes(JSON.parse(savedPrefixesJson));
             }
 
-            const savedSuffixesJson = localStorage.getItem(CHANNEL_SUFFIXES_KEY);
+            const savedSuffixesJson = getStorageItem(CHANNEL_SUFFIXES_KEY);
             if (savedSuffixesJson) {
                 setChannelSuffixes(JSON.parse(savedSuffixesJson));
             }
@@ -61,9 +63,9 @@ export const useSettings = () => {
 
     const saveDropboxSettings = useCallback((appKey: string, refreshToken: string) => {
         try {
-            localStorage.setItem(DB_APP_KEY, appKey);
+            setStorageItem(DB_APP_KEY, appKey);
             setDropboxAppKey(appKey);
-            localStorage.setItem(DB_REFRESH_TOKEN_KEY, refreshToken);
+            setStorageItem(DB_REFRESH_TOKEN_KEY, refreshToken);
             setDropboxRefreshToken(refreshToken);
         } catch (error) {
             console.error("Error saving Dropbox settings to localStorage", error);
@@ -72,9 +74,9 @@ export const useSettings = () => {
 
     const clearDropboxSettings = useCallback(() => {
         try {
-            localStorage.removeItem(DB_APP_KEY);
+            removeStorageItem(DB_APP_KEY);
             setDropboxAppKey('');
-            localStorage.removeItem(DB_REFRESH_TOKEN_KEY);
+            removeStorageItem(DB_REFRESH_TOKEN_KEY);
             setDropboxRefreshToken('');
         } catch (error) {
             console.error("Error clearing Dropbox settings from localStorage", error);
@@ -83,7 +85,7 @@ export const useSettings = () => {
 
     const updateChannelPrefixes = useCallback((prefixes: string[]) => {
         try {
-            localStorage.setItem(CHANNEL_PREFIXES_KEY, JSON.stringify(prefixes));
+            setStorageItem(CHANNEL_PREFIXES_KEY, JSON.stringify(prefixes));
             setChannelPrefixes(prefixes);
         } catch (error) {
             console.error("Error saving channel prefixes to localStorage", error);
@@ -92,7 +94,7 @@ export const useSettings = () => {
 
     const updateChannelSuffixes = useCallback((suffixes: string[]) => {
         try {
-            localStorage.setItem(CHANNEL_SUFFIXES_KEY, JSON.stringify(suffixes));
+            setStorageItem(CHANNEL_SUFFIXES_KEY, JSON.stringify(suffixes));
             setChannelSuffixes(suffixes);
         } catch (error) {
             console.error("Error saving channel suffixes to localStorage", error);

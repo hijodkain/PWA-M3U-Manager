@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Upload, Download, AlertCircle, Share2, Trash2, Link as LinkIcon, FileText, Settings, RefreshCw, Plus, Cloud, Database, FilePlus, List, Filter, Check, X, CheckSquare, Square, Search } from 'lucide-react';
 import { useChannels } from './useChannels';
 import { useSettings } from './useSettings';
+import { getStorageItem, setStorageItem, removeStorageItem } from './utils/storage';
 
 interface InicioTabProps {
     channelsHook: ReturnType<typeof useChannels>;
@@ -68,10 +69,10 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
     }, []);
 
     useEffect(() => {
-        const stored = localStorage.getItem('medicinaLists');
+        const stored = getStorageItem('medicinaLists');
         if (stored) setSavedMedicinaLists(JSON.parse(stored));
 
-        const storedDropbox = localStorage.getItem('dropboxLists');
+        const storedDropbox = getStorageItem('dropboxLists');
         if (storedDropbox) setSavedDropboxLists(JSON.parse(storedDropbox));
     }, []);
 
@@ -256,17 +257,17 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
 
                 if (activeSubTab === 'add-repair') {
                      // Guardar en mis listas reparadoras
-                     const currentLists = JSON.parse(localStorage.getItem('medicinaLists') || '[]');
+                     const currentLists = JSON.parse(getStorageItem('medicinaLists') || '[]');
                      const updated = [...currentLists, newList];
                      setSavedMedicinaLists(updated);
-                     localStorage.setItem('medicinaLists', JSON.stringify(updated));
+                     setStorageItem('medicinaLists', JSON.stringify(updated));
                      alert('¡Subido a Dropbox y añadido a tus listas reparadoras!');
                 } else {
                     // Guardar en mis listas dropbox (Default)
-                    const currentLists = JSON.parse(localStorage.getItem('dropboxLists') || '[]');
+                    const currentLists = JSON.parse(getStorageItem('dropboxLists') || '[]');
                     const updated = [...currentLists, newList];
                     setSavedDropboxLists(updated);
-                    localStorage.setItem('dropboxLists', JSON.stringify(updated));
+                    setStorageItem('dropboxLists', JSON.stringify(updated));
                     alert('¡Subido a Dropbox y añadido a tus listas principales!');
                 }
 
