@@ -62,11 +62,6 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
     const [mainListSearch, setMainListSearch] = useState('');
     const [selectedGroup, setSelectedGroup] = useState('all');
     const [loadedEpgSourceName, setLoadedEpgSourceName] = useState('');
-
-    const SUGGESTED_EPGS = [
-        { name: 'David_DobleM', url: 'https://raw.githubusercontent.com/davidmuma/EPG_dobleM/master/guiaiptv.xml' },
-        { name: 'Open-EPG.org', url: 'https://www.open-epg.com/generate/A5KxjtxpeF.xml' }
-    ];
     
     // UI State for toggles
     const [ottModeActive, setOttModeActive] = useState(false);
@@ -250,27 +245,15 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                     </div>
                 </div>
 
+
                  {/* No EPG Loaded Warning */}
-                 {epgChannels.length === 0 && !isEpgLoading && (
+                 {epgChannels.length === 0 && !isEpgLoading && onNavigateToSettings && (
                     <div className="mb-2 bg-blue-900/30 border border-blue-500/30 rounded-lg p-3">
                          <div className="text-xs sm:text-sm text-blue-200 mb-2 flex items-center gap-2">
                              <Zap className="h-4 w-4 text-yellow-400" />
                              <span>Carga una fuente EPG para empezar:</span>
                          </div>
                          <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-                            {SUGGESTED_EPGS.map((epg, idx) => (
-                                <button
-                                    key={idx}
-                                    onClick={() => {
-                                        setLoadedEpgSourceName(epg.name);
-                                        handleFetchEpgUrl(epg.url);
-                                    }}
-                                    className="flex-shrink-0 px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/40 border border-blue-500/30 rounded-md text-xs text-blue-100 transition-colors whitespace-nowrap"
-                                >
-                                    {epg.name}
-                                </button>
-                            ))}
-                            {onNavigateToSettings && (
                                 <button
                                     onClick={onNavigateToSettings}
                                     className="flex-shrink-0 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-md text-xs text-gray-300 transition-colors whitespace-nowrap flex items-center gap-1"
@@ -278,7 +261,6 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                     <span>Añadir fuentes</span>
                                     <ArrowLeftCircle className="h-3 w-3 rotate-180" />
                                 </button>
-                            )}
                          </div>
                     </div>
                  )}

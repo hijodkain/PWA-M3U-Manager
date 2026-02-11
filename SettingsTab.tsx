@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ExternalLink, PlusCircle, Trash2, Filter, List, Cloud } from 'lucide-react';
+import { ExternalLink, PlusCircle, Trash2, Filter, List, Cloud, Zap, Plus } from 'lucide-react';
 import { useSettings } from './useSettings';
 import { setStorageItem } from './utils/storage';
 
@@ -49,6 +49,13 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
     const [appKey, setAppKey] = useState(dropboxAppKey);
     const [newEpgUrl, setNewEpgUrl] = useState('');
     const [newEpgName, setNewEpgName] = useState('');
+
+    const SUGGESTED_EPGS = [
+        { name: 'David_DobleM', url: 'https://raw.githubusercontent.com/davidmuma/EPG_dobleM/master/guiaiptv.xml' },
+        { name: 'Open-EPG.org', url: 'https://www.open-epg.com/generate/A5KxjtxpeF.xml' }
+    ];
+    const visibleSuggestions = SUGGESTED_EPGS.filter(s => !savedEpgUrls.some(saved => saved.url === s.url));
+
     const [localPrefixes, setLocalPrefixes] = useState(channelPrefixes.join(', '));
     const [localSuffixes, setLocalSuffixes] = useState(channelSuffixes.join(', '));
 
@@ -241,6 +248,31 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
                             </h2>
                             <p className="text-gray-400">Añade URLs para cargar datos de guía de programación.</p>
                         </div>
+
+                        {visibleSuggestions.length > 0 && (
+                            <div className="bg-blue-900/10 border border-blue-900/30 rounded-xl p-6 mb-6">
+                                <h3 className="font-bold text-blue-400 mb-4 flex items-center gap-2">
+                                    <Zap size={18} /> Fuentes Recomendadas
+                                </h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {visibleSuggestions.map((epg, idx) => (
+                                        <div key={idx} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg border border-gray-700">
+                                            <div className="min-w-0">
+                                                <div className="font-bold text-white text-sm">{epg.name}</div>
+                                                <div className="text-gray-500 text-xs truncate max-w-[200px]">{epg.url}</div>
+                                            </div>
+                                            <button
+                                                onClick={() => addSavedEpgUrl(epg.name, epg.url)}
+                                                className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg transition-colors"
+                                                title="Añadir fuente"
+                                            >
+                                                <Plus size={16} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 mb-6">
                             <h3 className="font-bold text-white mb-4">Añadir Nueva Fuente</h3>
