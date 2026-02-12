@@ -39,6 +39,7 @@ Muchas veces la fuente EPG puede que no se cargue, esto suele pasar porque te da
 ## y los demás botones de la sección EPG,  ¿para qué sirven?
 si pulsas el botón "Logo Si" cambiarás el logo de tu canal por el de la  fuente EPG, usalo si tu canal no tiene logo, o está desfasado, o simplemente porque te gusta más el de la fuente EPG; tu elijes. 
 
+Botón NOMBRE: si está pulsado el nombre del canal de tu lista se actualizará cogiendo el de la fuente EPG. Esto asegura mejor sincronización entre tu lista y la fuente EPG, y normaliza el nombre del canal para tener canales de reemplazo automático en reproductores (como OTT Navigator por ej.) que incluyen esa funcionalidad. 
 
 
 ## Guía de Pestañas

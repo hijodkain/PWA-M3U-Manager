@@ -76,7 +76,7 @@ const HelpTab: React.FC = () => {
                      <li>Ve a la <a href="https://www.dropbox.com/developers/apps" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">Consola de Apps de Dropbox</a>.</li>
                      <li>Crea una app tipo <strong>"Scoped access"</strong> y acceso <strong>"App folder"</strong> (Más seguro).</li>
                      <li>En la pestaña <strong>Permissions</strong>, marca <code>files.content.write</code>.</li>
-                     <li>En <strong>Settings</strong> > <strong>Redirect URIs</strong> añade: <code>https://m3umanager.cat/</code> (o tu URL local).</li>
+                     <li>En <strong>Settings</strong> &gt; <strong>Redirect URIs</strong> añade: <code>https://m3umanager.cat/</code> (o tu URL local).</li>
                      <li>Copia el <strong>App Key</strong>.</li>
                      <li>En esta App, ve a <strong>Ajustes</strong>, pega el App Key y pulsa "Conectar".</li>
                 </ol>
