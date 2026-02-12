@@ -17,6 +17,7 @@ interface ReparacionChannelItemProps {
     onPlayClick?: () => void;
     style?: React.CSSProperties;
     isSencillo?: boolean;
+    className?: string; // Add className prop
 }
 
 const MarqueeText: React.FC<{ text: string; className?: string; isSelected?: boolean }> = ({ text, className = "", isSelected = false }) => {
@@ -88,6 +89,7 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
     onPlayClick,
     style,
     isSencillo = false,
+    className = "", // Destructure className
 }) => {
     const getDomainFromUrl = (url: string) => {
         if (!url) return '---';
@@ -151,7 +153,7 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
             onClick={onBodyClick}
             className={`group/item flex items-center gap-2 p-2 rounded-lg border-2 ${
                 isSelected ? 'border-blue-500 bg-blue-900/50' : 'border-transparent'
-            } cursor-pointer hover:bg-gray-700 min-h-[60px] transition-colors`}
+            } cursor-pointer hover:bg-gray-700 min-h-[60px] transition-colors relative ${className}`} // Add relative and className
         >
             <img
                 src={channel.tvgLogo || 'https://placehold.co/40x40/2d3748/e2e8f0?text=?'}
@@ -218,7 +220,7 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
                         if (onVerifyClick) onVerifyClick();
                     }}
                     disabled={verificationStatus === 'verifying'}
-                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-[10px] disabled:opacity-50 disabled:cursor-not-allowed transition-all whitespace-nowrap"
+                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-[10px] disabled:opacity-50 disabled:cursor-not-allowed transition-all whitespace-nowrap relative z-10"
                 >
                     {verificationStatus === 'verifying' ? 'Verifying...' : 'Verify'}
                 </button>

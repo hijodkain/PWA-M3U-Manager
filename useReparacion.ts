@@ -72,18 +72,18 @@ export const useReparacion = (
         }));
         
         try {
-            // Llamar a AWS Lambda verify-simple
-            const AWS_API_URL = process.env.NEXT_PUBLIC_AWS_VERIFY_API_URL || '';
-            
-            if (!AWS_API_URL) {
-                console.error('AWS_API_URL not configured');
-                throw new Error('AWS API URL not configured');
+            // Llamar a AWS Lambda verify-simple o fallback a local
+            const AWS_API_URL = process.env.NEXT_PUBLIC_AWS_VERIFY_API_URL;
+            let apiUrl = '';
+
+            if (AWS_API_URL) {
+                 apiUrl = `${AWS_API_URL}verify-simple?url=${encodeURIComponent(url)}`;
+                 console.log('Verifying (simple/AWS):', url);
+            } else {
+                 console.warn('AWS_API_URL not configured, using local fallback /api/verify_channel');
+                 apiUrl = `/api/verify_channel?url=${encodeURIComponent(url)}`;
             }
-            
-            const apiUrl = `${AWS_API_URL}verify-simple?url=${encodeURIComponent(url)}`;
-            console.log('Verifying (simple):', url);
-            console.log('API URL:', apiUrl);
-            
+
             // Timeout de 20 segundos para dar tiempo al servidor
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 20000);
@@ -169,16 +169,18 @@ export const useReparacion = (
         }));
         
         try {
-            // Llamar a AWS Lambda verify-quality (con FFprobe)
-            const AWS_API_URL = process.env.NEXT_PUBLIC_AWS_VERIFY_API_URL || '';
-            
-            if (!AWS_API_URL) {
-                console.error('AWS_API_URL not configured');
-                throw new Error('AWS API URL not configured');
+            // Llamar a AWS Lambda verify-quality (con FFprobe) o fallback a local
+            const AWS_API_URL = process.env.NEXT_PUBLIC_AWS_VERIFY_API_URL;
+            let apiUrl = '';
+
+            if (AWS_API_URL) {
+                 apiUrl = `${AWS_API_URL}verify-quality?url=${encodeURIComponent(url)}`;
+                 console.log('Verifying (quality/AWS):', url);
+            } else {
+                 console.warn('AWS_API_URL not configured, using local fallback /api/verify_channel');
+                 apiUrl = `/api/verify_channel?url=${encodeURIComponent(url)}`;
             }
             
-            const apiUrl = `${AWS_API_URL}verify-quality?url=${encodeURIComponent(url)}`;
-            console.log('Verifying (quality):', url);
             console.log('API URL:', apiUrl);
             
             // Timeout de 35 segundos para dar tiempo al análisis FFprobe

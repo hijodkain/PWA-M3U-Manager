@@ -74,6 +74,13 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
 
         const storedDropbox = getStorageItem('dropboxLists');
         if (storedDropbox) setSavedDropboxLists(JSON.parse(storedDropbox));
+        
+        // Verificar si debemos navegar automáticamente a la pestaña de Dropbox
+        const shouldNavigateToDropbox = getStorageItem('navigate_to_dropbox_lists');
+        if (shouldNavigateToDropbox === 'true') {
+            setActiveSubTab('dropbox-lists');
+            removeStorageItem('navigate_to_dropbox_lists');
+        }
     }, []);
 
     // Auto-load Logic

@@ -117,15 +117,25 @@ export default function PWAM3UManager() {
                         successMsg.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-4 rounded-lg shadow-xl z-50 animate-bounce';
                         successMsg.textContent = '¡Dropbox conectado exitosamente!';
                         document.body.appendChild(successMsg);
-                        setTimeout(() => successMsg.remove(), 3000);
+                        
+                        setTimeout(() => {
+                            successMsg.remove();
+                            // Navegar a Inicio -> Mis listas de Dropbox
+                            setStorageItem('navigate_to_dropbox_lists', 'true');
+                            setActiveTab('inicio');
+                        }, 2000);
 
-                        setActiveTab('settings');
                     } else {
                         alert('Conexión autorizada, pero no se recibió refresh_token. Es posible que ya estuvieras conectado. Intenta usar la aplicación, si falla, vuelve a conectar.');
                         // Aún así guardamos la key, y si hay access token podríamos usarlo, pero la app espera refresh token.
                         // En este caso asumimos éxito parcial.
                         settingsHook.saveDropboxSettings(appKey, data.refresh_token || ''); 
-                        setActiveTab('settings');
+                        
+                        setTimeout(() => {
+                             // Navegar a Inicio -> Mis listas de Dropbox también en este caso si hay key
+                             setStorageItem('navigate_to_dropbox_lists', 'true');
+                             setActiveTab('inicio');
+                        }, 2000);
                     }
 
                     // Limpiar storage temporal
