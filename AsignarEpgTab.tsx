@@ -43,7 +43,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
         setEpgSearchTerm,
         isSmartSearchEnabled,
         toggleSmartSearch,
-        getEpgSimilarityScore,
+        // getEpgSimilarityScore, // Removed as unused
         smartSearch,
         assignmentMode,
         toggleAssignmentMode,
@@ -448,7 +448,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                     if (destinationChannelId && smartSearch) {
                                         const targetChannel = channels.find(c => c.id === destinationChannelId);
                                         if (targetChannel) {
-                                            const score = getEpgSimilarityScore(targetChannel.name, epg.name);
+                                            const score = smartSearch.calculateSimilarity(targetChannel.name, epg.name);
                                             matchScore = score;
                                             if (score > 0.9) matchType = 'exact';
                                             else if (score > 0.7) matchType = 'partial';
