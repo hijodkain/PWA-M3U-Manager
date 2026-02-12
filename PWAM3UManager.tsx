@@ -5,7 +5,7 @@ import { useReparacion } from './useReparacion';
 import { useAsignarEpg } from './useAsignarEpg';
 import { useSettings } from './useSettings';
 import { useAppMode } from './AppModeContext';
-import { getStorageItem, removeStorageItem } from './utils/storage';
+import { getStorageItem, removeStorageItem, setStorageItem } from './utils/storage';
 import InicioTab from './InicioTab';
 // ... rest of imports
 import EditorTab from './EditorTab';
