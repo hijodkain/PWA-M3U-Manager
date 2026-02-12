@@ -153,7 +153,13 @@ export const useAsignarEpg = (
         }
     }, [epgChannels, epgSearchTerm, isSmartSearchEnabled, searchChannels]);
 
-    const handleEpgSourceClick = (sourceEpg: EpgChannel) => {
+    const handleEpgSourceClick = (sourceEpg: EpgChannel, options?: {
+        ottMode?: boolean;
+        tivimateMode?: boolean;
+        transferLogo?: boolean;
+        keepLogo?: boolean;
+        copyName?: boolean;
+    }) => {
         if (!destinationChannelId) return;
         saveStateToHistory();
         setChannels((prev) =>
@@ -162,9 +168,10 @@ export const useAsignarEpg = (
                     const updated = { ...dest };
                     
                     // Verificar modos activos
-                    const isOttMode = attributesToCopy.has('tvgName');
-                    const isTivimateMode = attributesToCopy.has('tvgId');
-                    const copyName = attributesToCopy.has('name');
+                    const isOttMode = options?.ottMode ?? attributesToCopy.has('tvgName');
+                    const isTivimateMode = options?.tivimateMode ?? attributesToCopy.has('tvgId');
+                    const copyName = options?.copyName ?? attributesToCopy.has('name');
+                    const transferLogo = options?.transferLogo ?? attributesToCopy.has('tvgLogo');
                     
                     // Modo OTT: asignar el channel ID solo a tvgName
                     if (isOttMode) {
@@ -177,7 +184,7 @@ export const useAsignarEpg = (
                     }
                     
                     // Copiar logo si está seleccionado
-                    if (attributesToCopy.has('tvgLogo')) {
+                    if (transferLogo) {
                         updated.tvgLogo = sourceEpg.logo;
                     }
                     

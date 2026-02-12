@@ -441,7 +441,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                     const epg = filteredEpgChannels[virtualRow.index];
                                     const isSelected = selectedEpgChannels.has(epg.id);
                                     
-                                    // Calculate match score if target is selected
+                                    // Calculate match score if target is selected using SmartSearch
                                     let matchScore = undefined;
                                     let matchType = undefined;
                                     
