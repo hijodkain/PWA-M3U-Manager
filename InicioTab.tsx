@@ -88,9 +88,9 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
         if (triggerLoad && url) {
             handleFetchUrl();
             setTriggerLoad(false);
-            setShowSuccessModal(true);
+            onNavigateToEditor();
         }
-    }, [triggerLoad, url, handleFetchUrl]);
+    }, [triggerLoad, url, handleFetchUrl, onNavigateToEditor]);
 
     // --- Dropbox Helpers ---
     const getDropboxAccessToken = async () => {
@@ -316,7 +316,7 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                     options: {
                         filename_only: true,
                         file_extensions: ['m3u', 'm3u8'],
-                        max_results: 20
+                        max_results: 1000
                     }
                 })
             });

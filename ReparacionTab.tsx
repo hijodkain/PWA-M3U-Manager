@@ -557,7 +557,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                     </div>
 
                     {/* Área de Carga (URL/Upload) - Solo si no hay lista cargada */}
-                    {!reparacionListName && !isMobile && (
+                    {!reparacionListName && (
                         <div className="bg-gray-700/30 p-3 rounded border border-gray-700 flex flex-wrap gap-2 items-center">
                             <input
                                 type="text"
