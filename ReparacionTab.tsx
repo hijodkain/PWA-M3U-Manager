@@ -520,6 +520,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                 <div className="flex items-center gap-2 bg-blue-900/30 p-2 rounded border border-blue-500/30">
                                     <span className="font-bold text-blue-300 truncate">L. reparadora: {reparacionListName}</span>
                                     {/* Botón Borrar Lista Definitivamente (Papelera) */}
+                                    {!isMobile && (
                                     <button 
                                         onClick={handleDeleteCurrentRepairList} 
                                         className="text-red-400 hover:text-red-200 p-1 hover:bg-red-900/40 rounded transition-colors ml-1"
@@ -527,6 +528,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     >
                                         <Trash2 size={16} />
                                     </button>
+                                    )}
                                     {/* Botón Cerrar (Solo quitar de vista) */}
                                     <button onClick={clearReparacion} className="text-gray-400 hover:text-white p-1 hover:bg-gray-700 rounded transition-colors" title="Cerrar lista">
                                         <X size={16} />
@@ -555,7 +557,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                     </div>
 
                     {/* Área de Carga (URL/Upload) - Solo si no hay lista cargada */}
-                    {!reparacionListName && (
+                    {!reparacionListName && !isMobile && (
                         <div className="bg-gray-700/30 p-3 rounded border border-gray-700 flex flex-wrap gap-2 items-center">
                             <input
                                 type="text"
@@ -615,6 +617,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                         {reparacionListRowVirtualizer.getVirtualItems().map((virtualItem) => {
                             const ch = filteredReparacionChannels[virtualItem.index];
                             const isChSelected = selectedReparacionChannels.has(ch.id);
+                            const channelInfo = verificationInfo[ch.id] || { status: 'pending', quality: 'unknown' };
                             return (
                                 <ReparacionChannelItem
                                     key={ch.id}
@@ -626,6 +629,10 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     // toggleReparacionSelection likely adds/removes from Set. Perfect.
                                     showCheckbox={!isSencillo}
                                     isSencillo={isSencillo}
+                                    verificationStatus={channelInfo.status}
+                                    quality={channelInfo.quality}
+                                    resolution={channelInfo.resolution}
+                                    onVerifyClick={() => verifyChannel(ch.id, ch.url)}
                                     style={{
                                         position: 'absolute',
                                         top: 0,

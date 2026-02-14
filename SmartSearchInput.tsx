@@ -74,7 +74,7 @@ export const SmartSearchInput: React.FC<SmartSearchInputProps> = ({
             
             {/* Descripción del modo actual */}
             {searchTerm && (
-                <div className="text-xs text-gray-500 bg-gray-800 p-2 rounded">
+                <div className="hidden sm:block text-xs text-gray-500 bg-gray-800 p-2 rounded">
                     {isSmartSearchEnabled ? (
                         <>
                             <strong>Búsqueda inteligente:</strong> Encuentra coincidencias parciales, 
