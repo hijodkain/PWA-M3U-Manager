@@ -1,5 +1,5 @@
 {
-  "name": "PWA M3U Manager",
+  "name": "M3U Manager",
   "short_name": "M3U Manager",
   "description": "A PWA for managing M3U playlists.",
   "start_url": "/",

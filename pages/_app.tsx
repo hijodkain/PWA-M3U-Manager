@@ -9,7 +9,7 @@ function MyApp({ Component, pageProps }: AppProps) {
     <GenericErrorBoundary>
       <AppModeProvider>
         <Head>
-          <title>PWA M3U Manager</title>
+          <title>M3U Manager</title>
           <link rel="icon" href="/logo.svg" type="image/svg+xml" />
         </Head>
         <Component {...pageProps} />
