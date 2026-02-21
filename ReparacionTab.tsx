@@ -126,6 +126,24 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
     // --- Handlers ---
 
     // Clear Main List Logic
+    const isWindows = typeof window !== 'undefined' && /Windows/i.test(navigator.userAgent);
+    const shouldShowPlayButton = !isSencillo || (isSencillo && isWindows);
+
+    const openInVLC = (url: string) => {
+        window.location.href = `vlc://${url}`;
+        setTimeout(() => {
+            const m3uContent = `#EXTM3U\n#EXTINF:-1,Stream\n${url}`;
+            const blob = new Blob([m3uContent], { type: 'audio/x-mpegurl' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'stream.m3u';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+        }, 500);
+    };
+
     const handleClearMainListClick = () => setShowClearConfirm(true);
 
     const handleDeleteCurrentRepairList = async () => {
@@ -450,6 +468,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     quality={channelInfo.quality}
                                     resolution={channelInfo.resolution}
                                     onVerifyClick={() => verifyChannel(ch.id, ch.url)}
+                                    onPlayClick={shouldShowPlayButton ? () => openInVLC(ch.url) : undefined}
                                     isSencillo={isSencillo}
                                     style={{
                                         position: 'absolute',
@@ -633,6 +652,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     quality={channelInfo.quality}
                                     resolution={channelInfo.resolution}
                                     onVerifyClick={() => verifyChannel(ch.id, ch.url)}
+                                    onPlayClick={shouldShowPlayButton ? () => openInVLC(ch.url) : undefined}
                                     style={{
                                         position: 'absolute',
                                         top: 0,
