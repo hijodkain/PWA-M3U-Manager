@@ -2,7 +2,7 @@ import React from 'react';
 import { Star, Target, Zap } from 'lucide-react';
 
 interface SearchResultItemProps {
-    name: string;
+    name?: string;
     score?: number;
     matchType?: 'exact' | 'partial' | 'fuzzy';
     isSelected?: boolean;
@@ -67,9 +67,11 @@ export const SearchResultItem: React.FC<SearchResultItemProps> = ({
             {/* Contenido principal */}
             <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate" title={name}>
-                        {name}
-                    </div>
+                    {name && (
+                        <div className="font-medium truncate" title={name}>
+                            {name}
+                        </div>
+                    )}
                     {children}
                 </div>
                 
