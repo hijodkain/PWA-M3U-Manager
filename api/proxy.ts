@@ -21,7 +21,18 @@ const handler = async (req, res) => {
             console.log(`Transformed Dropbox URL to: ${fetchUrl}`);
         }
 
-        const response = await fetch(fetchUrl);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+        const response = await fetch(fetchUrl, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': '*/*',
+            },
+            signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+
         console.log(`Fetched URL: ${fetchUrl}, Status: ${response.status}`);
         if (!response.ok) {
             console.error(`Failed to fetch: ${response.statusText}`);

@@ -450,32 +450,100 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
         setTriggerLoad(true);
     };
 
+    const normalizeIptvUrl = (rawUrl: string): { fetchUrl: string; suggestedName: string } => {
+        let fetchUrl = rawUrl.trim();
+        let suggestedName = 'Lista Reparadora';
+
+        try {
+            const u = new URL(fetchUrl);
+
+            // --- Xtream Codes V1: /get.php?username=X&password=Y ---
+            const isXtreamV1 = u.pathname.endsWith('/get.php') && u.searchParams.has('username') && u.searchParams.has('password');
+            if (isXtreamV1) {
+                // Ensure type=m3u_plus for maximum compatibility
+                if (!u.searchParams.get('type')) {
+                    u.searchParams.set('type', 'm3u_plus');
+                }
+                // Some panels use 'output' instead of 'type'
+                if (u.searchParams.has('output') && !u.searchParams.has('type')) {
+                    u.searchParams.set('type', u.searchParams.get('output')!);
+                }
+                // Force m3u_plus format
+                u.searchParams.set('type', 'm3u_plus');
+                fetchUrl = u.toString();
+                suggestedName = `Xtream-${u.searchParams.get('username') || u.hostname}`;
+                return { fetchUrl, suggestedName };
+            }
+
+            // --- Xtream Codes V2: /username/password[/type] ---
+            // Pattern: host:port/user/pass or host:port/user/pass/m3u_plus
+            const parts = u.pathname.split('/').filter(Boolean);
+            const isXtreamV2 =
+                parts.length >= 2 &&
+                !fetchUrl.includes('get.php') &&
+                !fetchUrl.endsWith('.m3u') &&
+                !fetchUrl.endsWith('.m3u8') &&
+                !fetchUrl.endsWith('.txt') &&
+                (u.searchParams.size === 0 || (u.searchParams.has('username') && u.searchParams.has('password')));
+
+            if (isXtreamV2 && parts.length >= 2) {
+                // Could be /username/password or /username/password/type
+                const [username, password] = parts;
+                const base = `${u.protocol}//${u.host}`;
+                fetchUrl = `${base}/get.php?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}&type=m3u_plus`;
+                suggestedName = `Xtream-${username}`;
+                return { fetchUrl, suggestedName };
+            }
+
+            // --- Standard URL: extract name from path or query params ---
+            // Check for username in query params (some panels)
+            const user = u.searchParams.get('username') || u.searchParams.get('user');
+            if (user) {
+                suggestedName = `Lista-${user}`;
+            } else {
+                const pathParts = u.pathname.split('/');
+                const last = pathParts[pathParts.length - 1];
+                if (last && last !== 'get.php') {
+                    suggestedName = last.replace(/\.(m3u8?|txt)$/i, '') || u.hostname;
+                } else {
+                    suggestedName = u.hostname;
+                }
+            }
+        } catch (_) {
+            // Invalid URL — leave as-is, proxy will report the error
+        }
+
+        return { fetchUrl, suggestedName };
+    };
+
     const handleMedicinaUrlLoad = async () => {
         if (!medicinaUrl) return;
         setIsMedicinaLoading(true);
         setMedicinaError('');
         try {
-            const response = await fetch(medicinaUrl);
-            if (!response.ok) throw new Error('Falló descarga');
-            const content = await response.text();
-            
-            let name = 'Lista Reparadora';
-             try {
-                const urlParts = new URL(medicinaUrl).pathname.split('/');
-                const last = urlParts[urlParts.length - 1];
-                if (last) name = last;
-            } catch (e) {}
+            const { fetchUrl, suggestedName } = normalizeIptvUrl(medicinaUrl);
 
-            const rawName = prompt('Nombre para lista:', name);
+            const proxyUrl = `/api/proxy?url=${encodeURIComponent(fetchUrl)}`;
+            const response = await fetch(proxyUrl);
+            if (!response.ok) throw new Error(`Error ${response.status}: ${response.statusText}`);
+            const content = await response.text();
+
+            // Validate it's actually an M3U playlist
+            const trimmed = content.trimStart();
+            if (!trimmed.startsWith('#EXTM3U') && !trimmed.startsWith('#EXT')) {
+                throw new Error('La respuesta no es una lista M3U válida. Comprueba la URL.');
+            }
+
+            const rawName = prompt('Nombre para lista:', suggestedName);
             if (!rawName) return;
-            
-            name = rawName.replace(/\s+/g, '-');
+
+            const name = rawName.replace(/\s+/g, '-');
             const groups = parseGroups(content);
-            
+
             setPreviewContent({ content, name, groups });
             setMedicinaUrl('');
         } catch (e) {
-            setMedicinaError('Error al guardar lista. Verifica la URL.');
+            setMedicinaError(e instanceof Error ? e.message : 'Error al cargar lista. Verifica la URL.');
         } finally {
             setIsMedicinaLoading(false);
         }
