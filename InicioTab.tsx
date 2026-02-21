@@ -54,8 +54,9 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
 
     // Estados para búsqueda en Dropbox
     const [isSearchingDropbox, setIsSearchingDropbox] = useState(false);
-    const [dropboxSearchResults, setDropboxSearchResults] = useState<Array<{name: string, path_lower: string, id: string}>>([]);
+    const [dropboxSearchResults, setDropboxSearchResults] = useState<Array<{name: string, path_lower: string, id: string, folder: 'root' | 'principales' | 'reparadoras'}>>([]);
     const [showDropboxSearchModal, setShowDropboxSearchModal] = useState(false);
+    const [selectedDropboxFiles, setSelectedDropboxFiles] = useState<Set<string>>(new Set());
 
     // --- Effects ---
     useEffect(() => {
@@ -297,121 +298,131 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
             if (onNavigateToSettings) onNavigateToSettings();
             return;
         }
-        
+
         setIsSearchingDropbox(true);
         setDropboxSearchResults([]);
+        setSelectedDropboxFiles(new Set());
         setShowDropboxSearchModal(true);
 
         try {
             const accessToken = await getDropboxAccessToken();
-            
-            const response = await fetch('https://api.dropboxapi.com/2/files/search_v2', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    query: ".m3u", // Busca cualquier cosa con m3u
-                    options: {
-                        filename_only: true,
-                        file_extensions: ['m3u', 'm3u8'],
-                        max_results: 1000
-                    }
-                })
-            });
 
-            if (!response.ok) throw new Error('Error buscando en Dropbox');
-            const data = await response.json();
-            
-            const files = data.matches.map((match: any) => ({
-                name: match.metadata.metadata.name,
-                path_lower: match.metadata.metadata.path_lower,
-                id: match.metadata.metadata.id
-            }));
-            
-            setDropboxSearchResults(files);
+            const isM3U = (name: string) => /\.(m3u8?)$/i.test(name);
 
+            const listFolder = async (path: string): Promise<any[]> => {
+                try {
+                    const res = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ path, recursive: false }),
+                    });
+                    if (!res.ok) return [];
+                    const data = await res.json();
+                    return data.entries || [];
+                } catch { return []; }
+            };
+
+            const [rootEntries, principalesEntries, reparadorasEntries] = await Promise.all([
+                listFolder(''),
+                listFolder('/Listas Principales'),
+                listFolder('/Listas Reparadoras'),
+            ]);
+
+            type FolderKey = 'root' | 'principales' | 'reparadoras';
+            const results: Array<{name: string, path_lower: string, id: string, folder: FolderKey}> = [];
+
+            const addEntries = (entries: any[], folder: FolderKey) => {
+                entries.filter(e => e['.tag'] === 'file' && isM3U(e.name)).forEach(e => {
+                    results.push({ name: e.name, path_lower: e.path_lower, id: e.id, folder });
+                });
+            };
+
+            addEntries(rootEntries, 'root');
+            addEntries(principalesEntries, 'principales');
+            addEntries(reparadorasEntries, 'reparadoras');
+
+            setDropboxSearchResults(results);
         } catch (e) {
             console.error(e);
-            alert('Error buscando lista en Dropbox');
+            alert('Error buscando listas en Dropbox');
         } finally {
             setIsSearchingDropbox(false);
         }
     };
 
-    const handleAddFromDropboxSearch = async (file: {name: string, path_lower: string, id: string}) => {
-         try {
-             setIsSearchingDropbox(true);
-             const accessToken = await getDropboxAccessToken();
-            
-            // Generar link compartido para este archivo
-            const shareResponse = await fetch('https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ path: file.path_lower }),
-            });
+    const getOrCreateSharedUrl = async (accessToken: string, filePath: string): Promise<string> => {
+        const shareRes = await fetch('https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path: filePath }),
+        });
+        if (shareRes.ok) {
+            const d = await shareRes.json();
+            return d.url.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('dl=0', 'dl=1');
+        }
+        // Link already exists — retrieve it
+        const listRes = await fetch('https://api.dropboxapi.com/2/sharing/list_shared_links', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path: filePath }),
+        });
+        if (listRes.ok) {
+            const d = await listRes.json();
+            if (d.links?.length > 0)
+                return d.links[0].url.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('dl=0', 'dl=1');
+        }
+        return '';
+    };
 
-            let sharedUrl = '';
-            if (shareResponse.ok) {
-                const shareData = await shareResponse.json();
-                sharedUrl = shareData.url.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('dl=0', 'dl=1');
-            } else {
-                 const listLinks = await fetch('https://api.dropboxapi.com/2/sharing/list_shared_links', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ path: file.path_lower }),
-                });
-                if(listLinks.ok) {
-                    const existing = await listLinks.json();
-                     if (existing.links?.length > 0) {
-                         sharedUrl = existing.links[0].url.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('dl=0', 'dl=1');
-                     }
+    const handleAddSelectedFromDropbox = async (targetFolder: 'principales' | 'reparadoras') => {
+        const filesToAdd = dropboxSearchResults.filter(f => selectedDropboxFiles.has(f.id));
+        if (filesToAdd.length === 0) { alert('Selecciona al menos una lista.'); return; }
+
+        setIsSearchingDropbox(true);
+        try {
+            const accessToken = await getDropboxAccessToken();
+
+            for (const file of filesToAdd) {
+                let filePath = file.path_lower;
+
+                // Si está en la raíz, moverla a la carpeta destino
+                if (file.folder === 'root') {
+                    const destFolder = targetFolder === 'principales' ? '/Listas Principales' : '/Listas Reparadoras';
+                    const moveRes = await fetch('https://api.dropboxapi.com/2/files/move_v2', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ from_path: file.path_lower, to_path: `${destFolder}/${file.name}`, autorename: true }),
+                    });
+                    if (moveRes.ok) {
+                        const moveData = await moveRes.json();
+                        filePath = moveData.metadata.path_lower;
+                    }
                 }
-            }
-            
-            if (sharedUrl) {
-                if (activeSubTab === 'dropbox-lists' || activeSubTab === 'load') {
-                    // Añadir a Mis Listas Dropbox
-                    const newList = {
-                        id: Date.now().toString(),
-                        name: file.name,
-                        url: sharedUrl,
-                        addedAt: new Date().toISOString()
-                    };
+
+                const sharedUrl = await getOrCreateSharedUrl(accessToken, filePath);
+                if (!sharedUrl) continue;
+
+                if (targetFolder === 'principales') {
+                    const newList = { id: `${Date.now()}-${Math.random()}`, name: file.name, url: sharedUrl, addedAt: new Date().toISOString() };
                     const updated = [...savedDropboxLists, newList];
                     setSavedDropboxLists(updated);
                     localStorage.setItem('dropboxLists', JSON.stringify(updated));
-                    alert('Añadida a tus listas principales');
-                } else if (activeSubTab === 'repair-lists' || activeSubTab === 'add-repair') {
-                     // Añadir a Mis Listas Reparadoras
-                     const newList = {
-                        id: Date.now().toString(),
-                        name: file.name,
-                        url: sharedUrl,
-                        addedAt: new Date().toISOString(), // Optional for parsing but good context
-                        content: '' // No content loaded yet, will load on use
-                    };
-                    // @ts-ignore - addedAt is extra but harmless
+                } else {
+                    const newList = { id: `${Date.now()}-${Math.random()}`, name: file.name, url: sharedUrl, content: '' };
+                    // @ts-ignore
                     const updated = [...savedMedicinaLists, newList];
                     setSavedMedicinaLists(updated);
                     localStorage.setItem('medicinaLists', JSON.stringify(updated));
-                    alert('Añadida a tus listas reparadoras');
                 }
-                
-                setShowDropboxSearchModal(false);
-            } else {
-                alert('No se pudo generar enlace para este archivo');
             }
 
-         } catch (e) {
-             alert((e as Error).message);
-         } finally {
-             setIsSearchingDropbox(false);
-         }
+            setShowDropboxSearchModal(false);
+            setSelectedDropboxFiles(new Set());
+        } catch (e) {
+            alert((e as Error).message);
+        } finally {
+            setIsSearchingDropbox(false);
+        }
     };
 
     // --- Parsing Helpers ---
@@ -1169,45 +1180,119 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
             {/* Modal para resultados de búsqueda (Global) */}
             {showDropboxSearchModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-                    <div className="bg-gray-800 rounded-xl max-w-lg w-full max-h-[80vh] flex flex-col shadow-2xl border border-gray-700">
+                    <div className="bg-gray-800 rounded-xl max-w-lg w-full max-h-[85vh] flex flex-col shadow-2xl border border-gray-700">
+                        {/* Cabecera */}
                         <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-900/50 rounded-t-xl">
                             <h3 className="font-bold text-white flex items-center gap-2">
-                                <Cloud size={18} className="text-blue-400" /> Archivos .m3u encontrados
+                                <Cloud size={18} className="text-blue-400" />
+                                Listas en Dropbox
+                                {dropboxSearchResults.length > 0 && (
+                                    <span className="text-xs font-normal text-gray-400 ml-1">({dropboxSearchResults.length} archivos)</span>
+                                )}
                             </h3>
                             <button onClick={() => setShowDropboxSearchModal(false)} className="text-gray-400 hover:text-white">
                                 <X size={20} />
                             </button>
                         </div>
-                        
-                        <div className="p-4 overflow-y-auto flex-1 custom-scrollbar">
+
+                        {/* Leyenda de colores */}
+                        {dropboxSearchResults.length > 0 && (
+                            <div className="px-4 pt-3 pb-1 flex flex-wrap gap-3 text-[11px] text-gray-400">
+                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-white inline-block"></span>Raíz</span>
+                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-400 inline-block"></span>Listas Principales</span>
+                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full inline-block" style={{backgroundColor:'#C084FC'}}></span>Listas Reparadoras</span>
+                            </div>
+                        )}
+
+                        {/* Lista de archivos */}
+                        <div className="px-4 pt-2 pb-2 overflow-y-auto flex-1 custom-scrollbar">
                             {isSearchingDropbox && dropboxSearchResults.length === 0 ? (
                                 <div className="text-center py-8">
                                     <RefreshCw className="animate-spin mb-3 mx-auto text-blue-500" size={24} />
                                     <p className="text-gray-400">Buscando en tu Dropbox...</p>
                                 </div>
                             ) : dropboxSearchResults.length > 0 ? (
-                                <div className="space-y-2">
-                                    {dropboxSearchResults.map(file => (
-                                        <div key={file.id} className="flex justify-between items-center p-3 bg-gray-700/50 rounded-lg hover:bg-gray-700 border border-gray-600/50">
-                                            <div className="flex items-center gap-3 overflow-hidden">
-                                                <FileText size={20} className="text-blue-400 flex-shrink-0" />
-                                                <span className="text-sm text-gray-200 truncate">{file.name}</span>
-                                            </div>
-                                            <button 
-                                                onClick={() => handleAddFromDropboxSearch(file)}
-                                                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-bold transition-colors ml-3 whitespace-nowrap"
+                                <div className="space-y-1.5">
+                                    {/* Selectall */}
+                                    <label className="flex items-center gap-2 px-2 py-1 cursor-pointer text-xs text-gray-400 hover:text-white select-none">
+                                        <input
+                                            type="checkbox"
+                                            className="accent-blue-500 w-4 h-4"
+                                            checked={selectedDropboxFiles.size === dropboxSearchResults.length && dropboxSearchResults.length > 0}
+                                            onChange={e => {
+                                                if (e.target.checked) setSelectedDropboxFiles(new Set(dropboxSearchResults.map(f => f.id)));
+                                                else setSelectedDropboxFiles(new Set());
+                                            }}
+                                        />
+                                        Seleccionar todo ({selectedDropboxFiles.size}/{dropboxSearchResults.length})
+                                    </label>
+
+                                    {dropboxSearchResults.map(file => {
+                                        const nameColor =
+                                            file.folder === 'principales' ? 'text-green-400' :
+                                            file.folder === 'reparadoras' ? 'text-[#C084FC]' :
+                                            'text-white';
+                                        const folderLabel =
+                                            file.folder === 'principales' ? 'Listas Principales' :
+                                            file.folder === 'reparadoras' ? 'Listas Reparadoras' :
+                                            'Raíz';
+                                        const isChecked = selectedDropboxFiles.has(file.id);
+                                        return (
+                                            <label
+                                                key={file.id}
+                                                className={`flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer select-none transition-colors ${isChecked ? 'bg-gray-700 border-blue-500/50' : 'bg-gray-700/40 border-gray-600/40 hover:bg-gray-700/70'}`}
                                             >
-                                                Añadir
-                                            </button>
-                                        </div>
-                                    ))}
+                                                <input
+                                                    type="checkbox"
+                                                    className="accent-blue-500 w-4 h-4 flex-shrink-0"
+                                                    checked={isChecked}
+                                                    onChange={() => {
+                                                        setSelectedDropboxFiles(prev => {
+                                                            const next = new Set(prev);
+                                                            if (next.has(file.id)) next.delete(file.id);
+                                                            else next.add(file.id);
+                                                            return next;
+                                                        });
+                                                    }}
+                                                />
+                                                <FileText size={16} className="text-blue-400 flex-shrink-0" />
+                                                <div className="flex-1 overflow-hidden">
+                                                    <p className={`text-sm font-medium truncate ${nameColor}`}>{file.name}</p>
+                                                    <p className="text-[11px] text-gray-500 truncate">{folderLabel}</p>
+                                                </div>
+                                            </label>
+                                        );
+                                    })}
                                 </div>
                             ) : (
                                 <div className="text-center py-8 text-gray-400">
-                                    No se encontraron archivos .m3u
+                                    No se encontraron archivos .m3u en Dropbox
                                 </div>
                             )}
                         </div>
+
+                        {/* Botones de acción */}
+                        {dropboxSearchResults.length > 0 && (
+                            <div className="p-4 border-t border-gray-700 flex flex-col sm:flex-row gap-2">
+                                <button
+                                    onClick={() => handleAddSelectedFromDropbox('principales')}
+                                    disabled={isSearchingDropbox || selectedDropboxFiles.size === 0}
+                                    className="flex-1 bg-green-700 hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold py-2 px-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                >
+                                    {isSearchingDropbox ? <RefreshCw size={14} className="animate-spin" /> : <Cloud size={14} />}
+                                    Añadir a Listas Principales
+                                </button>
+                                <button
+                                    onClick={() => handleAddSelectedFromDropbox('reparadoras')}
+                                    disabled={isSearchingDropbox || selectedDropboxFiles.size === 0}
+                                    className="flex-1 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold py-2 px-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                    style={{backgroundColor: selectedDropboxFiles.size === 0 || isSearchingDropbox ? '#7c5ba8' : '#9333ea'}}
+                                >
+                                    {isSearchingDropbox ? <RefreshCw size={14} className="animate-spin" /> : <Cloud size={14} />}
+                                    Añadir a Listas Reparadoras
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
