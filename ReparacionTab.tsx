@@ -458,9 +458,13 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     key={ch.id}
                                     channel={ch}
                                     onBodyClick={() => {
-                                        setDestinationChannelId(ch.id)
-                                        setReparacionListSearch(normalizeChannelName(ch.name));
-                                        // Auto-show repair list search logic if intended
+                                        if (destinationChannelId === ch.id) {
+                                            setDestinationChannelId('');
+                                            setReparacionListSearch('');
+                                        } else {
+                                            setDestinationChannelId(ch.id);
+                                            setReparacionListSearch(normalizeChannelName(ch.name));
+                                        }
                                     }}
                                     isSelected={destinationChannelId === ch.id}
                                     showCheckbox={false}
@@ -670,6 +674,19 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                         )}
                     </div>
                 </div>
+
+                {/* Botón Añadir — visible al seleccionar canales */}
+                {selectedReparacionChannels.size > 0 && (
+                    <div className="pt-2 border-t border-gray-700 mt-1">
+                        <button
+                            onClick={handleAddSelectedFromReparacion}
+                            className="w-full py-2 bg-green-600 hover:bg-green-500 text-white text-sm font-bold rounded-lg flex items-center justify-center gap-2 transition-colors shadow"
+                        >
+                            <Check size={15} />
+                            Añadir {selectedReparacionChannels.size} canal{selectedReparacionChannels.size !== 1 ? 'es' : ''} seleccionado{selectedReparacionChannels.size !== 1 ? 's' : ''}
+                        </button>
+                    </div>
+                )}
 
             </div>
         </div>
