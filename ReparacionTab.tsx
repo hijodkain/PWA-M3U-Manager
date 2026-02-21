@@ -602,7 +602,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 </div>
 
                 {/* Filtros e Inputs de la lista reparadora */}
-                {!!reparacionListName && (
+                {(filteredReparacionChannels.length > 0 || !!reparacionListSearch || !!reparacionListName) && (
                     <div className="space-y-2 mb-2">
                         {/* Buscador Reparación - Visible siempre en Pro, o Sencillo si hay necesidad */}
                          <SmartSearchInput
