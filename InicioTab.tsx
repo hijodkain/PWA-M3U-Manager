@@ -57,6 +57,7 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
     const [dropboxSearchResults, setDropboxSearchResults] = useState<Array<{name: string, path_lower: string, id: string, folder: 'root' | 'principales' | 'reparadoras'}>>([]);
     const [showDropboxSearchModal, setShowDropboxSearchModal] = useState(false);
     const [selectedDropboxFiles, setSelectedDropboxFiles] = useState<Set<string>>(new Set());
+    const [dropboxSearchScope, setDropboxSearchScope] = useState<'all' | 'principales' | 'reparadoras'>('all');
 
     // --- Effects ---
     useEffect(() => {
@@ -292,13 +293,14 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
         }
     };
 
-    const handleSearchDropbox = async () => {
+    const handleSearchDropbox = async (scope: 'all' | 'principales' | 'reparadoras' = 'all') => {
         if (!settingsHook.dropboxRefreshToken) {
             alert("Debes conectar tu cuenta de Dropbox en Ajustes primero.");
             if (onNavigateToSettings) onNavigateToSettings();
             return;
         }
 
+        setDropboxSearchScope(scope);
         setIsSearchingDropbox(true);
         setDropboxSearchResults([]);
         setSelectedDropboxFiles(new Set());
@@ -322,12 +324,6 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                 } catch { return []; }
             };
 
-            const [rootEntries, principalesEntries, reparadorasEntries] = await Promise.all([
-                listFolder(''),
-                listFolder('/Listas Principales'),
-                listFolder('/Listas Reparadoras'),
-            ]);
-
             type FolderKey = 'root' | 'principales' | 'reparadoras';
             const results: Array<{name: string, path_lower: string, id: string, folder: FolderKey}> = [];
 
@@ -337,9 +333,22 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                 });
             };
 
-            addEntries(rootEntries, 'root');
-            addEntries(principalesEntries, 'principales');
-            addEntries(reparadorasEntries, 'reparadoras');
+            if (scope === 'all') {
+                const [rootEntries, principalesEntries, reparadorasEntries] = await Promise.all([
+                    listFolder(''),
+                    listFolder('/Listas Principales'),
+                    listFolder('/Listas Reparadoras'),
+                ]);
+                addEntries(rootEntries, 'root');
+                addEntries(principalesEntries, 'principales');
+                addEntries(reparadorasEntries, 'reparadoras');
+            } else if (scope === 'principales') {
+                const entries = await listFolder('/Listas Principales');
+                addEntries(entries, 'principales');
+            } else {
+                const entries = await listFolder('/Listas Reparadoras');
+                addEntries(entries, 'reparadoras');
+            }
 
             setDropboxSearchResults(results);
         } catch (e) {
@@ -1024,11 +1033,11 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                                 Mis Listas de Dropbox
                             </h2>
                             <div className="flex gap-2">
-                                <button 
-                                    onClick={handleSearchDropbox}
+                                <button
+                                    onClick={() => handleSearchDropbox('principales')}
                                     disabled={isSearchingDropbox}
                                     className={`px-2 py-1.5 sm:px-3 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-1 sm:gap-2 shadow-sm transition-all ${dropboxRefreshToken ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-75'}`}
-                                    title={dropboxRefreshToken ? "Buscar archivos .m3u en tu Dropbox" : "Conecta Dropbox para buscar"}
+                                    title={dropboxRefreshToken ? "Buscar archivos .m3u en /Listas Principales" : "Conecta Dropbox para buscar"}
                                 >
                                     <Search className="w-3 h-3 sm:w-4 sm:h-4" /> <span className="hidden xs:inline">Buscar en Dropbox</span><span className="xs:hidden">Buscar</span>
                                 </button>
@@ -1106,11 +1115,11 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                                 Mis Listas Reparadoras
                             </h2>
                             <div className="flex gap-2">
-                                <button 
-                                    onClick={handleSearchDropbox}
+                                <button
+                                    onClick={() => handleSearchDropbox('reparadoras')}
                                     disabled={isSearchingDropbox}
                                     className={`px-2 py-1.5 sm:px-3 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-1 sm:gap-2 shadow-sm transition-all ${dropboxRefreshToken ? 'bg-purple-600 hover:bg-purple-700 text-white' : 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-75'}`}
-                                    title={dropboxRefreshToken ? "Buscar archivos .m3u en tu Dropbox" : "Conecta Dropbox para buscar"}
+                                    title={dropboxRefreshToken ? "Buscar archivos .m3u en /Listas Reparadoras" : "Conecta Dropbox para buscar"}
                                 >
                                     <Search className="w-3 h-3 sm:w-4 sm:h-4" /> <span className="hidden xs:inline">Buscar en Dropbox</span><span className="xs:hidden">Buscar</span>
                                 </button>
@@ -1274,23 +1283,27 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                         {/* Botones de acción */}
                         {dropboxSearchResults.length > 0 && (
                             <div className="p-4 border-t border-gray-700 flex flex-col sm:flex-row gap-2">
-                                <button
-                                    onClick={() => handleAddSelectedFromDropbox('principales')}
-                                    disabled={isSearchingDropbox || selectedDropboxFiles.size === 0}
-                                    className="flex-1 bg-green-700 hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold py-2 px-3 rounded-lg transition-colors flex items-center justify-center gap-2"
-                                >
-                                    {isSearchingDropbox ? <RefreshCw size={14} className="animate-spin" /> : <Cloud size={14} />}
-                                    Añadir a Listas Principales
-                                </button>
-                                <button
-                                    onClick={() => handleAddSelectedFromDropbox('reparadoras')}
-                                    disabled={isSearchingDropbox || selectedDropboxFiles.size === 0}
-                                    className="flex-1 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold py-2 px-3 rounded-lg transition-colors flex items-center justify-center gap-2"
-                                    style={{backgroundColor: selectedDropboxFiles.size === 0 || isSearchingDropbox ? '#7c5ba8' : '#9333ea'}}
-                                >
-                                    {isSearchingDropbox ? <RefreshCw size={14} className="animate-spin" /> : <Cloud size={14} />}
-                                    Añadir a Listas Reparadoras
-                                </button>
+                                {dropboxSearchScope !== 'reparadoras' && (
+                                    <button
+                                        onClick={() => handleAddSelectedFromDropbox('principales')}
+                                        disabled={isSearchingDropbox || selectedDropboxFiles.size === 0}
+                                        className="flex-1 bg-green-700 hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold py-2 px-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        {isSearchingDropbox ? <RefreshCw size={14} className="animate-spin" /> : <Cloud size={14} />}
+                                        Añadir a Listas Principales
+                                    </button>
+                                )}
+                                {dropboxSearchScope !== 'principales' && (
+                                    <button
+                                        onClick={() => handleAddSelectedFromDropbox('reparadoras')}
+                                        disabled={isSearchingDropbox || selectedDropboxFiles.size === 0}
+                                        className="flex-1 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold py-2 px-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                        style={{backgroundColor: selectedDropboxFiles.size === 0 || isSearchingDropbox ? '#7c5ba8' : '#9333ea'}}
+                                    >
+                                        {isSearchingDropbox ? <RefreshCw size={14} className="animate-spin" /> : <Cloud size={14} />}
+                                        Añadir a Listas Reparadoras
+                                    </button>
+                                )}
                             </div>
                         )}
                     </div>
