@@ -738,8 +738,8 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                                 Cargar Lista Principal
                             </h2>
                              <div className="flex gap-2">
-                                <button 
-                                    onClick={handleSearchDropbox}
+                                <button
+                                    onClick={() => handleSearchDropbox('all')}
                                     disabled={isSearchingDropbox}
                                     className={`px-2 py-1.5 sm:px-3 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-1 sm:gap-2 shadow-sm transition-all ${dropboxRefreshToken ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-75'}`}
                                     title={dropboxRefreshToken ? "Buscar archivos .m3u en tu Dropbox" : "Conecta Dropbox para buscar"}
@@ -968,8 +968,8 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                                         Añadir Lista Reparadora
                                     </h2>
                                     <div className="flex gap-2">
-                                        <button 
-                                            onClick={handleSearchDropbox}
+                                        <button
+                                            onClick={() => handleSearchDropbox('all')}
                                             disabled={isSearchingDropbox}
                                             className={`px-2 py-1.5 sm:px-3 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-1 sm:gap-2 shadow-sm transition-all ${dropboxRefreshToken ? 'bg-purple-600 hover:bg-purple-700 text-white' : 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-75'}`}
                                             title={dropboxRefreshToken ? "Buscar archivos .m3u en tu Dropbox" : "Conecta Dropbox para buscar"}
