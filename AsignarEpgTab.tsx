@@ -382,17 +382,61 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                     
                     {/* EPG Tools Header */}
                      <div className="p-2 bg-gray-800 border-b border-gray-700 flex flex-col gap-2 flex-shrink-0 shadow-sm z-10">
-                        {/* Smart Search EPG */}
-                        <SmartSearchInput
-                            searchTerm={epgSearchTerm}
-                            onSearchChange={setEpgSearchTerm}
-                            placeholder={destinationChannelId 
-                                ? `Buscar EPG para: ${filteredMainChannelsForEpg.find(c => c.id === destinationChannelId)?.name}...` 
-                                : "Buscar en guía EPG..."}
-                            isSmartSearchEnabled={isSmartSearchEnabled}
-                            onToggleSmartSearch={toggleSmartSearch}
-                            className="w-full"
-                        />
+                        {/* Smart Search EPG + selector de fuente */}
+                        <div className="flex gap-2 items-start">
+                            <div className="flex-1 min-w-0">
+                                <SmartSearchInput
+                                    searchTerm={epgSearchTerm}
+                                    onSearchChange={setEpgSearchTerm}
+                                    placeholder={destinationChannelId
+                                        ? `Buscar EPG para: ${filteredMainChannelsForEpg.find(c => c.id === destinationChannelId)?.name}...`
+                                        : "Buscar en guía EPG..."}
+                                    isSmartSearchEnabled={isSmartSearchEnabled}
+                                    onToggleSmartSearch={toggleSmartSearch}
+                                    className="w-full"
+                                />
+                            </div>
+
+                            {/* Fuente EPG */}
+                            {savedEpgUrls.length > 0 ? (
+                                <div className="flex flex-col gap-1 flex-shrink-0">
+                                    <select
+                                        defaultValue=""
+                                        onChange={e => {
+                                            const source = savedEpgUrls.find(s => s.id === e.target.value);
+                                            if (source) {
+                                                setLoadedEpgSourceName(source.name);
+                                                handleFetchEpgUrl(source.url);
+                                                e.target.value = '';
+                                            }
+                                        }}
+                                        className="bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-xs text-white focus:ring-1 focus:ring-blue-500 max-w-[140px]"
+                                        title="Seleccionar fuente EPG"
+                                    >
+                                        <option value="" disabled>
+                                            {isEpgLoading ? 'Cargando…' : (loadedEpgSourceName ? `✓ ${loadedEpgSourceName}` : 'Fuente EPG…')}
+                                        </option>
+                                        {savedEpgUrls.map(s => (
+                                            <option key={s.id} value={s.id}>{s.name}</option>
+                                        ))}
+                                    </select>
+                                    {loadedEpgSourceName && !isEpgLoading && (
+                                        <span className="text-[10px] text-green-400 truncate max-w-[140px] text-right px-1">
+                                            ✓ {loadedEpgSourceName}
+                                        </span>
+                                    )}
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={onNavigateToSettings}
+                                    className="flex-shrink-0 flex items-center gap-1 text-[11px] text-blue-400 hover:text-blue-300 border border-blue-800 hover:border-blue-600 rounded px-2 py-1.5 transition-colors whitespace-nowrap bg-blue-900/20"
+                                    title="Ir a Ajustes → Fuentes EPG"
+                                >
+                                    <SettingsIcon size={12} />
+                                    Añadir fuente EPG
+                                </button>
+                            )}
+                        </div>
                          {/* Selection Controls */}
                         {epgChannels.length > 0 && (
                             <div className="flex items-center justify-between px-1">

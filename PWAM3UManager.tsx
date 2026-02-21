@@ -171,7 +171,7 @@ export default function PWAM3UManager() {
                     onNavigateToInicio={() => setActiveTab('inicio')}
                 />;
             case 'asignar-epg':
-                return <AsignarEpgTab epgHook={epgHook} channelsHook={channelsHook} settingsHook={settingsHook} />;
+                return <AsignarEpgTab epgHook={epgHook} channelsHook={channelsHook} settingsHook={settingsHook} onNavigateToSettings={() => setActiveTab('settings')} />;
             case 'save':
                 return <SaveTab channelsHook={channelsHook} settingsHook={settingsHook} />;
             case 'settings':
