@@ -144,12 +144,22 @@ export const useAsignarEpg = (
             setSmartSearchResults(searchResults);
             return searchResults.map(result => result.item);
         } else {
-            // Búsqueda tradicional exacta
+            // Búsqueda tradicional exacta con ordenación por grado de coincidencia
             setSmartSearchResults([]);
-            return epgChannels.filter(channel => 
-                channel.name.toLowerCase().includes(epgSearchTerm.toLowerCase()) ||
-                channel.id.toLowerCase().includes(epgSearchTerm.toLowerCase())
+            const term = epgSearchTerm.toLowerCase();
+            const matched = epgChannels.filter(channel =>
+                channel.name.toLowerCase().includes(term) ||
+                channel.id.toLowerCase().includes(term)
             );
+            // Ordenar: exacto > empieza por > contiene
+            const rank = (ch: EpgChannel): number => {
+                const name = ch.name.toLowerCase();
+                const id = ch.id.toLowerCase();
+                if (name === term || id === term) return 0;
+                if (name.startsWith(term) || id.startsWith(term)) return 1;
+                return 2;
+            };
+            return matched.sort((a, b) => rank(a) - rank(b));
         }
     }, [epgChannels, epgSearchTerm, isSmartSearchEnabled, searchChannels]);
 

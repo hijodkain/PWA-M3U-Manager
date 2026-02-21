@@ -514,7 +514,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                             className="px-2 py-1"
                                         >
                                             <SearchResultItem
-                                                name={epg.name || epg.id} // Valor por defecto para evitar nombre vacío
+                                                name={epg.name || epg.id}
                                                 score={matchScore}
                                                 matchType={matchType as any}
                                                 isSelected={isSelected}
@@ -533,20 +533,18 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                                 }}
                                                 className={`h-full border border-gray-700/50 ${!destinationChannelId ? 'hover:border-blue-500/50' : ''}`}
                                             >
-                                                <div className="flex items-center gap-3">
-                                                    {/* EPG Logo Listing */}
-                                                    <div className="w-8 h-8 rounded bg-white/5 p-0.5 flex-shrink-0">
+                                                <div className="flex items-center gap-2">
+                                                    {/* EPG Logo */}
+                                                    <div className="w-8 h-8 rounded bg-black/40 flex items-center justify-center flex-shrink-0 overflow-hidden">
                                                         {epg.logo ? (
-                                                            <img src={epg.logo} className="w-full h-full object-contain rounded-sm" loading="lazy" onError={(e) => e.currentTarget.style.display = 'none'} />
+                                                            <img src={epg.logo} className="w-full h-full object-contain" loading="lazy" onError={(e) => e.currentTarget.style.display = 'none'} />
                                                         ) : (
-                                                            <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-500 font-bold bg-black/20 rounded-sm">
-                                                                EPG
-                                                            </div>
+                                                            <Tv className="w-4 h-4 text-gray-600" />
                                                         )}
                                                     </div>
-                                                    
-                                                     <div className="flex flex-col min-w-0">
-                                                        <div className="text-[10px] text-gray-400 truncate font-mono">{epg.id}</div>
+                                                    <div className="flex flex-col min-w-0">
+                                                        <div className="text-xs font-bold text-gray-200 truncate leading-tight">{epg.name || epg.id}</div>
+                                                        <div className="text-[10px] text-gray-500 truncate font-mono leading-tight">{epg.id}</div>
                                                     </div>
                                                 </div>
                                             </SearchResultItem>
