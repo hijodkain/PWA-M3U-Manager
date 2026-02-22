@@ -4,7 +4,7 @@ import { Play } from 'lucide-react';
 
 interface ReparacionChannelItemProps {
     channel: Channel;
-    onBodyClick: () => void;
+    onBodyClick?: () => void;
     onSelectClick?: (event: React.MouseEvent<HTMLInputElement>) => void;
     isSelected: boolean;
     isChecked?: boolean;

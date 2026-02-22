@@ -646,11 +646,9 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     key={ch.id}
                                     channel={ch}
                                     isSelected={isChSelected}
-                                    onBodyClick={() => toggleReparacionSelection(ch.id, virtualItem.index, false, false, false)}
-                                    // Make sure toggleReparacionSelection handles the "uncheck if clicked again" logic if user requested.
-                                    // Context: "Toggle de selección: Canal seleccionado se deselecciona al hacer clic de nuevo"
-                                    // toggleReparacionSelection likely adds/removes from Set. Perfect.
-                                    showCheckbox={!isSencillo}
+                                    isChecked={isChSelected}
+                                    showCheckbox={true}
+                                    onSelectClick={() => toggleReparacionSelection(ch.id, virtualItem.index, false, false, false)}
                                     isSencillo={isSencillo}
                                     verificationStatus={channelInfo.status}
                                     quality={channelInfo.quality}
