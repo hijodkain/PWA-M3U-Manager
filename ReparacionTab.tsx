@@ -648,7 +648,14 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     isSelected={isChSelected}
                                     isChecked={isChSelected}
                                     showCheckbox={true}
-                                    onSelectClick={() => toggleReparacionSelection(ch.id, virtualItem.index, false, false, false)}
+                                    onSelectClick={(e) => toggleReparacionSelection(ch.id, virtualItem.index, e.shiftKey, e.metaKey, e.ctrlKey)}
+                                    onBodyClick={destinationChannelId ? () => {
+                                        if (attributesToCopy.size === 0) {
+                                            alert(`Selecciona al menos un atributo para reparar en el canal "${filteredMainChannels.find(c => c.id === destinationChannelId)?.name || 'seleccionado'}"`);
+                                        } else {
+                                            handleSourceChannelClick(ch);
+                                        }
+                                    } : undefined}
                                     isSencillo={isSencillo}
                                     verificationStatus={channelInfo.status}
                                     quality={channelInfo.quality}
