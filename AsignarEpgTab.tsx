@@ -332,7 +332,16 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                         className="px-2 py-1"
                                     >
                                         <div
-                                            onClick={() => setDestinationChannelId(isTarget ? null : channel.id)}
+                                            onClick={() => {
+                                                if (isTarget) {
+                                                    setDestinationChannelId(null);
+                                                    setEpgSearchTerm('');
+                                                } else {
+                                                    setDestinationChannelId(channel.id);
+                                                    setEpgSearchTerm(channel.name);
+                                                    if (!isSmartSearchEnabled) toggleSmartSearch();
+                                                }
+                                            }}
                                             className={`
                                                 flex items-center gap-2 p-2 rounded-lg cursor-pointer border h-full select-none transition-all
                                                 ${isTarget 
