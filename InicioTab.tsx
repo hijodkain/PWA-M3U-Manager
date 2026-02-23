@@ -390,6 +390,9 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
         setIsSearchingDropbox(true);
         try {
             const accessToken = await getDropboxAccessToken();
+            
+            const newPrincipales: any[] = [];
+            const newReparadoras: any[] = [];
 
             for (const file of filesToAdd) {
                 let filePath = file.path_lower;
@@ -412,17 +415,24 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                 if (!sharedUrl) continue;
 
                 if (targetFolder === 'principales') {
-                    const newList = { id: `${Date.now()}-${Math.random()}`, name: file.name, url: sharedUrl, addedAt: new Date().toISOString() };
-                    const updated = [...savedDropboxLists, newList];
-                    setSavedDropboxLists(updated);
-                    localStorage.setItem('dropboxLists', JSON.stringify(updated));
+                    newPrincipales.push({ id: `${Date.now()}-${Math.random()}`, name: file.name, url: sharedUrl, addedAt: new Date().toISOString() });
                 } else {
-                    const newList = { id: `${Date.now()}-${Math.random()}`, name: file.name, url: sharedUrl, content: '' };
-                    // @ts-ignore
-                    const updated = [...savedMedicinaLists, newList];
-                    setSavedMedicinaLists(updated);
-                    localStorage.setItem('medicinaLists', JSON.stringify(updated));
+                    newReparadoras.push({ id: `${Date.now()}-${Math.random()}`, name: file.name, url: sharedUrl, content: '' });
                 }
+            }
+
+            if (targetFolder === 'principales' && newPrincipales.length > 0) {
+                setSavedDropboxLists(prev => {
+                    const updated = [...prev, ...newPrincipales];
+                    localStorage.setItem('dropboxLists', JSON.stringify(updated));
+                    return updated;
+                });
+            } else if (targetFolder === 'reparadoras' && newReparadoras.length > 0) {
+                setSavedMedicinaLists(prev => {
+                    const updated = [...prev, ...newReparadoras];
+                    localStorage.setItem('medicinaLists', JSON.stringify(updated));
+                    return updated;
+                });
             }
 
             setShowDropboxSearchModal(false);
