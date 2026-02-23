@@ -136,22 +136,22 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
 
     const ToolbarContent = () => (
         <>
-            <div className="flex items-center gap-2 mr-2">
+            <div className="flex items-center gap-4 mr-2">
                 <span className="text-xs text-gray-400 font-medium">Preparar el canal para:</span>
                 <button 
                     onClick={() => handleToggle('ott')}
-                    className={`flex items-center justify-center p-2 rounded-lg transition-all ${ottModeActive ? 'bg-orange-900/40 border border-orange-500/50' : 'bg-gray-700/50 border border-transparent hover:bg-gray-700'}`}
+                    className={`flex items-center justify-center transition-all duration-300 ${ottModeActive ? 'scale-125 drop-shadow-[0_0_8px_rgba(249,115,22,0.8)] opacity-100' : 'opacity-50 hover:opacity-100 hover:scale-110'}`}
                     title="Formato OTT"
                 >
-                    <img src="/ott-logo.png" alt="OTT" className="w-5 h-5 object-contain" onError={(e) => e.currentTarget.style.display = 'none'} />
+                    <img src="/ott-logo.png" alt="OTT" className="w-6 h-6 object-contain" onError={(e) => e.currentTarget.style.display = 'none'} />
                 </button>
 
                 <button 
                     onClick={() => handleToggle('tivimate')}
-                    className={`flex items-center justify-center p-2 rounded-lg transition-all ${tivimateModeActive ? 'bg-blue-900/40 border border-blue-500/50' : 'bg-gray-700/50 border border-transparent hover:bg-gray-700'}`}
+                    className={`flex items-center justify-center transition-all duration-300 ${tivimateModeActive ? 'scale-125 drop-shadow-[0_0_8px_rgba(59,130,246,0.8)] opacity-100' : 'opacity-50 hover:opacity-100 hover:scale-110'}`}
                     title="Formato TiviMate"
                 >
-                    <img src="/tivimate-logo.png" alt="TiviMate" className="w-5 h-5 object-contain" onError={(e) => e.currentTarget.style.display = 'none'} />
+                    <img src="/tivimate-logo.png" alt="TiviMate" className="w-6 h-6 object-contain" onError={(e) => e.currentTarget.style.display = 'none'} />
                 </button>
             </div>
 
@@ -320,7 +320,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                                     setEpgSearchTerm('');
                                                 } else {
                                                     setDestinationChannelId(channel.id);
-                                                    setEpgSearchTerm(channel.name);
+                                                    setEpgSearchTerm(epgNormalizeChannelName(channel.name));
                                                     if (!isSmartSearchEnabled) toggleSmartSearch();
                                                 }
                                             }}
