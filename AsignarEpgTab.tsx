@@ -136,23 +136,24 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
 
     const ToolbarContent = () => (
         <>
-            <button 
-                onClick={() => handleToggle('ott')}
-                className={`flex flex-col items-center justify-center p-2 rounded-lg transition-all ${ottModeActive ? 'bg-orange-900/40 border border-orange-500/50' : 'bg-gray-700/50 border border-transparent hover:bg-gray-700'}`}
-                title="Formato OTT"
-            >
-                <img src="/ott-logo.png" alt="OTT" className="w-5 h-5 object-contain" onError={(e) => e.currentTarget.style.display = 'none'} />
-                <span className={`text-[10px] mt-1 font-bold ${ottModeActive ? 'text-orange-400' : 'text-gray-400'}`}>OTT</span>
-            </button>
+            <div className="flex items-center gap-2 mr-2">
+                <span className="text-xs text-gray-400 font-medium">Preparar el canal para:</span>
+                <button 
+                    onClick={() => handleToggle('ott')}
+                    className={`flex items-center justify-center p-2 rounded-lg transition-all ${ottModeActive ? 'bg-orange-900/40 border border-orange-500/50' : 'bg-gray-700/50 border border-transparent hover:bg-gray-700'}`}
+                    title="Formato OTT"
+                >
+                    <img src="/ott-logo.png" alt="OTT" className="w-5 h-5 object-contain" onError={(e) => e.currentTarget.style.display = 'none'} />
+                </button>
 
-            <button 
-                onClick={() => handleToggle('tivimate')}
-                className={`flex flex-col items-center justify-center p-2 rounded-lg transition-all ${tivimateModeActive ? 'bg-blue-900/40 border border-blue-500/50' : 'bg-gray-700/50 border border-transparent hover:bg-gray-700'}`}
-                title="Formato TiviMate"
-            >
-                <img src="/tivimate-logo.png" alt="TiviMate" className="w-5 h-5 object-contain" onError={(e) => e.currentTarget.style.display = 'none'} />
-                <span className={`text-[10px] mt-1 font-bold ${tivimateModeActive ? 'text-blue-400' : 'text-gray-400'}`}>TiviM</span>
-            </button>
+                <button 
+                    onClick={() => handleToggle('tivimate')}
+                    className={`flex items-center justify-center p-2 rounded-lg transition-all ${tivimateModeActive ? 'bg-blue-900/40 border border-blue-500/50' : 'bg-gray-700/50 border border-transparent hover:bg-gray-700'}`}
+                    title="Formato TiviMate"
+                >
+                    <img src="/tivimate-logo.png" alt="TiviMate" className="w-5 h-5 object-contain" onError={(e) => e.currentTarget.style.display = 'none'} />
+                </button>
+            </div>
 
             <div className="w-px h-8 bg-gray-600 mx-1"></div>
 
@@ -245,25 +246,6 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                     </div>
                 </div>
 
-
-                 {/* No EPG Loaded Warning */}
-                 {epgChannels.length === 0 && !isEpgLoading && onNavigateToSettings && (
-                    <div className="mb-2 bg-blue-900/30 border border-blue-500/30 rounded-lg p-3">
-                         <div className="text-xs sm:text-sm text-blue-200 mb-2 flex items-center gap-2">
-                             <Zap className="h-4 w-4 text-yellow-400" />
-                             <span>Carga una fuente EPG para empezar:</span>
-                         </div>
-                         <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-                                <button
-                                    onClick={onNavigateToSettings}
-                                    className="flex-shrink-0 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-md text-xs text-gray-300 transition-colors whitespace-nowrap flex items-center gap-1"
-                                >
-                                    <span>Añadir fuentes</span>
-                                    <ArrowLeftCircle className="h-3 w-3 rotate-180" />
-                                </button>
-                         </div>
-                    </div>
-                 )}
 
                 {/* Toolbar Horizontal Scrollable */}
                 <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar mask-linear-fade">
@@ -368,7 +350,9 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                                     {channel.name}
                                                 </div>
                                                 <div className="flex items-center gap-2 text-[10px] text-gray-500 mt-0.5">
-                                                    <span className="truncate max-w-[80px]">{channel.groupTitle || 'No Group'}</span>
+                                                    <span className="truncate max-w-[120px]" title={`ID: ${channel.tvgId || 'N/A'} | Name: ${channel.tvgName || 'N/A'}`}>
+                                                        {channel.tvgId ? `ID: ${channel.tvgId}` : 'Sin ID'} | {channel.tvgName ? `Name: ${channel.tvgName}` : 'Sin Name'}
+                                                    </span>
                                                     {hasEpg && <span className="text-green-400">EPG OK</span>}
                                                 </div>
                                             </div>

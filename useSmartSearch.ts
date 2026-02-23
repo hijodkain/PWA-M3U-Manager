@@ -117,7 +117,7 @@ export const useSmartSearch = ({ channelPrefixes, channelSuffixes }: UseSmartSea
     /**
      * Busca canales con coincidencias inteligentes
      */
-    const searchChannels = useCallback(<T extends { name: string }>(
+    const searchChannels = useCallback(<T extends { name: string, id?: string }>(
         channels: T[],
         searchTerm: string,
         minSimilarity: number = 0.6
@@ -130,12 +130,13 @@ export const useSmartSearch = ({ channelPrefixes, channelSuffixes }: UseSmartSea
         for (const channel of channels) {
             const originalName = channel.name.toLowerCase();
             const normalizedName = normalizeChannelName(channel.name).toLowerCase();
+            const originalId = channel.id ? channel.id.toLowerCase() : '';
             
             let score = 0;
             let matchType: 'exact' | 'partial' | 'fuzzy' = 'fuzzy';
             
             // 1. Coincidencia exacta (original)
-            if (originalName === searchTerm.toLowerCase()) {
+            if (originalName === searchTerm.toLowerCase() || originalId === searchTerm.toLowerCase()) {
                 score = 1.0;
                 matchType = 'exact';
             }
@@ -145,7 +146,7 @@ export const useSmartSearch = ({ channelPrefixes, channelSuffixes }: UseSmartSea
                 matchType = 'exact';
             }
             // 3. Contiene la búsqueda (original)
-            else if (originalName.includes(searchTerm.toLowerCase())) {
+            else if (originalName.includes(searchTerm.toLowerCase()) || originalId.includes(searchTerm.toLowerCase())) {
                 score = 0.9;
                 matchType = 'partial';
             }
@@ -155,7 +156,7 @@ export const useSmartSearch = ({ channelPrefixes, channelSuffixes }: UseSmartSea
                 matchType = 'partial';
             }
             // 5. Búsqueda contenida en el nombre (original)
-            else if (searchTerm.toLowerCase().length > 3 && originalName.includes(searchTerm.toLowerCase())) {
+            else if (searchTerm.toLowerCase().length > 3 && (originalName.includes(searchTerm.toLowerCase()) || originalId.includes(searchTerm.toLowerCase()))) {
                 score = 0.8;
                 matchType = 'partial';
             }
@@ -168,15 +169,17 @@ export const useSmartSearch = ({ channelPrefixes, channelSuffixes }: UseSmartSea
             else {
                 const searchWords = normalizedSearchTerm.split(/\s+/).filter(w => w.length > 2);
                 const nameWords = normalizedName.split(/\s+/).filter(w => w.length > 2);
+                const idWords = originalId.split(/[\s\-\_]+/).filter(w => w.length > 2);
+                const allWords = [...nameWords, ...idWords];
                 
-                if (searchWords.length > 0 && nameWords.length > 0) {
+                if (searchWords.length > 0 && allWords.length > 0) {
                     let wordMatches = 0;
                     let totalSimilarity = 0;
                     
                     for (const searchWord of searchWords) {
                         let bestWordSimilarity = 0;
-                        for (const nameWord of nameWords) {
-                            const similarity = calculateSimilarity(searchWord, nameWord);
+                        for (const word of allWords) {
+                            const similarity = calculateSimilarity(searchWord, word);
                             bestWordSimilarity = Math.max(bestWordSimilarity, similarity);
                         }
                         if (bestWordSimilarity >= minSimilarity) {
