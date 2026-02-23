@@ -11,7 +11,7 @@ interface SaveTabProps {
 type SaveSubTab = 'update' | 'new' | 'download';
 
 const SaveTab: React.FC<SaveTabProps> = ({ channelsHook, settingsHook }) => {
-    const { channels, fileName, setFileName, originalFileName, handleDownload, generateM3UContent } = channelsHook;
+    const { channels, fileName, setFileName, originalFileName, handleDownload, generateM3UContent, url } = channelsHook;
     const { dropboxAppKey, dropboxRefreshToken } = settingsHook;
 
     const [activeSubTab, setActiveSubTab] = useState<SaveSubTab>('update');
@@ -41,6 +41,62 @@ const SaveTab: React.FC<SaveTabProps> = ({ channelsHook, settingsHook }) => {
 
     const convertDropboxUrl = (url: string): string => {
         return url.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('dl=0', 'dl=1');
+    };
+
+    const getDropboxFilePath = async (accessToken: string, filename: string, sharedUrl: string): Promise<string> => {
+        try {
+            // 1. Intentar obtener el path desde el enlace compartido si es de Dropbox
+            if (sharedUrl && sharedUrl.includes('dropbox')) {
+                const normalizedUrl = sharedUrl.replace('dl.dropboxusercontent.com', 'www.dropbox.com').replace('dl=1', 'dl=0');
+                
+                const res = await fetch('https://api.dropboxapi.com/2/sharing/get_shared_link_metadata', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ url: normalizedUrl }),
+                });
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.path_lower) {
+                        return data.path_lower;
+                    }
+                }
+            }
+            
+            // 2. Si no hay URL o falló, buscar el archivo por nombre en Dropbox
+            const searchRes = await fetch('https://api.dropboxapi.com/2/files/search_v2', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    query: filename,
+                    options: {
+                        max_results: 1,
+                        filename_only: true
+                    }
+                }),
+            });
+            
+            if (searchRes.ok) {
+                const searchData = await searchRes.json();
+                if (searchData.matches && searchData.matches.length > 0) {
+                    const match = searchData.matches[0].metadata.metadata;
+                    if (match && match.path_lower) {
+                        return match.path_lower;
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("Error getting file path:", e);
+        }
+        
+        // Fallback al root
+        return `/${filename}`;
     };
 
     const handleUploadToDropbox = async (isNewFile: boolean = false) => {
@@ -81,25 +137,15 @@ const SaveTab: React.FC<SaveTabProps> = ({ channelsHook, settingsHook }) => {
             
             // Definir la ruta basada en el tipo de lista (Carpeta organizada)
             const folder = 'Listas Principales';
-            // Si es actualización (isNewFile=false) y no tenemos path guardado, asumimos raíz o intentamos mantener lógica previa.
-            // Pero para simplificar y organizar, vamos a intentar empujar a la carpeta organizada si es "Nueva".
-            // Si es Update, usamos el originalFileName tal cual (que puede no tener path y estar en root).
-            // NOTA: Para mover archivos legacy a carpetas, se requeriría una migración. 
-            // Aquí solo aplicamos carpeta a NUEVOS archivos o si forzamos el path.
             
             let uploadPath = `/${filenameToUse}`;
             if (isNewFile) {
                 // Las nuevas listas van siempre a la carpeta organizada
                 uploadPath = `/${folder}/${filenameToUse}`;
             } else {
-                // Si es update, si originalFileName ya tiene path (slash), lo usará. 
-                // Si es legacy (sin slash), estará en root.
-                // Podríamos forzar moverlo, pero es arriesgado en update. Lo dejamos como está para updates.
-                if (!filenameToUse.startsWith('/')) {
-                     uploadPath = `/${filenameToUse}`;
-                } else {
-                    uploadPath = filenameToUse;
-                }
+                // Si es update, buscar la ruta real del archivo en Dropbox
+                setUploadStatus('Buscando ubicación del archivo...');
+                uploadPath = await getDropboxFilePath(accessToken, filenameToUse, url);
             }
 
             const response = await fetch('https://content.dropboxapi.com/2/files/upload', {
