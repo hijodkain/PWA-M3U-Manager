@@ -1,5 +1,18 @@
 # 📝 Notas de Entrega - Actualización EPG y Estabilidad
 
+## 📅 Fecha: 23/02/2026
+
+## ✅ Cambios Realizados (Rama: feature/mejoras-epg-tab -> main)
+
+### 1. 📺 Mejoras en Asignar EPG (`AsignarEpgTab.tsx`)
+- **Limpieza de UI**: Se eliminó el banner azul de "Carga una fuente EPG para empezar" y el botón de "Añadir fuentes".
+- **Botones OTT y Tivimate**: Se rediseñaron para ser solo iconos (sin texto, bordes ni padding). Ahora tienen un efecto de escala y resplandor (naranja/azul) al estar activos o al pasar el ratón por encima. Se añadió el texto "Preparar el canal para:" a su izquierda.
+- **Información de la lista principal**: En la lista de canales de la izquierda, ahora se muestra el `tvg-id` y `tvg-name` debajo del nombre del canal, en lugar del grupo al que pertenece.
+
+### 2. 🔍 Buscador Inteligente (`useSmartSearch.ts`)
+- Se modificó para que la búsqueda también tenga en cuenta la propiedad `id` de los canales (útil para buscar por ID en la lista EPG).
+- Al hacer clic en un canal de la lista principal, el nombre que se pasa al buscador de la derecha ahora se normaliza automáticamente (usando `epgNormalizeChannelName`), aplicando los filtros de prefijos/sufijos configurados en la pestaña Ajustes.
+
 ## 📅 Fecha: 24/01/2026
 
 ## ✅ Cambios Realizados
