@@ -509,11 +509,13 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
             // Pattern: host:port/user/pass or host:port/user/pass/m3u_plus
             const parts = u.pathname.split('/').filter(Boolean);
             const isXtreamV2 =
-                parts.length >= 2 &&
+                (parts.length === 2 || parts.length === 3) &&
                 !fetchUrl.includes('get.php') &&
                 !fetchUrl.endsWith('.m3u') &&
                 !fetchUrl.endsWith('.m3u8') &&
                 !fetchUrl.endsWith('.txt') &&
+                !u.hostname.includes('github') &&
+                !u.hostname.includes('pastebin') &&
                 (u.searchParams.size === 0 || (u.searchParams.has('username') && u.searchParams.has('password')));
 
             if (isXtreamV2 && parts.length >= 2) {
@@ -532,8 +534,9 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                 suggestedName = `Lista-${user}`;
             } else {
                 const pathParts = u.pathname.split('/');
-                const last = pathParts[pathParts.length - 1];
+                let last = pathParts[pathParts.length - 1];
                 if (last && last !== 'get.php') {
+                    try { last = decodeURIComponent(last); } catch(e) {}
                     suggestedName = last.replace(/\.(m3u8?|txt)$/i, '') || u.hostname;
                 } else {
                     suggestedName = u.hostname;
