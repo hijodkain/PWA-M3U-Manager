@@ -617,7 +617,7 @@ export const useReparacion = (
             });
         }
         return channels;
-    }, [mainChannels, mainListFilter, mainListSearch, isSmartSearchEnabled, searchChannels, showOnlyUnverified, verificationInfo]);
+    }, [mainChannels, mainListFilter, mainDomainFilter, mainListSearch, isSmartSearchEnabled, searchChannels, showOnlyUnverified, verificationInfo]);
 
     const filteredReparacionChannels = useMemo(() => {
         let channels = reparacionChannels;

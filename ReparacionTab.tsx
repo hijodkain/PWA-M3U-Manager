@@ -402,15 +402,16 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 
                 {/* Filtros y Verificación */}
                 <div className="space-y-2 mb-2">
-                    {/* Fila: Filtro + Toggle Unverified */}
-                    <div className="flex gap-2">
+                    {/* Fila: Filtro Grupo + Toggle Unverified + Verificación Rápida */}
+                    <div className="flex gap-2 w-full">
                         <select
                             value={mainListFilter}
                             onChange={(e) => setMainListFilter(e.target.value)}
-                            className="bg-gray-700 border border-gray-600 rounded-md px-3 py-1.5 text-white text-sm focus:ring-blue-500 focus:border-blue-500 flex-grow"
+                            className={`bg-gray-700 border border-gray-600 rounded-md px-3 py-1.5 text-white text-sm focus:ring-blue-500 focus:border-blue-500 truncate ${mainListFilter !== 'Todos los canales' ? 'w-1/3' : 'w-2/3'}`}
                         >
                             <option value="Todos los canales">Todos los canales</option>
                             {mainListUniqueGroups.map((g) => {
+                                if (g === 'Todos los canales') return null;
                                 const failedCount = failedChannelsByGroup[g] || 0;
                                 return (
                                     <option key={g} value={g} className={failedCount > 0 ? 'text-yellow-400' : ''}>
@@ -419,30 +420,29 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                 );
                             })}
                         </select>
+                        {mainListFilter !== 'Todos los canales' && (
+                            <button
+                                onClick={handleQuickVerify}
+                                className="w-1/3 text-xs py-1.5 px-1 rounded-md flex items-center justify-center gap-1 transition-colors bg-blue-600 hover:bg-blue-700 shadow-sm"
+                                title="Verificación rápida de grupo"
+                            >
+                                <Check size={14} /> <span className="hidden xl:inline">Verif. Rápida</span><span className="xl:hidden">Verif.</span>
+                            </button>
+                        )}
                         <button
                             onClick={toggleShowOnlyUnverified}
-                            className={`flex items-center gap-1 px-2 py-1.5 rounded border ${showOnlyUnverified ? 'bg-yellow-900/40 border-yellow-500/50 text-yellow-400' : 'bg-gray-700 border-gray-600 text-gray-400'}`}
+                            className={`flex items-center justify-center gap-1 px-2 py-1.5 rounded border ${mainListFilter !== 'Todos los canales' ? 'w-1/3' : 'w-1/3'} ${showOnlyUnverified ? 'bg-yellow-900/40 border-yellow-500/50 text-yellow-400' : 'bg-gray-700 border-gray-600 text-gray-400'}`}
                             title="Mostrar solo no verificados"
                         >
                             <Check size={16} />
                             <span className="text-xs font-bold">{showOnlyUnverified ? 'Rotos' : 'Todos'}</span>
                         </button>
                     </div>
-
-                    {/* Botón Verificación Rápida (Solo si hay grupo seleccionado) */}
-                    {mainListFilter !== 'Todos los canales' && (
-                        <button
-                            onClick={handleQuickVerify}
-                            className="w-full text-xs py-2 px-1 rounded-md flex items-center justify-center gap-1 transition-colors bg-blue-600 hover:bg-blue-700 shadow-sm"
-                        >
-                            <Check size={14} /> Verificación rápida de canales del grupo
-                        </button>
-                    )}
                     
                     {!isSencillo && (
                         <div className="flex gap-2 w-full">
                             <select
-                                className="w-2/3 bg-gray-900 text-xs border border-gray-700 rounded p-1.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 truncate"
+                                className="w-2/3 bg-gray-900 text-xs border border-gray-700 rounded p-1.5 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 truncate"
                                 value={mainDomainFilter}
                                 onChange={(e) => setMainDomainFilter(e.target.value)}
                             >
