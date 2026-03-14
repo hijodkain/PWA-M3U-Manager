@@ -50,7 +50,7 @@ export const useReparacion = (
     const [reparacionListSearch, setReparacionListSearch] = useState('');
     const [smartSearchResults, setSmartSearchResults] = useState<SearchMatch<Channel>[]>([]);
     const [isSmartSearchEnabled, setIsSmartSearchEnabled] = useState(true);
-    const [showOnlyUnverified, setShowOnlyUnverified] = useState(false);
+    const [mainStatusFilter, setMainStatusFilter] = useState('Todos');
 
     // Inicializar búsqueda inteligente
     const smartSearch = useSmartSearch({
@@ -608,16 +608,22 @@ export const useReparacion = (
                 channels = channels.filter(c => c.name.toLowerCase().includes(mainListSearch.toLowerCase()));
             }
         }
-        // Aplicar filtro de no verificados (solo oculta, no elimina)
-        if (showOnlyUnverified) {
+        // Aplicar filtro de estado
+        if (mainStatusFilter !== 'Todos') {
             channels = channels.filter(c => {
                 const info = verificationInfo[c.id];
-                // Mostrar solo si no está verificado O si está verificado pero no es 'ok'
-                return !info || info.status !== 'ok';
+                if (mainStatusFilter === 'Rotos') {
+                    return info && info.status === 'failed';
+                } else if (mainStatusFilter === 'Pendientes') {
+                    return !info || info.status === 'pending' || info.status === 'verifying';
+                } else if (mainStatusFilter === 'ResDesconocida') {
+                    return info && info.status === 'ok' && (info.quality === 'unknown' || !info.quality);
+                }
+                return true;
             });
         }
         return channels;
-    }, [mainChannels, mainListFilter, mainDomainFilter, mainListSearch, isSmartSearchEnabled, searchChannels, showOnlyUnverified, verificationInfo]);
+    }, [mainChannels, mainListFilter, mainDomainFilter, mainListSearch, isSmartSearchEnabled, searchChannels, mainStatusFilter, verificationInfo]);
 
     const filteredReparacionChannels = useMemo(() => {
         let channels = reparacionChannels;
@@ -705,9 +711,7 @@ export const useReparacion = (
     }, []);
 
     // Función para alternar filtro de no verificados
-    const toggleShowOnlyUnverified = useCallback(() => {
-        setShowOnlyUnverified(prev => !prev);
-    }, []);
+
 
     // Función para obtener el score de similitud de un canal
     const getChannelSimilarityScore = useCallback((channelId: string): number => {
@@ -764,7 +768,7 @@ export const useReparacion = (
         findSimilarChannels,
         getChannelSimilarityScore,
         smartSearch,
-        showOnlyUnverified,
-        toggleShowOnlyUnverified,
+        mainStatusFilter,
+        setMainStatusFilter,
     };
 };

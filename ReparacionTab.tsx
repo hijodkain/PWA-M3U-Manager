@@ -72,8 +72,8 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         toggleSmartSearch,
         getChannelSimilarityScore,
         smartSearch,
-        showOnlyUnverified,
-        toggleShowOnlyUnverified,
+        mainStatusFilter,
+        setMainStatusFilter,
     } = reparacionHook;
     
     const { normalizeChannelName } = smartSearch;
@@ -429,14 +429,17 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                 <Check size={14} /> <span className="hidden xl:inline">Verif. Rápida</span><span className="xl:hidden">Verif.</span>
                             </button>
                         )}
-                        <button
-                            onClick={toggleShowOnlyUnverified}
-                            className={`flex items-center justify-center gap-1 px-2 py-1.5 rounded border ${mainListFilter !== 'Todos los canales' ? 'w-1/3' : 'w-1/3'} ${showOnlyUnverified ? 'bg-yellow-900/40 border-yellow-500/50 text-yellow-400' : 'bg-gray-700 border-gray-600 text-gray-400'}`}
-                            title="Mostrar solo no verificados"
+                        <select
+                            value={mainStatusFilter}
+                            onChange={(e) => setMainStatusFilter(e.target.value)}
+                            className={`bg-gray-700 border border-gray-600 rounded-md px-2 py-1.5 text-white text-xs font-bold focus:ring-blue-500 focus:border-blue-500 truncate ${mainListFilter !== 'Todos los canales' ? 'w-1/3' : 'w-1/3'} ${mainStatusFilter !== 'Todos' ? 'text-yellow-400 border-yellow-500/50 bg-yellow-900/40' : 'text-gray-400'}`}
+                            title="Filtrar por estado de verificación"
                         >
-                            <Check size={16} />
-                            <span className="text-xs font-bold">{showOnlyUnverified ? 'Rotos' : 'Todos'}</span>
-                        </button>
+                            <option value="Todos">Todos</option>
+                            <option value="Rotos">Rotos</option>
+                            <option value="Pendientes">Pendientes</option>
+                            <option value="ResDesconocida">❓ Res. desconocida</option>
+                        </select>
                     </div>
                     
                     {!isSencillo && (
