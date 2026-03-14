@@ -234,12 +234,14 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
                         onMouseEnter={() => {
                             if (onDragSelect) onDragSelect();
                         }}
-                        onPointerEnter={() => {
+                        onPointerEnter={(e) => {
+                            if (e.pointerType === 'mouse' && e.buttons !== 1) return; // Solo arrastre con ratón pulsado
                             if (onDragSelect) onDragSelect();
                         }}
                         onPointerDown={(e) => {
                             e.currentTarget.releasePointerCapture(e.pointerId);
-                            if (onSelectClick) onSelectClick(e as any);
+                            // Usaremos solo onPointerDown o onClick, no los dos o causaría toggle duplicado
+                            // onClick hace bubbling. Si paramos propagación aquí, mejor lanzarlo aquí y evitar onClick on div.
                         }}
                         onClick={(e) => {
                             e.stopPropagation();
