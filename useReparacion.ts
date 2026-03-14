@@ -21,6 +21,7 @@ export const useReparacion = (
     settingsHook: { channelPrefixes: string[], channelSuffixes: string[] }
 ) => {
     const [reparacionChannels, setReparacionChannels] = useState<Channel[]>([]);
+    const [reparacionListName, setReparacionListName] = useState<string>('');
     const [selectedReparacionChannels, setSelectedReparacionChannels] = useState<Set<string>>(new Set());
     const [attributesToCopy, setAttributesToCopy] = useState<Set<AttributeKey>>(new Set<AttributeKey>(['url']));
     const [destinationChannelId, setDestinationChannelId] = useState<string | null>(null);
@@ -796,6 +797,8 @@ export const useReparacion = (
         failedChannelsByGroup,
         reparacionUrl,
         setReparacionUrl,
+        reparacionListName,
+        setReparacionListName,
         handleReparacionUrlLoad,
         isCurationLoading,
         curationError,

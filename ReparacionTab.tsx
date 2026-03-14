@@ -25,11 +25,13 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
     const [showMainSearch, setShowMainSearch] = useState(false);
     const [showClearConfirm, setShowClearConfirm] = useState(false);
     const [savedMedicinaLists, setSavedMedicinaLists] = useState<Array<{ id: string; name: string; url: string; content?: string }>>([]);
-    const [reparacionListName, setReparacionListName] = useState('');
     const [bulkActionType, setBulkActionType] = useState('offline_repair');
 
     const {
         selectedReparacionChannels,
+        reparacionListName,
+        setReparacionListName,
+        setReparacionChannels,
         attributesToCopy,
         destinationChannelId,
         setDestinationChannelId,
@@ -332,16 +334,9 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
     };
 
     const clearReparacion = () => {
-        // We need to clear the channels in hook.
-        // Assuming we can just reload empty or rely on a "clear" method if added.
-        // If not available, we can load a dummy empty file?
-        // Or finding a way to setReparacionChannels([]).
-        // Since I can't easily edit the hook right now, I'll set url to empty and reload? No.
-        // I will assume for now I cannot clear it cleanly without hook mods, so I will reload the page/component or 
-        // just set list name to empty and hide the UI, effectively "clearing" the view context.
         setReparacionListName('');
         setReparacionUrl('');
-        // Ideally: reparacionHook.setReparacionChannels([]);
+        setReparacionChannels([]);
     };
 
 
