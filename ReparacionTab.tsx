@@ -444,37 +444,33 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                     </div>
                     
                     {!isSencillo && (
-                        <>
-                            <div className="flex gap-2 w-full mt-2">
-                                <select
-                                    className="w-full bg-gray-900 text-xs border border-gray-700 rounded p-1.5 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 truncate"
-                                    value={mainDomainFilter}
-                                    onChange={(e) => setMainDomainFilter(e.target.value)}
-                                >
-                                    {mainListUniqueDomains.map(domain => (
-                                        <option key={domain} value={domain}>{domain}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="flex gap-2 w-full mt-2 mb-2">
-                                <select
-                                    className="w-2/3 bg-gray-900 text-xs border border-gray-700 rounded p-1.5 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 truncate"
-                                    value={bulkActionType}
-                                    onChange={(e) => setBulkActionType(e.target.value)}
-                                >
-                                    <option value="offline_repair">Offline a reparar</option>
-                                    <option value="res_desconocida_repair">Res desconocida a reparar</option>
-                                    <option value="eliminar">Eliminar canal</option>
-                                </select>
-                                <button
-                                    onClick={() => executeBulkAction(bulkActionType, filteredMainChannels)}
-                                    className="w-1/3 text-xs py-1.5 px-0 rounded border border-red-900/50 text-red-500 hover:bg-red-900/20 flex items-center justify-center gap-1"
-                                    title="Aplicar acción"
-                                >
-                                    <Trash2 size={12} /> <span className="hidden sm:inline">Aplicar</span>
-                                </button>
-                            </div>
-                        </>
+                        <div className="flex gap-2 w-full mt-2 mb-2">
+                            <select
+                                className="w-1/3 bg-gray-900 text-xs border border-gray-700 rounded p-1.5 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 truncate"
+                                value={mainDomainFilter}
+                                onChange={(e) => setMainDomainFilter(e.target.value)}
+                            >
+                                {mainListUniqueDomains.map(domain => (
+                                    <option key={domain} value={domain}>{domain}</option>
+                                ))}
+                            </select>
+                            <select
+                                className="w-1/3 bg-gray-900 text-xs border border-gray-700 rounded p-1.5 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 truncate"
+                                value={bulkActionType}
+                                onChange={(e) => setBulkActionType(e.target.value)}
+                            >
+                                <option value="offline_repair">Offline a reparar</option>
+                                <option value="res_desconocida_repair">Res desconocida a reparar</option>
+                                <option value="eliminar">Eliminar canal</option>
+                            </select>
+                            <button
+                                onClick={() => executeBulkAction(bulkActionType, filteredMainChannels)}
+                                className="w-1/3 text-xs py-1.5 px-0 rounded border border-red-900/50 text-red-500 hover:bg-red-900/20 flex items-center justify-center gap-1"
+                                title="Aplicar acción"
+                            >
+                                <Trash2 size={12} /> <span className="hidden sm:inline">Aplicar</span>
+                            </button>
+                        </div>
                     )}
                 </div>
 

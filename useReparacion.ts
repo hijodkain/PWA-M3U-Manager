@@ -594,11 +594,15 @@ export const useReparacion = (
         const domains = new Set<string>();
         mainChannels.forEach(c => {
             if (c.url) {
-                try {
-                    const url = new URL(c.url);
-                    domains.add(url.hostname);
-                } catch (e) {
-                    // Invalid URL, ignore
+                if (c.url === '-- Reparar Canal') {
+                    domains.add('-- Reparar Canal');
+                } else {
+                    try {
+                        const url = new URL(c.url);
+                        domains.add(url.hostname);
+                    } catch (e) {
+                        // Invalid URL, ignore
+                    }
                 }
             }
         });
@@ -618,6 +622,9 @@ export const useReparacion = (
         if (mainDomainFilter !== 'Todos los dominios') {
             channels = channels.filter(c => {
                 if (!c.url) return false;
+                if (mainDomainFilter === '-- Reparar Canal') {
+                    return c.url === '-- Reparar Canal';
+                }
                 try {
                     const url = new URL(c.url);
                     return url.hostname === mainDomainFilter;
