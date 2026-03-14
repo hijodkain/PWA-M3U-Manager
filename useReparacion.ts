@@ -44,6 +44,7 @@ export const useReparacion = (
     const VERIFICATION_WARNING_THRESHOLD = 50; // Advertir si hay más de 50 canales (solo para verificación simple)
 
     const [mainListFilter, setMainListFilter] = useState('Todos los canales');
+    const [mainDomainFilter, setMainDomainFilter] = useState('Todos los dominios');
     const [reparacionListFilter, setReparacionListFilter] = useState('Todos los canales');
     const [mainListSearch, setMainListSearch] = useState('');
     const [reparacionListSearch, setReparacionListSearch] = useState('');
@@ -561,6 +562,21 @@ export const useReparacion = (
         [mainChannels]
     );
 
+    const mainListUniqueDomains = useMemo(() => {
+        const domains = new Set<string>();
+        mainChannels.forEach(c => {
+            if (c.url) {
+                try {
+                    const url = new URL(c.url);
+                    domains.add(url.hostname);
+                } catch (e) {
+                    // Invalid URL, ignore
+                }
+            }
+        });
+        return ['Todos los dominios', ...Array.from(domains)];
+    }, [mainChannels]);
+
     const reparacionListUniqueGroups = useMemo(
         () => ['Todos los canales', ...Array.from(new Set(reparacionChannels.map((c) => c.groupTitle).filter(Boolean)))],
         [reparacionChannels]
@@ -570,6 +586,17 @@ export const useReparacion = (
         let channels = mainChannels;
         if (mainListFilter !== 'Todos los canales') {
             channels = channels.filter(c => c.groupTitle === mainListFilter);
+        }
+        if (mainDomainFilter !== 'Todos los dominios') {
+            channels = channels.filter(c => {
+                if (!c.url) return false;
+                try {
+                    const url = new URL(c.url);
+                    return url.hostname === mainDomainFilter;
+                } catch (e) {
+                    return false;
+                }
+            });
         }
         if (mainListSearch) {
             if (isSmartSearchEnabled) {
@@ -695,6 +722,8 @@ export const useReparacion = (
         setDestinationChannelId,
         mainListFilter,
         setMainListFilter,
+        mainDomainFilter,
+        setMainDomainFilter,
         reparacionListFilter,
         setReparacionListFilter,
         handleReparacionFileUpload,
@@ -702,6 +731,7 @@ export const useReparacion = (
         toggleAttributeToCopy,
         handleSourceChannelClick,
         mainListUniqueGroups,
+        mainListUniqueDomains,
         reparacionListUniqueGroups,
         filteredMainChannels,
         filteredReparacionChannels,

@@ -34,6 +34,8 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         setDestinationChannelId,
         mainListFilter,
         setMainListFilter,
+        mainDomainFilter,
+        setMainDomainFilter,
         reparacionListFilter,
         setReparacionListFilter,
         handleReparacionFileUpload,
@@ -41,6 +43,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         toggleAttributeToCopy,
         handleSourceChannelClick,
         mainListUniqueGroups,
+        mainListUniqueDomains,
         reparacionListUniqueGroups,
         filteredMainChannels,
         filteredReparacionChannels,
@@ -437,12 +440,24 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                     )}
                     
                     {!isSencillo && (
-                         <button
-                            onClick={clearFailedChannelsUrls}
-                            className="w-full text-xs py-1.5 px-1 rounded border border-red-900/50 text-red-400 hover:bg-red-900/20 flex items-center justify-center gap-2"
-                        >
-                            <Trash2 size={12} /> Limpiar URLs fallidas
-                        </button>
+                        <div className="flex gap-2 w-full">
+                            <select
+                                className="w-2/3 bg-gray-900 text-xs border border-gray-700 rounded p-1.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 truncate"
+                                value={mainDomainFilter}
+                                onChange={(e) => setMainDomainFilter(e.target.value)}
+                            >
+                                {mainListUniqueDomains.map(domain => (
+                                    <option key={domain} value={domain}>{domain}</option>
+                                ))}
+                            </select>
+                            <button
+                                onClick={clearFailedChannelsUrls}
+                                className="w-1/3 text-xs py-1.5 px-0 rounded border border-red-900/50 text-red-400 hover:bg-red-900/20 flex items-center justify-center gap-1"
+                                title="Limpiar URLs fallidas"
+                            >
+                                <Trash2 size={12} /> <span className="hidden sm:inline">Limpiar URLs</span>
+                            </button>
+                        </div>
                     )}
                 </div>
 
