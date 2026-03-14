@@ -691,17 +691,11 @@ export const useReparacion = (
             for (let i = start; i <= end; i++) {
                 newSelected.add(filteredReparacionChannels[i].id);
             }
-        } else if (metaKey || ctrlKey) {
+        } else {
+            // Comportamiento por defecto: siempre añadir/quitar sin borrar los demás
             if (newSelected.has(id)) {
                 newSelected.delete(id);
             } else {
-                newSelected.add(id);
-            }
-        } else {
-            if (newSelected.has(id) && newSelected.size === 1) {
-                newSelected.clear();
-            } else {
-                newSelected.clear();
                 newSelected.add(id);
             }
         }
@@ -709,6 +703,15 @@ export const useReparacion = (
         setSelectedReparacionChannels(newSelected);
         setLastSelectedIndex(index);
     }, [selectedReparacionChannels, lastSelectedIndex, filteredReparacionChannels]);
+
+    // Opcional para selección en arrastre (touch o ratón)
+    const selectMultipleChannels = useCallback((channelsIds: string[]) => {
+        setSelectedReparacionChannels(prev => {
+            const newSelected = new Set(prev);
+            channelsIds.forEach(id => newSelected.add(id));
+            return newSelected;
+        });
+    }, []);
 
     const toggleSelectAllReparacionGroup = () => {
         const allIdsInGroup = filteredReparacionChannels.map(c => c.id);
@@ -775,6 +778,7 @@ export const useReparacion = (
         filteredMainChannels,
         filteredReparacionChannels,
         toggleReparacionSelection,
+        selectMultipleChannels,
         toggleSelectAllReparacionGroup,
         verifySelectedReparacionChannels,
         handleAddSelectedFromReparacion,

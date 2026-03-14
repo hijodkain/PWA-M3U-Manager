@@ -6,6 +6,7 @@ interface ReparacionChannelItemProps {
     channel: Channel;
     onBodyClick?: () => void;
     onSelectClick?: (event: React.MouseEvent<HTMLInputElement>) => void;
+    onDragSelect?: () => void;
     isSelected: boolean;
     isChecked?: boolean;
     hasEpg?: boolean;
@@ -78,6 +79,7 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
     channel,
     onBodyClick,
     onSelectClick,
+    onDragSelect,
     isSelected,
     isChecked,
     hasEpg,
@@ -227,16 +229,30 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
                 
                 {/* Checkbox */}
                 {showCheckbox && (
-                    <input
-                        type="checkbox"
-                        checked={isChecked}
+                    <div 
+                        className="flex justify-center items-center p-1 md:p-2 cursor-pointer touch-none"
+                        onMouseEnter={() => {
+                            if (onDragSelect) onDragSelect();
+                        }}
+                        onPointerEnter={() => {
+                            if (onDragSelect) onDragSelect();
+                        }}
+                        onPointerDown={(e) => {
+                            e.currentTarget.releasePointerCapture(e.pointerId);
+                            if (onSelectClick) onSelectClick(e as any);
+                        }}
                         onClick={(e) => {
                             e.stopPropagation();
                             if (onSelectClick) onSelectClick(e as any);
                         }}
-                        readOnly
-                        className="form-checkbox h-4 w-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
-                    />
+                    >
+                        <input
+                            type="checkbox"
+                            checked={isChecked}
+                            readOnly
+                            className="form-checkbox h-4 w-4 md:h-5 md:w-5 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 pointer-events-none"
+                        />
+                    </div>
                 )}
             </div>
         </div>

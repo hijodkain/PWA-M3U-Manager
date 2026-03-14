@@ -75,6 +75,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         smartSearch,
         mainStatusFilter,
         setMainStatusFilter,
+        selectMultipleChannels,
     } = reparacionHook;
     
     const { normalizeChannelName } = smartSearch;
@@ -108,6 +109,22 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
 
     // Check if is mobile
     const [isMobile, setIsMobile] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
+    
+    // Gestores globales de puntero para finalizar el arrastre
+    const handleGlobalDragEnd = () => setIsDragging(false);
+
+    useEffect(() => {
+        window.addEventListener('mouseup', handleGlobalDragEnd);
+        window.addEventListener('touchend', handleGlobalDragEnd);
+        window.addEventListener('pointerup', handleGlobalDragEnd);
+        return () => {
+            window.removeEventListener('mouseup', handleGlobalDragEnd);
+            window.removeEventListener('touchend', handleGlobalDragEnd);
+            window.removeEventListener('pointerup', handleGlobalDragEnd);
+        };
+    }, []);
+
     useEffect(() => {
         const checkMobile = () => setIsMobile(window.innerWidth < 1024);
         checkMobile();
@@ -677,7 +694,14 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 )}
                 
                 {/* Lista canales reparadores */}
-                <div ref={reparacionListParentRef} className="flex-1 overflow-y-auto min-h-0 pr-1">
+                <div 
+                    ref={reparacionListParentRef} 
+                    className="flex-1 overflow-y-auto min-h-0 pr-1 touch-none"
+                    onPointerDown={() => setIsDragging(true)}
+                    onPointerUp={() => setIsDragging(false)}
+                    onPointerLeave={() => setIsDragging(false)}
+                    onDragStart={(e) => e.preventDefault()}
+                >
                      <div style={{ height: `${reparacionListRowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
                         {reparacionListRowVirtualizer.getVirtualItems().map((virtualItem) => {
                             const ch = filteredReparacionChannels[virtualItem.index];
@@ -691,6 +715,11 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     isChecked={isChSelected}
                                     showCheckbox={true}
                                     onSelectClick={(e) => toggleReparacionSelection(ch.id, virtualItem.index, e.shiftKey, e.metaKey, e.ctrlKey)}
+                                    onDragSelect={() => {
+                                        if (isDragging && !isChSelected) {
+                                            selectMultipleChannels([ch.id]);
+                                        }
+                                    }}
                                     onBodyClick={destinationChannelId ? () => {
                                         if (attributesToCopy.size === 0) {
                                             alert(`Selecciona al menos un atributo para reparar en el canal "${filteredMainChannels.find(c => c.id === destinationChannelId)?.name || 'seleccionado'}"`);
