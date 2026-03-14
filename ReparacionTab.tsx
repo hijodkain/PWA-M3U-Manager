@@ -610,7 +610,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                     <div className="flex justify-between items-start mb-2">
                         <div className="flex-grow flex items-center gap-2">
                             <h3 className="font-bold text-lg text-gray-300">
-                                {isSencillo ? 'Carga lista de reparación' : 'Lista Medicina'}
+                                {isSencillo ? 'Lista Reparadora: ' : 'Lista reparadora: '}
                             </h3>
                             {reparacionListName && (
                                 <div className="flex items-center gap-1.5 ml-2 bg-gray-700/50 px-2 py-1 rounded-md max-w-full">
