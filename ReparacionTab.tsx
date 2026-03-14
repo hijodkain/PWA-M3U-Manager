@@ -563,62 +563,57 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
             <div className={`lg:col-span-5 bg-gray-800 p-4 rounded-lg flex flex-col border border-gray-700 min-h-0 ${isMobile ? 'h-[400px]' : 'h-full'}`}>
                 
                 {/* Header Lista Reparadora */}
-                {reparacionListName ? (
-                    /* Lista cargada: línea compacta */
-                    <div className="flex items-center justify-between mb-2 flex-shrink-0">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                            <span className="text-xs font-semibold text-gray-400 flex-shrink-0">Lista Medicina:</span>
-                            <span className="text-sm font-bold text-gray-200 truncate">{reparacionListName}</span>
-                        </div>
-                        <button
-                            onClick={clearReparacion}
-                            className="text-gray-400 hover:text-white p-1 hover:bg-gray-700 rounded transition-colors flex-shrink-0 ml-2"
-                            title="Cerrar lista"
-                        >
-                            <X size={16} />
-                        </button>
-                    </div>
-                ) : (
-                    /* Sin lista: UI completa de carga */
-                    <div className="mb-4">
-                        <div className="flex justify-between items-start mb-2">
-                            <div className="flex-grow">
-                                <h3 className="font-bold text-lg text-gray-300">
-                                    {isSencillo ? 'Carga lista de reparación' : 'Lista Medicina'}
-                                </h3>
-                            </div>
-                            {savedMedicinaLists.length > 0 && (
-                                <select
-                                    onChange={(e) => loadRepairList(e.target.value)}
-                                    value=""
-                                    className="ml-2 w-48 bg-gray-700 border border-gray-600 text-xs rounded px-2 py-1.5 text-white"
-                                >
-                                    <option value="">Cargar guardada...</option>
-                                    {savedMedicinaLists.map(l => (
-                                        <option key={l.id} value={l.id}>{l.name}</option>
-                                    ))}
-                                </select>
+                <div className="mb-4">
+                    <div className="flex justify-between items-start mb-2">
+                        <div className="flex-grow flex items-center gap-2">
+                            <h3 className="font-bold text-lg text-gray-300">
+                                {isSencillo ? 'Carga lista de reparación' : 'Lista Medicina'}
+                            </h3>
+                            {reparacionListName && (
+                                <div className="flex items-center gap-1.5 ml-2 bg-gray-700/50 px-2 py-1 rounded-md max-w-full">
+                                    <span className="text-sm font-bold text-gray-200 truncate">{reparacionListName}</span>
+                                    <button
+                                        onClick={clearReparacion}
+                                        className="text-red-400 hover:text-red-300 p-0.5 hover:bg-gray-600 rounded transition-colors flex-shrink-0"
+                                        title="Eliminar y descargar lista actual"
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                </div>
                             )}
                         </div>
-                        <div className="bg-gray-700/30 p-3 rounded border border-gray-700 flex flex-wrap gap-2 items-center">
-                            <input
-                                type="text"
-                                placeholder="URL..."
-                                value={reparacionUrl}
-                                onChange={(e) => setReparacionUrl(e.target.value)}
-                                className="flex-1 min-w-[150px] bg-gray-900 border border-gray-600 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
-                            />
-                            <button onClick={() => handleReparacionUrlLoad()} className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm font-medium">
-                                Cargar
-                            </button>
-                            <div className="w-px h-6 bg-gray-600 mx-1"></div>
-                            <label className="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded text-sm flex items-center gap-1">
-                                <Upload size={14} /> Subir
-                                <input id="rep-file" type="file" className="hidden" onChange={handleReparacionFileUpload} accept=".m3u,.m3u8" />
-                            </label>
-                        </div>
+                        {!reparacionListName && savedMedicinaLists.length > 0 && (
+                            <select
+                                onChange={(e) => loadRepairList(e.target.value)}
+                                value=""
+                                className="ml-2 w-48 bg-gray-700 border border-gray-600 text-xs rounded px-2 py-1.5 text-white"
+                            >
+                                <option value="">Cargar guardada...</option>
+                                {savedMedicinaLists.map(l => (
+                                    <option key={l.id} value={l.id}>{l.name}</option>
+                                ))}
+                            </select>
+                        )}
                     </div>
-                )}
+                    {/* Siempre mostramos la caja de inputs, incluso si hay una lista cargada */}
+                    <div className="bg-gray-700/30 p-3 rounded border border-gray-700 flex flex-wrap gap-2 items-center">
+                        <input
+                            type="text"
+                            placeholder="URL..."
+                            value={reparacionUrl}
+                            onChange={(e) => setReparacionUrl(e.target.value)}
+                            className="flex-1 min-w-[150px] bg-gray-900 border border-gray-600 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
+                        />
+                        <button onClick={() => handleReparacionUrlLoad()} className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm font-medium">
+                            Cargar
+                        </button>
+                        <div className="w-px h-6 bg-gray-600 mx-1"></div>
+                        <label className="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded text-sm flex items-center gap-1">
+                            <Upload size={14} /> Subir
+                            <input id="rep-file" type="file" className="hidden" onChange={handleReparacionFileUpload} accept=".m3u,.m3u8" />
+                        </label>
+                    </div>
+                </div>
 
                 {/* Filtros e Inputs de la lista reparadora */}
                 {(filteredReparacionChannels.length > 0 || !!reparacionListSearch || !!reparacionListName) && (
