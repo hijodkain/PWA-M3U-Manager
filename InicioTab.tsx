@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, Download, AlertCircle, Share2, Trash2, Link as LinkIcon, FileText, Settings, RefreshCw, Plus, Cloud, Database, FilePlus, List, Filter, Check, X, CheckSquare, Square, Search } from 'lucide-react';
+import { Upload, Download, AlertCircle, Share2, Trash2, Link as LinkIcon, FileText, Settings, RefreshCw, Plus, Cloud, Database, FilePlus, List, Filter, Check, X, CheckSquare, Square, Search, Github } from 'lucide-react';
 import { useChannels } from './useChannels';
 import { useSettings } from './useSettings';
 import { getStorageItem, setStorageItem, removeStorageItem } from './utils/storage';
@@ -16,7 +16,7 @@ interface BeforeInstallPromptEvent extends Event {
     userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-type SubTab = 'load' | 'add-repair' | 'dropbox-lists' | 'repair-lists';
+type SubTab = 'load' | 'add-repair' | 'dropbox-lists' | 'repair-lists' | 'github-repos';
 
 const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNavigateToEditor, onNavigateToSettings }) => {
     const {
@@ -41,6 +41,10 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
     const [medicinaUrl, setMedicinaUrl] = useState('');
     const [isMedicinaLoading, setIsMedicinaLoading] = useState(false);
     const [medicinaError, setMedicinaError] = useState('');
+    const [githubRepoUrl, setGithubRepoUrl] = useState('');
+    const [isGithubLoading, setIsGithubLoading] = useState(false);
+    const [githubError, setGithubError] = useState('');
+    const [githubFiles, setGithubFiles] = useState<Array<{ name: string; url: string; path: string }>>([]);
     const [savedMedicinaLists, setSavedMedicinaLists] = useState<Array<{ id: string; name: string; url: string; content?: string }>>([]);
     const [savedDropboxLists, setSavedDropboxLists] = useState<Array<{ id: string; name: string; url: string; addedAt: string }>>([]);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -549,6 +553,74 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
         return { fetchUrl, suggestedName };
     };
 
+    const handleGithubAnalyze = async () => {
+        if (!githubRepoUrl) return;
+        setIsGithubLoading(true);
+        setGithubError('');
+        setGithubFiles([]);
+
+        try {
+            const urlMatch = githubRepoUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
+            if (!urlMatch) {
+                throw new Error('URL de GitHub no válida. Usa el formato https://github.com/usuario/repositorio');
+            }
+            const owner = urlMatch[1];
+            let repo = urlMatch[2];
+            // Quitar .git si lo tiene
+            if (repo.endsWith('.git')) repo = repo.slice(0, -4);
+
+            const repoResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}`);
+            if (!repoResponse.ok) {
+                throw new Error(`Repositorio no encontrado u oculto (${repoResponse.status})`);
+            }
+            const repoData = await repoResponse.json();
+            const defaultBranch = repoData.default_branch || 'main';
+
+            const treeResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/${defaultBranch}?recursive=1`);
+            if (!treeResponse.ok) {
+                throw new Error(`Error al leer los archivos del repositorio (${treeResponse.status})`);
+            }
+            const treeData = await treeResponse.json();
+
+            const m3uFiles = treeData.tree
+                .filter((file: any) => file.type === 'blob' && /\.(m3u8?|txt)$/i.test(file.path))
+                .map((file: any) => {
+                    const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/refs/heads/${defaultBranch}/${file.path}`;
+                    return {
+                        name: file.path.split('/').pop() || file.path,
+                        url: rawUrl,
+                        path: file.path
+                    };
+                });
+
+            if (m3uFiles.length === 0) {
+                setGithubError('No se encontraron archivos M3U, M3U8 o TXT en el repositorio.');
+            } else {
+                setGithubFiles(m3uFiles);
+            }
+        } catch (error) {
+            setGithubError(error instanceof Error ? error.message : 'Error desconocido al analizar GitHub');
+        } finally {
+            setIsGithubLoading(false);
+        }
+    };
+
+    const handleAñadirGithubFile = (fileItem: { name: string; url: string; path: string }) => {
+        const newList = {
+            id: 'med-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+            name: fileItem.name,
+            url: fileItem.url
+        };
+        const currentLists = JSON.parse(getStorageItem('medicinaLists') || '[]');
+        const updated = [...currentLists, newList];
+        setSavedMedicinaLists(updated);
+        setStorageItem('medicinaLists', JSON.stringify(updated));
+        
+        // Remove from list so user knows it's added
+        setGithubFiles(prev => prev.filter(f => f.path !== fileItem.path));
+        alert(`Añadida a Listas Reparadoras: ${fileItem.name}`);
+    };
+
     const handleMedicinaUrlLoad = async () => {
         if (!medicinaUrl) return;
         setIsMedicinaLoading(true);
@@ -736,6 +808,12 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                     active={activeSubTab === 'repair-lists'} 
                     onClick={() => setActiveSubTab('repair-lists')} 
                     tooltip="Mis Listas Reparadoras"
+                />
+                <SidebarButton 
+                    icon={<Github size={24} />} 
+                    active={activeSubTab === 'github-repos'} 
+                    onClick={() => setActiveSubTab('github-repos')} 
+                    tooltip="Explorar GitHub"
                 />
             </div>
 
@@ -1194,6 +1272,106 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                                 </table>
                             </div>
                         )}
+                    </div>
+                )}
+
+                {activeSubTab === 'github-repos' && (
+                    <div className="max-w-4xl mx-auto animate-fadeIn pt-2 sm:pt-4">
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-2 sm:gap-3 text-white">
+                                <Github size={24} className="sm:w-7 sm:h-7" />
+                                Explorar Repositorio GitHub
+                            </h2>
+                        </div>
+                        <div className="bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-700 shadow-xl mb-6">
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-300 mb-2">
+                                    URL del repositorio de GitHub
+                                </label>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="url"
+                                        value={githubRepoUrl}
+                                        onChange={(e) => setGithubRepoUrl(e.target.value)}
+                                        placeholder="ej. https://github.com/usuario/mi-repo"
+                                        className="flex-grow bg-gray-900 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
+                                    />
+                                    <button
+                                        onClick={handleGithubAnalyze}
+                                        disabled={isGithubLoading || !githubRepoUrl}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 whitespace-nowrap disabled:opacity-50"
+                                    >
+                                        {isGithubLoading ? <RefreshCw className="animate-spin" size={20} /> : <Search size={20} />}
+                                        <span className="hidden sm:inline">Analizar</span>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            {githubError && (
+                                <div className="p-3 sm:p-4 mb-4 bg-red-900/50 border border-red-500/50 rounded-lg flex items-start gap-3">
+                                    <AlertCircle className="text-red-400 mt-0.5 shrink-0" size={18} />
+                                    <p className="text-sm text-red-200">{githubError}</p>
+                                </div>
+                            )}
+
+                            {githubFiles.length > 0 && (
+                                <div className="mt-6 border hidden sm:block border-gray-700 rounded-lg overflow-hidden bg-gray-900/50">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="bg-gray-800 border-b border-gray-700">
+                                                <th className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Nombre del Archivo</th>
+                                                <th className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Ruta</th>
+                                                <th className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider text-right">Acción</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-800">
+                                            {githubFiles.map((file, idx) => (
+                                                <tr key={idx} className="hover:bg-gray-800/50 transition-colors">
+                                                    <td className="px-4 py-3 text-white font-medium text-sm flex items-center gap-2">
+                                                        <FileText size={16} className="text-blue-400" />
+                                                        {file.name}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-gray-400 text-xs truncate max-w-[200px]" title={file.path}>
+                                                        {file.path}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-right">
+                                                        <button 
+                                                            onClick={() => handleAñadirGithubFile(file)}
+                                                            className="text-xs bg-green-600/20 text-green-400 hover:bg-green-600 hover:text-white px-3 py-1.5 rounded transition-colors"
+                                                        >
+                                                            Añadir a Reparadoras
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                            
+                            {/* Mobile View for Github Files */}
+                            {githubFiles.length > 0 && (
+                                <div className="mt-4 sm:hidden space-y-3">
+                                    {githubFiles.map((file, idx) => (
+                                        <div key={idx} className="bg-gray-900 border border-gray-700 rounded-lg p-3 flex flex-col gap-3">
+                                            <div className="flex items-start gap-2">
+                                                <FileText size={16} className="text-blue-400 mt-1 shrink-0" />
+                                                <div className="flex flex-col overflow-hidden">
+                                                    <span className="text-sm font-medium text-white break-words">{file.name}</span>
+                                                    <span className="text-xs text-gray-500 truncate" title={file.path}>{file.path}</span>
+                                                </div>
+                                            </div>
+                                            <button 
+                                                onClick={() => handleAñadirGithubFile(file)}
+                                                className="w-full text-xs font-medium bg-green-600/20 text-green-400 hover:bg-green-600 hover:text-white py-2 rounded transition-colors"
+                                            >
+                                                Añadir a Reparadoras
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
 

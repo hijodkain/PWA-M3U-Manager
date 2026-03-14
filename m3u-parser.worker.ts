@@ -13,12 +13,16 @@ export interface Channel {
 
 const parseM3U = (content: string): Channel[] => {
     const lines = content.split('\n');
-    if (lines[0].trim() !== '#EXTM3U') {
-        throw new Error('Archivo no válido. Debe empezar con #EXTM3U.');
+    
+    // Buscar si hay alguna línea non-vacía que sea un indicador de lista
+    const firstNonEmpty = lines.find(l => l.trim().length > 0)?.trim() || '';
+    if (!firstNonEmpty.startsWith('#EXTM3U') && !firstNonEmpty.startsWith('#EXTINF')) {
+        throw new Error('Archivo no válido. Debe contener un formato M3U (#EXTM3U o #EXTINF).');
     }
+
     const parsedChannels: Channel[] = [];
     let order = 1;
-    for (let i = 1; i < lines.length; i++) {
+    for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
         if (line.startsWith('#EXTINF:')) {
             const info = line.substring(8);
