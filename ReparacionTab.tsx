@@ -127,7 +127,33 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         { key: 'tvgName', label: 'tvg-name' },
     ];
 
-    // --- Handlers ---
+    // Actualizar nombre de lista cuando se carga por URL
+    const onUrlLoad = async () => {
+        const urlToLoad = reparacionUrl;
+        await handleReparacionUrlLoad();
+        if (urlToLoad) {
+            try {
+                const urlObj = new URL(urlToLoad);
+                let name = urlObj.pathname.split('/').pop() || 'Lista Medicina';
+                // Si es un enlace de dropbox, intentar sacar el nombre del dl=
+                if (urlToLoad.includes('dropbox') && name === 'file') {
+                    name = 'Lista de Dropbox';
+                }
+                setReparacionListName(name);
+            } catch (e) {
+                setReparacionListName('Lista Medicina URL');
+            }
+        }
+    };
+
+    // Actualizar nombre de lista cuando se carga por archivo
+    const onFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setReparacionListName(file.name);
+            await handleReparacionFileUpload(e);
+        }
+    };
 
     // Clear Main List Logic
     const isWindows = typeof window !== 'undefined' && /Windows/i.test(navigator.userAgent);
@@ -595,24 +621,26 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                             </select>
                         )}
                     </div>
-                    {/* Siempre mostramos la caja de inputs, incluso si hay una lista cargada */}
-                    <div className="bg-gray-700/30 p-3 rounded border border-gray-700 flex flex-wrap gap-2 items-center">
-                        <input
-                            type="text"
-                            placeholder="URL..."
-                            value={reparacionUrl}
-                            onChange={(e) => setReparacionUrl(e.target.value)}
-                            className="flex-1 min-w-[150px] bg-gray-900 border border-gray-600 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
-                        />
-                        <button onClick={() => handleReparacionUrlLoad()} className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm font-medium">
-                            Cargar
-                        </button>
-                        <div className="w-px h-6 bg-gray-600 mx-1"></div>
-                        <label className="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded text-sm flex items-center gap-1">
-                            <Upload size={14} /> Subir
-                            <input id="rep-file" type="file" className="hidden" onChange={handleReparacionFileUpload} accept=".m3u,.m3u8" />
-                        </label>
-                    </div>
+                    {/* Si no hay lista, mostramos la caja de inputs */}
+                    {!reparacionListName ? (
+                        <div className="bg-gray-700/30 p-3 rounded border border-gray-700 flex flex-wrap gap-2 items-center">
+                            <input
+                                type="text"
+                                placeholder="URL..."
+                                value={reparacionUrl}
+                                onChange={(e) => setReparacionUrl(e.target.value)}
+                                className="flex-1 min-w-[150px] bg-gray-900 border border-gray-600 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
+                            />
+                            <button onClick={() => onUrlLoad()} className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm font-medium">
+                                Cargar
+                            </button>
+                            <div className="w-px h-6 bg-gray-600 mx-1"></div>
+                            <label className="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded text-sm flex items-center gap-1">
+                                <Upload size={14} /> Subir
+                                <input id="rep-file" type="file" className="hidden" onChange={onFileUpload} accept=".m3u,.m3u8" />
+                            </label>
+                        </div>
+                    ) : null}
                 </div>
 
                 {/* Filtros e Inputs de la lista reparadora */}
