@@ -26,6 +26,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
     const [showClearConfirm, setShowClearConfirm] = useState(false);
     const [savedMedicinaLists, setSavedMedicinaLists] = useState<Array<{ id: string; name: string; url: string; content?: string }>>([]);
     const [reparacionListName, setReparacionListName] = useState('');
+    const [bulkActionType, setBulkActionType] = useState('offline_repair');
 
     const {
         selectedReparacionChannels,
@@ -59,7 +60,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         verificationProgress,
         cancelVerification,
         verifyChannel,
-        clearFailedChannelsUrls,
+        executeBulkAction,
         failedChannelsByGroup,
         reparacionUrl,
         setReparacionUrl,
@@ -77,7 +78,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
     } = reparacionHook;
     
     const { normalizeChannelName } = smartSearch;
-    const { undo, history, setChannels, fileName, channels } = channelsHook;
+    const { undo, history, setChannels, fileName, channels, saveStateToHistory } = channelsHook;
 
     const mainListParentRef = useRef<HTMLDivElement>(null);
     const reparacionListParentRef = useRef<HTMLDivElement>(null);
@@ -432,35 +433,48 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                         <select
                             value={mainStatusFilter}
                             onChange={(e) => setMainStatusFilter(e.target.value)}
-                            className={`bg-gray-700 border border-gray-600 rounded-md px-2 py-1.5 text-white text-xs font-bold focus:ring-blue-500 focus:border-blue-500 truncate ${mainListFilter !== 'Todos los canales' ? 'w-1/3' : 'w-1/3'} ${mainStatusFilter !== 'Todos' ? 'text-yellow-400 border-yellow-500/50 bg-yellow-900/40' : 'text-gray-400'}`}
+                            className={`bg-gray-700 border border-gray-600 rounded-md px-2 py-1.5 text-xs font-bold focus:ring-blue-500 focus:border-blue-500 truncate ${mainListFilter !== 'Todos los canales' ? 'w-1/3' : 'w-1/3'} ${mainStatusFilter !== 'Todos' ? 'text-yellow-400 border-yellow-500/50 bg-yellow-900/40' : 'text-gray-400'} ${mainStatusFilter === 'Todos' ? 'text-white' : ''}`}
                             title="Filtrar por estado de verificación"
                         >
-                            <option value="Todos" className="text-white">Todos</option>
-                            <option value="Rotos" className="text-red-500">❌ Offline</option>
-                            <option value="Pendientes" className="text-gray-400">○ Pendientes</option>
-                            <option value="ResDesconocida" className="text-white bg-gray-600">❓ Res. desconocida</option>
+                            <option value="Todos" style={{ color: 'white' }}>Todos</option>
+                            <option value="Rotos" style={{ color: '#ef4444' }}>❌ Offline</option>
+                            <option value="Pendientes" style={{ color: '#9ca3af' }}>○ Pendientes</option>
+                            <option value="ResDesconocida" style={{ color: 'white', backgroundColor: '#4b5563' }}>❓ Res. desconocida</option>
                         </select>
                     </div>
                     
                     {!isSencillo && (
-                        <div className="flex gap-2 w-full">
-                            <select
-                                className="w-2/3 bg-gray-900 text-xs border border-gray-700 rounded p-1.5 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 truncate"
-                                value={mainDomainFilter}
-                                onChange={(e) => setMainDomainFilter(e.target.value)}
-                            >
-                                {mainListUniqueDomains.map(domain => (
-                                    <option key={domain} value={domain}>{domain}</option>
-                                ))}
-                            </select>
-                            <button
-                                onClick={clearFailedChannelsUrls}
-                                className="w-1/3 text-xs py-1.5 px-0 rounded border border-red-900/50 text-red-400 hover:bg-red-900/20 flex items-center justify-center gap-1"
-                                title="Limpiar URLs fallidas"
-                            >
-                                <Trash2 size={12} /> <span className="hidden sm:inline">Limpiar URLs</span>
-                            </button>
-                        </div>
+                        <>
+                            <div className="flex gap-2 w-full mt-2">
+                                <select
+                                    className="w-full bg-gray-900 text-xs border border-gray-700 rounded p-1.5 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 truncate"
+                                    value={mainDomainFilter}
+                                    onChange={(e) => setMainDomainFilter(e.target.value)}
+                                >
+                                    {mainListUniqueDomains.map(domain => (
+                                        <option key={domain} value={domain}>{domain}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="flex gap-2 w-full mt-2 mb-2">
+                                <select
+                                    className="w-2/3 bg-gray-900 text-xs border border-gray-700 rounded p-1.5 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 truncate"
+                                    value={bulkActionType}
+                                    onChange={(e) => setBulkActionType(e.target.value)}
+                                >
+                                    <option value="offline_repair">Offline a reparar</option>
+                                    <option value="res_desconocida_repair">Res desconocida a reparar</option>
+                                    <option value="eliminar">Eliminar canal</option>
+                                </select>
+                                <button
+                                    onClick={() => executeBulkAction(bulkActionType, filteredMainChannels)}
+                                    className="w-1/3 text-xs py-1.5 px-0 rounded border border-red-900/50 text-red-500 hover:bg-red-900/20 flex items-center justify-center gap-1"
+                                    title="Aplicar acción"
+                                >
+                                    <Trash2 size={12} /> <span className="hidden sm:inline">Aplicar</span>
+                                </button>
+                            </div>
+                        </>
                     )}
                 </div>
 

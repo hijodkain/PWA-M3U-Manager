@@ -479,19 +479,47 @@ export const useReparacion = (
         }
     };
 
-    const clearFailedChannelsUrls = () => {
+    const executeBulkAction = (actionType: string, filteredChannels: Channel[]) => {
         saveStateToHistory();
         const newInfo = { ...verificationInfo };
-        setMainChannels(prev =>
-            prev.map(channel => {
-                if (verificationInfo[channel.id]?.status === 'failed') {
+        let channelsToDelete = new Set<string>();
+
+        if (actionType === 'eliminar') {
+            channelsToDelete = new Set(filteredChannels.map(c => c.id));
+            if (!confirm(`Se van a eliminar ${channelsToDelete.size} canales. ¿Deseas continuar?`)) {
+                return;
+            }
+        }
+
+        setMainChannels(prev => {
+            if (actionType === 'eliminar') {
+                return prev.filter(c => !channelsToDelete.has(c.id));
+            }
+
+            return prev.map(channel => {
+                // Solo aplicar a los canales que están en la vista filtrada
+                const isFiltered = filteredChannels.some(fc => fc.id === channel.id);
+                if (!isFiltered) return channel;
+
+                const info = verificationInfo[channel.id];
+
+                if (actionType === 'offline_repair' && info?.status === 'failed') {
                     newInfo[channel.id] = { status: 'pending', quality: 'unknown' };
-                    return { ...channel, url: 'http://--', status: 'pending', quality: 'unknown' };
+                    return { ...channel, url: '-- Reparar Canal', status: 'pending', quality: 'unknown' };
                 }
+
+                if (actionType === 'res_desconocida_repair' && info?.status === 'ok' && (!info.quality || info.quality === 'unknown')) {
+                    newInfo[channel.id] = { status: 'pending', quality: 'unknown' };
+                    return { ...channel, url: '-- Reparar Canal', status: 'pending', quality: 'unknown' };
+                }
+
                 return channel;
-            })
-        );
-        setVerificationInfo(newInfo);
+            });
+        });
+
+        if (actionType !== 'eliminar') {
+            setVerificationInfo(newInfo);
+        }
     };
 
     const failedChannelsByGroup = useMemo(() => {
@@ -753,7 +781,7 @@ export const useReparacion = (
         cancelVerification,
         verifyChannel,
         verifyChannelSimple,
-        clearFailedChannelsUrls,
+        executeBulkAction,
         failedChannelsByGroup,
         reparacionUrl,
         setReparacionUrl,
