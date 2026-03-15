@@ -691,7 +691,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 {/* Lista canales reparadores */}
                 <div 
                     ref={reparacionListParentRef} 
-                    className="flex-1 overflow-y-auto min-h-0 pr-1 touch-none"
+                    className="flex-1 overflow-y-auto min-h-0 pr-1"
                     onPointerDown={() => setIsDragging(true)}
                     onPointerUp={() => setIsDragging(false)}
                     onPointerLeave={() => setIsDragging(false)}
