@@ -58,8 +58,12 @@ const EditableCell: React.FC<EditableCellProps> = ({ value, onSave, className = 
   }
 
   return (
-    <div onDoubleClick={handleDoubleClick} className={`${className} cursor-pointer px-1 py-0.5`}>
-      {value}
+    <div
+      onDoubleClick={handleDoubleClick}
+      className={`w-full min-h-[22px] cursor-pointer px-1 py-0.5 flex items-center ${className}`}
+      title="Doble clic para editar"
+    >
+      {value || <span className="w-full">&nbsp;</span>}
     </div>
   );
 };

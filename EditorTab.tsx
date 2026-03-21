@@ -2,7 +2,7 @@ import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { Upload, Download, Plus, Trash2, GripVertical, ShieldCheck, ShieldX, ShieldQuestion, Undo2, Redo2, HelpCircle } from 'lucide-react';
+import { Upload, Download, Plus, Trash2, GripVertical, ShieldCheck, ShieldX, ShieldQuestion, Undo2, Redo2, HelpCircle, SlidersHorizontal } from 'lucide-react';
 import { useChannels } from './useChannels';
 import { useSettings } from './useSettings';
 import { useAppMode } from './AppModeContext';
@@ -15,6 +15,28 @@ interface EditorTabProps {
     channelsHook: ReturnType<typeof useChannels>;
     settingsHook: ReturnType<typeof useSettings>;
 }
+
+type ColumnKey = 'status' | 'tvgId' | 'tvgName' | 'tvgLogo' | 'groupTitle' | 'name' | 'url';
+
+const ALL_EDITOR_COLUMNS: { key: ColumnKey; label: string; onlyPro?: boolean }[] = [
+    { key: 'status', label: 'Estado', onlyPro: true },
+    { key: 'tvgId', label: 'tvg-id', onlyPro: true },
+    { key: 'tvgName', label: 'tvg-name', onlyPro: true },
+    { key: 'tvgLogo', label: 'Logo' },
+    { key: 'groupTitle', label: 'Grupo' },
+    { key: 'name', label: 'Nombre del canal' },
+    { key: 'url', label: 'URL del stream', onlyPro: true },
+];
+
+const DEFAULT_VISIBLE_COLUMNS: Record<ColumnKey, boolean> = {
+    status: true,
+    tvgId: true,
+    tvgName: true,
+    tvgLogo: true,
+    groupTitle: true,
+    name: true,
+    url: true,
+};
 
 const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => {
     const { isSencillo } = useAppMode();
@@ -33,6 +55,9 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
     const [filteredGroups, setFilteredGroups] = useState<string[]>([]);
     const [prefixInput, setPrefixInput] = useState('');
     const [suffixInput, setSuffixInput] = useState('');
+    const [showColumnsDropdown, setShowColumnsDropdown] = useState(false);
+    const [visibleColumns, setVisibleColumns] = useState<Record<ColumnKey, boolean>>(DEFAULT_VISIBLE_COLUMNS);
+    const columnsDropdownRef = useRef<HTMLDivElement>(null);
     
     const {
         channels,
@@ -44,6 +69,9 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         selectedChannels,
         filterGroup,
         setFilterGroup,
+        mainDomainFilter,
+        setMainDomainFilter,
+        uniqueDomains,
         selectAllCheckboxRef,
         tableContainerRef,
         handleFetchUrl,
@@ -68,6 +96,52 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
 
     const { savedUrls } = settingsHook;
     const { columnWidths, handleResize } = useColumnResizing();
+
+    useEffect(() => {
+        try {
+            const savedColumns = localStorage.getItem('editor_visible_columns');
+            if (savedColumns) {
+                const parsed = JSON.parse(savedColumns);
+                setVisibleColumns({
+                    ...DEFAULT_VISIBLE_COLUMNS,
+                    ...parsed,
+                });
+            }
+        } catch {
+            // Si localStorage falla, mantenemos la configuración por defecto.
+        }
+    }, []);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('editor_visible_columns', JSON.stringify(visibleColumns));
+        } catch {
+            // Si localStorage falla, no bloqueamos el uso de la tabla.
+        }
+    }, [visibleColumns]);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (columnsDropdownRef.current && !columnsDropdownRef.current.contains(event.target as Node)) {
+                setShowColumnsDropdown(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const isColumnVisible = (key: ColumnKey) => {
+        if (isSencillo && (key === 'status' || key === 'tvgId' || key === 'tvgName' || key === 'url')) {
+            return false;
+        }
+        return visibleColumns[key];
+    };
+
+    const visibleColumnOptions = useMemo(
+        () => ALL_EDITOR_COLUMNS.filter(col => !col.onlyPro || !isSencillo),
+        [isSencillo]
+    );
     
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -82,15 +156,18 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
 
     // Calcular el ancho total de la tabla sumando todas las columnas visibles
     const totalTableWidth = useMemo(() => {
-        let width = columnWidths.select + columnWidths.order + columnWidths.tvgLogo + 
-                    columnWidths.groupTitle + columnWidths.name;
-        
-        if (!isSencillo) {
-            width += columnWidths.status + columnWidths.tvgId + columnWidths.tvgName + columnWidths.url;
-        }
-        
+        let width = columnWidths.select + columnWidths.order;
+
+        if (isColumnVisible('status')) width += columnWidths.status;
+        if (isColumnVisible('tvgId')) width += columnWidths.tvgId;
+        if (isColumnVisible('tvgName')) width += columnWidths.tvgName;
+        if (isColumnVisible('tvgLogo')) width += columnWidths.tvgLogo;
+        if (isColumnVisible('groupTitle')) width += columnWidths.groupTitle;
+        if (isColumnVisible('name')) width += columnWidths.name;
+        if (isColumnVisible('url')) width += columnWidths.url;
+
         return width;
-    }, [columnWidths, isSencillo]);
+    }, [columnWidths, visibleColumns, isSencillo]);
 
     // Obtener el ancho del contenedor para decidir si usar 100% o el ancho calculado
     const [containerWidth, setContainerWidth] = useState(0);
@@ -343,12 +420,16 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
     };
 
     const gridTemplateColumns = useMemo(() => {
-        let cols = `${columnWidths.select}px ${columnWidths.order}px`;
-        if (!isSencillo) cols += ` ${columnWidths.status}px ${columnWidths.tvgId}px ${columnWidths.tvgName}px`;
-        cols += ` ${columnWidths.tvgLogo}px ${columnWidths.groupTitle}px ${columnWidths.name}px`;
-        if (!isSencillo) cols += ` ${columnWidths.url}px`;
-        return cols;
-    }, [columnWidths, isSencillo]);
+        const cols: string[] = [`${columnWidths.select}px`, `${columnWidths.order}px`];
+        if (isColumnVisible('status')) cols.push(`${columnWidths.status}px`);
+        if (isColumnVisible('tvgId')) cols.push(`${columnWidths.tvgId}px`);
+        if (isColumnVisible('tvgName')) cols.push(`${columnWidths.tvgName}px`);
+        if (isColumnVisible('tvgLogo')) cols.push(`${columnWidths.tvgLogo}px`);
+        if (isColumnVisible('groupTitle')) cols.push(`${columnWidths.groupTitle}px`);
+        if (isColumnVisible('name')) cols.push(`${columnWidths.name}px`);
+        if (isColumnVisible('url')) cols.push(`${columnWidths.url}px`);
+        return cols.join(' ');
+    }, [columnWidths, visibleColumns, isSencillo]);
 
     return (
         <>
@@ -480,6 +561,24 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                 </select>
                             </div>
 
+                            {!isSencillo && (
+                                <div className="flex items-center">
+                                    <span className="text-xs text-gray-400 mr-2 uppercase tracking-wide font-semibold">Dominio</span>
+                                    <select
+                                        id="domain-filter"
+                                        value={mainDomainFilter}
+                                        onChange={(e) => setMainDomainFilter(e.target.value)}
+                                        className="bg-gray-700 border border-gray-600 rounded px-3 py-1 text-sm text-white focus:ring-blue-500 focus:border-blue-500 max-w-[220px]"
+                                    >
+                                        {uniqueDomains.map((domain) => (
+                                            <option key={domain} value={domain}>
+                                                {domain}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
                             {!isSencillo && (history.length > 0 || redoHistory.length > 0) && (
                                 <div className="flex items-center gap-1 bg-gray-700/50 rounded p-1 border border-gray-600">
                                     <button
@@ -520,6 +619,47 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                             >
                                 <Plus size={16} className="mr-2" /> Crear Canal
                             </button>
+
+                            <div className="relative" ref={columnsDropdownRef}>
+                                <button
+                                    onClick={() => setShowColumnsDropdown(prev => !prev)}
+                                    className="bg-gray-700 hover:bg-gray-600 text-white font-medium py-1.5 px-3 rounded-md flex items-center text-sm border border-gray-600"
+                                    title="Seleccionar columnas visibles"
+                                >
+                                    <SlidersHorizontal size={16} className="mr-2" /> Columnas
+                                </button>
+
+                                {showColumnsDropdown && (
+                                    <div className="absolute right-0 mt-2 w-60 bg-gray-800 border border-gray-600 rounded-md shadow-xl z-30 p-3">
+                                        <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold mb-2">Columnas visibles</p>
+                                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                                            {visibleColumnOptions.map((column) => (
+                                                <label key={column.key} className="flex items-center gap-2 text-sm text-gray-200 cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={visibleColumns[column.key]}
+                                                        onChange={(e) => {
+                                                            const isChecked = e.target.checked;
+                                                            if (column.key === 'name' && !isChecked) {
+                                                                return;
+                                                            }
+                                                            setVisibleColumns(prev => ({
+                                                                ...prev,
+                                                                [column.key]: isChecked,
+                                                            }));
+                                                        }}
+                                                        className="form-checkbox h-4 w-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+                                                    />
+                                                    <span>{column.label}</span>
+                                                    {column.key === 'name' && (
+                                                        <span className="text-[10px] text-gray-500 ml-auto">obligatoria</span>
+                                                    )}
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
 
                             {selectedChannels.length > 0 && (
                                 <button
@@ -565,31 +705,37 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                         <ResizableHeader width={columnWidths.order} onResize={(w) => handleResize('order', w)} align="center">
                             Orden
                         </ResizableHeader>
-                        {!isSencillo && (
+                        {isColumnVisible('status') && (
                             <ResizableHeader width={columnWidths.status} onResize={(w) => handleResize('status', w)} align="center">
                                 Estado
                             </ResizableHeader>
                         )}
-                        {!isSencillo && (
+                        {isColumnVisible('tvgId') && (
                             <ResizableHeader width={columnWidths.tvgId} onResize={(w) => handleResize('tvgId', w)} align="left">
                                 tvg-id
                             </ResizableHeader>
                         )}
-                        {!isSencillo && (
+                        {isColumnVisible('tvgName') && (
                             <ResizableHeader width={columnWidths.tvgName} onResize={(w) => handleResize('tvgName', w)} align="left">
                                 tvg-name
                             </ResizableHeader>
                         )}
-                        <ResizableHeader width={columnWidths.tvgLogo} onResize={(w) => handleResize('tvgLogo', w)} align="center">
-                            Logo
-                        </ResizableHeader>
-                        <ResizableHeader width={columnWidths.groupTitle} onResize={(w) => handleResize('groupTitle', w)} align="left">
-                            Grupo
-                        </ResizableHeader>
-                        <ResizableHeader width={columnWidths.name} onResize={(w) => handleResize('name', w)} align="left">
-                            Nombre del Canal
-                        </ResizableHeader>
-                        {!isSencillo && (
+                        {isColumnVisible('tvgLogo') && (
+                            <ResizableHeader width={columnWidths.tvgLogo} onResize={(w) => handleResize('tvgLogo', w)} align="center">
+                                Logo
+                            </ResizableHeader>
+                        )}
+                        {isColumnVisible('groupTitle') && (
+                            <ResizableHeader width={columnWidths.groupTitle} onResize={(w) => handleResize('groupTitle', w)} align="left">
+                                Grupo
+                            </ResizableHeader>
+                        )}
+                        {isColumnVisible('name') && (
+                            <ResizableHeader width={columnWidths.name} onResize={(w) => handleResize('name', w)} align="left">
+                                Nombre del Canal
+                            </ResizableHeader>
+                        )}
+                        {isColumnVisible('url') && (
                             <ResizableHeader width={columnWidths.url} onResize={(w) => handleResize('url', w)} align="left">
                                 URL del Stream
                             </ResizableHeader>
@@ -622,6 +768,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                             <StatusIndicator status={channel.status} />
                                         }
                                         gridTemplateColumns={gridTemplateColumns}
+                                        visibleColumns={visibleColumns}
                                         measureRef={rowVirtualizer.measureElement}
                                         suggestions={{ groupTitle: uniqueGroups }}
                                         style={{
@@ -652,6 +799,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                     ) : null
                                 }
                                 gridTemplateColumns={gridTemplateColumns}
+                                visibleColumns={visibleColumns}
                                 suggestions={{ groupTitle: uniqueGroups }}
                                 style={{ width: `${tableWidth}px` }} // Overlay matches table width
                             />

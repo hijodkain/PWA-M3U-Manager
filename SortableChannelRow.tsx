@@ -6,6 +6,8 @@ import { useAppMode } from './AppModeContext';
 import EditableCell from './EditableCell';
 import { Channel } from './index';
 
+type ColumnKey = 'status' | 'tvgId' | 'tvgName' | 'tvgLogo' | 'groupTitle' | 'name' | 'url';
+
 interface SortableChannelRowProps {
     id: string;
     channel: Channel;
@@ -18,6 +20,7 @@ interface SortableChannelRowProps {
     measureRef?: (node: HTMLElement | null) => void;
     isOverlay?: boolean;
     gridTemplateColumns: string;
+    visibleColumns: Record<ColumnKey, boolean>;
     suggestions?: {
         groupTitle?: string[];
         // Add more suggestion types later if needed
@@ -35,6 +38,7 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
     measureRef,
     isOverlay,
     gridTemplateColumns,
+    visibleColumns,
     suggestions,
 }) => {
     const { isSencillo } = useAppMode();
@@ -73,6 +77,13 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
     const rowListeners = isOverlay ? {} : listeners;
     const isSelected = selectedChannels.includes(channel.id);
 
+    const isColumnVisible = (key: ColumnKey) => {
+        if (isSencillo && (key === 'status' || key === 'tvgId' || key === 'tvgName' || key === 'url')) {
+            return false;
+        }
+        return visibleColumns[key];
+    };
+
     // State for local editing of Logo
     const [isEditingLogo, setIsEditingLogo] = React.useState(false);
 
@@ -80,13 +91,13 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
     // Using simple truncate for now as base, and hover effect via CSS classes defined globally or locally.
     // To enable the "marquee on hover", we wrap EditableCell in a container that handles the hover trigger.
     const MarqueeCell = ({ value, onSave, suggestionsList }: { value: string, onSave: (val: string) => void, suggestionsList?: string[] }) => (
-        <div className="w-full overflow-hidden group relative" title={value}>
-             <div className="truncate group-hover:overflow-visible group-hover:w-auto">
-                <div className={`inline-block ${value.length > 20 ? 'group-hover:animate-marquee' : ''}`}>
+        <div className="w-full overflow-hidden group relative" title={value || 'Doble clic para editar'}>
+             <div className="w-full truncate group-hover:overflow-visible">
+                <div className={`w-full ${value.length > 20 ? 'group-hover:animate-marquee' : ''}`}>
                     <EditableCell 
                         value={value} 
                         onSave={onSave} 
-                        className=""
+                        className="w-full"
                         suggestions={suggestionsList}
                     />
                 </div>
@@ -129,87 +140,93 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
             </div>
 
             {/* Status (Pro only) */}
-            {!isSencillo && (
+            {isColumnVisible('status') && (
                 <div className="px-2 py-2 text-center flex items-center justify-center">
                     {statusIndicator}
                 </div>
             )}
 
             {/* TvgID (Pro only) */}
-            {!isSencillo && (
+            {isColumnVisible('tvgId') && (
                 <div className="px-2 py-2 text-sm text-gray-300 overflow-hidden">
                     <MarqueeCell value={channel.tvgId || ''} onSave={(val) => onUpdate(channel.id, 'tvgId', val)} />
                 </div>
             )}
 
              {/* TvgName (Pro only) */}
-            {!isSencillo && (
+            {isColumnVisible('tvgName') && (
                 <div className="px-2 py-2 text-sm text-gray-300 overflow-hidden">
                     <MarqueeCell value={channel.tvgName || ''} onSave={(val) => onUpdate(channel.id, 'tvgName', val)} />
                 </div>
             )}
 
             {/* Logo */}
-            <div 
-                className="px-2 py-2 text-center flex items-center justify-center overflow-hidden h-full"
-                onDoubleClick={() => setIsEditingLogo(true)}
-                title="Doble clic para editar URL del logo"
-            >
-                 {isEditingLogo ? (
-                    <input 
-                        type="text" 
-                        defaultValue={channel.tvgLogo}
-                        autoFocus
-                        onBlur={(e) => {
-                            onUpdate(channel.id, 'tvgLogo', e.target.value);
-                            setIsEditingLogo(false);
-                        }}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                                onUpdate(channel.id, 'tvgLogo', e.currentTarget.value);
+            {isColumnVisible('tvgLogo') && (
+                <div 
+                    className="px-2 py-2 text-center flex items-center justify-center overflow-hidden h-full"
+                    onDoubleClick={() => setIsEditingLogo(true)}
+                    title="Doble clic para editar URL del logo"
+                >
+                     {isEditingLogo ? (
+                        <input 
+                            type="text" 
+                            defaultValue={channel.tvgLogo}
+                            autoFocus
+                            onBlur={(e) => {
+                                onUpdate(channel.id, 'tvgLogo', e.target.value);
                                 setIsEditingLogo(false);
-                            }
-                            if (e.key === 'Escape') {
-                                setIsEditingLogo(false);
-                            }
-                        }}
-                        className="w-full text-xs bg-gray-900 text-white border border-blue-500 rounded px-1 py-0.5"
-                        onClick={(e) => e.stopPropagation()}
-                    />
-                 ) : channel.tvgLogo ? (
-                    <img
-                        src={channel.tvgLogo}
-                        alt="logo"
-                        className="h-8 w-auto object-contain rounded-sm cursor-pointer hover:opacity-80 transition-opacity"
-                        onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                            const parent = e.currentTarget.parentElement;
-                            if (parent && !parent.querySelector('span')) {
-                                parent.innerHTML += '<span class="text-gray-500 text-xs">Sin Logo</span>';
-                            }
-                        }}
-                    />
-                ) : (
-                    <span className="text-gray-500 text-xs cursor-text select-text">Sin Logo</span>
-                )}
-            </div>
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    onUpdate(channel.id, 'tvgLogo', e.currentTarget.value);
+                                    setIsEditingLogo(false);
+                                }
+                                if (e.key === 'Escape') {
+                                    setIsEditingLogo(false);
+                                }
+                            }}
+                            className="w-full text-xs bg-gray-900 text-white border border-blue-500 rounded px-1 py-0.5"
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                     ) : channel.tvgLogo ? (
+                        <img
+                            src={channel.tvgLogo}
+                            alt="logo"
+                            className="h-8 w-auto object-contain rounded-sm cursor-pointer hover:opacity-80 transition-opacity"
+                            onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                const parent = e.currentTarget.parentElement;
+                                if (parent && !parent.querySelector('span')) {
+                                    parent.innerHTML += '<span class="text-gray-500 text-xs">Sin Logo</span>';
+                                }
+                            }}
+                        />
+                    ) : (
+                        <span className="text-gray-500 text-xs cursor-text select-text">Sin Logo</span>
+                    )}
+                </div>
+            )}
 
             {/* Group */}
-            <div className="px-2 py-2 text-sm text-gray-300 overflow-hidden">
-                 <MarqueeCell 
-                    value={channel.groupTitle || ''} 
-                    onSave={(val) => onUpdate(channel.id, 'groupTitle', val)} 
-                    suggestionsList={suggestions?.groupTitle}
-                />
-            </div>
+            {isColumnVisible('groupTitle') && (
+                <div className="px-2 py-2 text-sm text-gray-300 overflow-hidden">
+                     <MarqueeCell 
+                        value={channel.groupTitle || ''} 
+                        onSave={(val) => onUpdate(channel.id, 'groupTitle', val)} 
+                        suggestionsList={suggestions?.groupTitle}
+                    />
+                </div>
+            )}
 
              {/* Name */}
-            <div className="px-2 py-2 text-sm text-white font-medium overflow-hidden">
-                 <MarqueeCell value={channel.name} onSave={(val) => onUpdate(channel.id, 'name', val)} />
-            </div>
+            {isColumnVisible('name') && (
+                <div className="px-2 py-2 text-sm text-white font-medium overflow-hidden">
+                     <MarqueeCell value={channel.name} onSave={(val) => onUpdate(channel.id, 'name', val)} />
+                </div>
+            )}
 
              {/* URL (Pro only) */}
-            {!isSencillo && (
+            {isColumnVisible('url') && (
                 <div className="px-2 py-2 text-sm text-gray-400 overflow-hidden">
                      <MarqueeCell value={channel.url} onSave={(val) => onUpdate(channel.id, 'url', val)} />
                 </div>
