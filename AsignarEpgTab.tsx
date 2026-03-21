@@ -113,14 +113,14 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
     const mainListRowVirtualizer = useVirtualizer({
         count: filteredMainChannelsForEpg.length,
         getScrollElement: () => mainListParentRef.current,
-        estimateSize: () => 60,
+        estimateSize: () => 46,
         overscan: 10,
     });
 
     const epgListRowVirtualizer = useVirtualizer({
         count: filteredEpgChannels.length,
         getScrollElement: () => epgListParentRef.current,
-        estimateSize: () => 60,
+        estimateSize: () => 46,
         overscan: 10,
     });
 
@@ -250,9 +250,9 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
     );
 
     return (
-        <div className="flex flex-col h-[calc(100vh-140px)] sm:h-[calc(100vh-180px)] overflow-hidden">
+        <div className="flex flex-col h-[calc(100dvh-140px)] sm:h-[calc(100dvh-180px)] overflow-hidden">
             {/* Header: Load EPG Source & Tools */}
-            <div className="bg-gray-800 p-2 shadow-lg z-20 flex-shrink-0">
+            <div className="bg-gray-800 px-2 py-1.5 shadow-lg z-20 flex-shrink-0 h-[30%] min-h-[150px] overflow-y-auto md:h-auto md:min-h-0 md:overflow-visible">
                 <div className="flex items-center justify-between gap-2 mb-1.5">
                     <h2 className="text-sm font-bold text-white flex items-center truncate min-w-0">
                         <Tv className="mr-1.5 h-4 w-4 text-blue-400 flex-shrink-0" />
@@ -306,11 +306,11 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                 </div>
             </div>
 
-            {/* Paneles: apilados en portrait, lado a lado en md+ */}
-            <div className="flex-grow flex flex-col md:flex-row min-h-0 bg-gray-900">
+            {/* Paneles de listas: 70% del alto, lado a lado para maximizar filas visibles */}
+            <div className="h-[70%] md:h-auto md:flex-1 grid grid-cols-2 min-h-0 bg-gray-900">
 
                 {/* PANEL IZQUIERDO: Lista principal */}
-                <div className="flex flex-col h-1/2 md:h-full md:w-1/2 border-b md:border-b-0 md:border-r border-gray-700 bg-gray-800/50">
+                <div className="flex flex-col min-h-0 border-r border-gray-700 bg-gray-800/50">
                     
                     {/* Filter Main List */}
                     <div className="px-2 pt-1.5 pb-1.5 bg-gray-800 border-b border-gray-700 flex-shrink-0">
@@ -371,7 +371,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                             height: `${virtualRow.size}px`,
                                             transform: `translateY(${virtualRow.start}px)`,
                                         }}
-                                        className="px-2 py-1"
+                                        className="px-1.5 py-0.5"
                                     >
                                         <div
                                             onClick={() => {
@@ -385,7 +385,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                                 }
                                             }}
                                             className={`
-                                                flex items-center gap-2 p-1.5 rounded-lg cursor-pointer border h-full select-none transition-all
+                                                flex items-center gap-1.5 p-1 rounded-lg cursor-pointer border h-full select-none transition-all
                                                 ${isTarget
                                                     ? 'bg-blue-600 border-blue-400 shadow-lg scale-[1.01] z-10'
                                                     : hasMatchingEpg
@@ -394,14 +394,14 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                                 }
                                             `}
                                         >
-                                            <div className={`w-1 h-7 rounded-full flex-shrink-0 ${hasMatchingEpg ? 'bg-green-500' : 'bg-gray-600'}`} />
+                                            <div className={`w-1 h-6 rounded-full flex-shrink-0 ${hasMatchingEpg ? 'bg-green-500' : 'bg-gray-600'}`} />
 
                                             {/* Channel Logo */}
-                                            <div className="w-7 h-7 rounded bg-black/40 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                            <div className="w-6 h-6 rounded bg-black/40 flex items-center justify-center flex-shrink-0 overflow-hidden">
                                                 {channel.tvgLogo ? (
                                                     <img src={channel.tvgLogo} alt="" className="w-full h-full object-contain" onError={(e) => e.currentTarget.style.display = 'none'} />
                                                 ) : (
-                                                    <Tv className="w-3.5 h-3.5 text-gray-600" />
+                                                    <Tv className="w-3 h-3 text-gray-600" />
                                                 )}
                                             </div>
 
@@ -417,17 +417,17 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                                         {channel.tvgId || channel.tvgName || '—'}
                                                     </span>
                                                     {hasMatchingEpg && (
-                                                        <span className="inline-flex items-center text-[9px] font-bold text-green-400 bg-green-900/30 px-1 py-0.5 rounded-full leading-none whitespace-nowrap">✓ EPG</span>
+                                                        <span className="inline-flex items-center text-[8px] font-bold text-green-400 bg-green-900/30 px-1 py-0.5 rounded-full leading-none whitespace-nowrap">✓ EPG</span>
                                                     )}
                                                     {!hasMatchingEpg && hasAssignedField && epgIdSet.size > 0 && (
-                                                        <span className="inline-flex items-center text-[9px] font-bold text-amber-400 bg-amber-900/30 px-1 py-0.5 rounded-full leading-none whitespace-nowrap">! Sin EPG</span>
+                                                        <span className="inline-flex items-center text-[8px] font-bold text-amber-400 bg-amber-900/30 px-1 py-0.5 rounded-full leading-none whitespace-nowrap">! Sin EPG</span>
                                                     )}
                                                 </div>
                                             </div>
 
                                             {isTarget && (
                                                 <div className="bg-white text-blue-600 p-1 rounded-full animate-pulse shadow-sm flex-shrink-0">
-                                                    <ArrowLeftCircle size={14} className="-rotate-90 md:rotate-0" />
+                                                    <ArrowLeftCircle size={12} className="-rotate-90 md:rotate-0" />
                                                 </div>
                                             )}
                                         </div>
@@ -439,10 +439,10 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                 </div>
 
                 {/* PANEL DERECHO: Fuente EPG */}
-                <div className="flex flex-col h-1/2 md:h-full md:w-1/2 bg-gray-800">
+                 <div className="flex flex-col min-h-0 bg-gray-800">
                     
                     {/* EPG Tools Header */}
-                     <div className="p-2 bg-gray-800 border-b border-gray-700 flex flex-col gap-2 flex-shrink-0 shadow-sm z-10">
+                     <div className="p-1.5 bg-gray-800 border-b border-gray-700 flex flex-col gap-1.5 flex-shrink-0 shadow-sm z-10">
                         {/* Smart Search EPG + selector de fuente */}
                         <div className="flex gap-2 items-start">
                             <div className="flex-1 min-w-0">
@@ -572,7 +572,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                                 height: `${virtualRow.size}px`,
                                                 transform: `translateY(${virtualRow.start}px)`,
                                             }}
-                                            className="px-2 py-1"
+                                                className="px-1.5 py-0.5"
                                         >
                                             <SearchResultItem
                                                 score={matchScore}
@@ -593,13 +593,13 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                                 }}
                                                 className={`h-full border border-gray-700/50 ${!destinationChannelId ? 'hover:border-blue-500/50' : ''}`}
                                             >
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-1.5">
                                                     {/* Logo EPG */}
-                                                    <div className="w-9 h-9 rounded bg-black/40 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                                    <div className="w-7 h-7 rounded bg-black/40 flex items-center justify-center flex-shrink-0 overflow-hidden">
                                                         {epg.logo ? (
                                                             <img src={epg.logo} className="w-full h-full object-contain" loading="lazy" onError={(e) => e.currentTarget.style.display = 'none'} />
                                                         ) : (
-                                                            <Tv className="w-4 h-4 text-gray-600" />
+                                                            <Tv className="w-3.5 h-3.5 text-gray-600" />
                                                         )}
                                                     </div>
                                                     {/* Nombre e ID */}
