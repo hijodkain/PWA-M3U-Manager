@@ -69,6 +69,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
     const [keepLogoActive, setKeepLogoActive] = useState(false);
     const [copyNameActive, setCopyNameActive] = useState(false);
     const [isShortViewport, setIsShortViewport] = useState(false);
+    const [selectedLettersCount, setSelectedLettersCount] = useState(0);
 
     useEffect(() => {
         const checkViewport = () => setIsShortViewport(window.innerHeight <= 560);
@@ -479,8 +480,64 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                 </button>
                             )}
                         </div>
-                        <div className="text-[10px] text-green-400 px-1">
-                            {isSmartSearchEnabled ? 'Búsqueda inteligente activa' : 'Búsqueda inteligente inactiva'}
+                        <div className="flex items-center gap-2 px-1">
+                            <span className="text-[10px] text-green-400 flex-1">
+                                {isSmartSearchEnabled ? 'Búsqueda inteligente activa' : 'Búsqueda inteligente inactiva'}
+                            </span>
+                            
+                            {/* Botón Menos */}
+                            <button
+                                onClick={() => {
+                                    if (selectedLettersCount > 0) {
+                                        setSelectedLettersCount(selectedLettersCount - 1);
+                                    }
+                                }}
+                                disabled={selectedLettersCount === 0}
+                                className="text-xs font-bold px-2 py-1 rounded bg-red-900/40 border border-red-600/60 text-red-400 hover:bg-red-900/60 hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                title="Deseleccionar última letra"
+                            >
+                                −
+                            </button>
+                            
+                            {/* Botón Más */}
+                            <button
+                                onClick={() => {
+                                    if (selectedLettersCount < epgSearchTerm.length) {
+                                        setSelectedLettersCount(selectedLettersCount + 1);
+                                    }
+                                }}
+                                disabled={selectedLettersCount >= epgSearchTerm.length || epgSearchTerm.length === 0}
+                                className="text-xs font-bold px-2 py-1 rounded bg-green-900/40 border border-green-600/60 text-green-400 hover:bg-green-900/60 hover:text-green-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                title="Seleccionar siguiente letra"
+                            >
+                                +
+                            </button>
+                            
+                            {/* Botón Añadir Prefijo */}
+                            <button
+                                onClick={() => {
+                                    const selectedText = epgSearchTerm.substring(0, selectedLettersCount);
+                                    if (selectedText.trim()) {
+                                        const newPrefix = selectedText;
+                                        const currentPrefixes = settingsHook.channelPrefixes || [];
+                                        
+                                        // Verificar si el prefijo ya existe
+                                        if (!currentPrefixes.includes(newPrefix)) {
+                                            const updatedPrefixes = [newPrefix, ...currentPrefixes];
+                                            settingsHook.updateChannelPrefixes(updatedPrefixes);
+                                            alert(`Prefijo "${newPrefix}" añadido a la búsqueda inteligente`);
+                                            setSelectedLettersCount(0);
+                                        } else {
+                                            alert(`El prefijo "${newPrefix}" ya existe`);
+                                        }
+                                    }
+                                }}
+                                disabled={selectedLettersCount === 0}
+                                className="text-xs font-bold px-3 py-1 rounded bg-blue-900/40 border border-blue-600/60 text-blue-400 hover:bg-blue-900/60 hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all whitespace-nowrap"
+                                title="Añadir texto seleccionado como prefijo"
+                            >
+                                Añadir prefijo
+                            </button>
                         </div>
                          {/* Selection Controls */}
                         {epgChannels.length > 0 && (
