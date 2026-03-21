@@ -49,6 +49,7 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
     const [savedDropboxLists, setSavedDropboxLists] = useState<Array<{ id: string; name: string; url: string; addedAt: string }>>([]);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [triggerLoad, setTriggerLoad] = useState(false);
+    const [shouldNavigateAfterLoad, setShouldNavigateAfterLoad] = useState(false);
 
     // Estados para Preview y Upload (Nueva funcionalidad)
     const [previewContent, setPreviewContent] = useState<{content: string, name: string, groups: string[]} | null>(null);
@@ -94,9 +95,19 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
         if (triggerLoad && url) {
             handleFetchUrl();
             setTriggerLoad(false);
+            setShouldNavigateAfterLoad(true);
+        }
+    }, [triggerLoad, url, handleFetchUrl]);
+
+    useEffect(() => {
+        if (!shouldNavigateAfterLoad || isLoading) return;
+
+        if (!error) {
             onNavigateToEditor();
         }
-    }, [triggerLoad, url, handleFetchUrl, onNavigateToEditor]);
+
+        setShouldNavigateAfterLoad(false);
+    }, [shouldNavigateAfterLoad, isLoading, error, onNavigateToEditor]);
 
     // --- Dropbox Helpers ---
     const getDropboxAccessToken = async () => {
@@ -915,7 +926,10 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                                     />
                                 </div>
                                 <button 
-                                    onClick={() => handleFetchUrl()}
+                                    onClick={() => {
+                                        setShouldNavigateAfterLoad(true);
+                                        handleFetchUrl();
+                                    }}
                                     disabled={isLoading || !url}
                                     className="bg-blue-600 hover:bg-blue-700 text-white px-4 rounded-lg font-medium flex items-center gap-2 disabled:opacity-50 text-sm"
                                 >
