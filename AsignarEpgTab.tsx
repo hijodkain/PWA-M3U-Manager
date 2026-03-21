@@ -151,153 +151,197 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
 
     const ToolbarContent = () => (
         <>
-            <div className="flex items-center gap-4 mr-2">
-                <span className="text-xs text-gray-400 font-medium">Preparar el canal para:</span>
-                <button 
-                    onClick={() => handleToggle('ott')}
-                    className={`flex items-center justify-center transition-all duration-300 ${ottModeActive ? 'scale-125 drop-shadow-[0_0_8px_rgba(249,115,22,0.8)] opacity-100' : 'opacity-50 hover:opacity-100 hover:scale-110'}`}
-                    title="Formato OTT"
-                >
-                    <img src="/ott-logo.png" alt="OTT" className="w-6 h-6 object-contain" onError={(e) => e.currentTarget.style.display = 'none'} />
-                </button>
+            {/* Grupo: App destino */}
+            <div className="flex flex-col gap-1 flex-shrink-0">
+                <span className="text-[9px] text-gray-500 uppercase tracking-wider font-semibold leading-none">App destino</span>
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={() => handleToggle('ott')}
+                        className={`flex flex-col items-center justify-center p-1.5 rounded-lg gap-0.5 border transition-all duration-200 w-[52px] ${
+                            ottModeActive
+                                ? 'bg-orange-900/40 border-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.3)]'
+                                : 'bg-gray-700/60 border-gray-600/60 hover:border-orange-600/60 hover:bg-gray-700'
+                        }`}
+                        title="Usar formato para OTT Navigator"
+                    >
+                        <img src="/ott-logo.png" alt="OTT" className="w-7 h-7 object-contain" onError={(e) => e.currentTarget.style.display = 'none'} />
+                        <span className={`text-[9px] font-bold leading-none ${ottModeActive ? 'text-orange-400' : 'text-gray-400'}`}>OTT</span>
+                    </button>
 
-                <button 
-                    onClick={() => handleToggle('tivimate')}
-                    className={`flex items-center justify-center transition-all duration-300 ${tivimateModeActive ? 'scale-125 drop-shadow-[0_0_8px_rgba(59,130,246,0.8)] opacity-100' : 'opacity-50 hover:opacity-100 hover:scale-110'}`}
-                    title="Formato TiviMate"
-                >
-                    <img src="/tivimate-logo.png" alt="TiviMate" className="w-6 h-6 object-contain" onError={(e) => e.currentTarget.style.display = 'none'} />
-                </button>
+                    <button
+                        onClick={() => handleToggle('tivimate')}
+                        className={`flex flex-col items-center justify-center p-1.5 rounded-lg gap-0.5 border transition-all duration-200 w-[52px] ${
+                            tivimateModeActive
+                                ? 'bg-blue-900/40 border-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.3)]'
+                                : 'bg-gray-700/60 border-gray-600/60 hover:border-blue-600/60 hover:bg-gray-700'
+                        }`}
+                        title="Usar formato para TiviMate"
+                    >
+                        <img src="/tivimate-logo.png" alt="TiviMate" className="w-7 h-7 object-contain" onError={(e) => e.currentTarget.style.display = 'none'} />
+                        <span className={`text-[9px] font-bold leading-none ${tivimateModeActive ? 'text-blue-400' : 'text-gray-400'}`}>TiviMate</span>
+                    </button>
+                </div>
             </div>
 
-            <div className="w-px h-8 bg-gray-600 mx-1"></div>
+            <div className="w-px h-12 bg-gray-600/50 flex-shrink-0 self-end mb-0.5 mx-0.5"></div>
 
-            <button 
-                onClick={() => handleToggle('logo')}
-                className={`flex flex-col items-center justify-center p-2 rounded-lg transition-all ${transferLogoActive ? 'bg-green-500 text-white' : 'bg-gray-700 text-gray-400 hover:text-white'}`}
-                title="Asignar Logo"
-            >
-                <Image size={18} />
-                <span className="text-[10px] mt-1 font-bold">Logo Si</span>
-            </button>
+            {/* Grupo: Transferir desde EPG */}
+            <div className="flex flex-col gap-1 flex-shrink-0">
+                <span className="text-[9px] text-gray-500 uppercase tracking-wider font-semibold leading-none">Transferir desde EPG</span>
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={() => handleToggle('logo')}
+                        className={`flex flex-col items-center justify-center p-1.5 rounded-lg gap-0.5 border transition-all w-[52px] ${
+                            transferLogoActive
+                                ? 'bg-green-800/50 border-green-500 text-green-300'
+                                : 'bg-gray-700/60 border-gray-600/60 text-gray-400 hover:text-gray-200 hover:border-gray-500'
+                        }`}
+                        title="Copiar logo desde EPG al canal"
+                    >
+                        <Image size={16} />
+                        <span className="text-[9px] font-bold leading-none">Logo Sí</span>
+                    </button>
 
-            <button 
-                onClick={() => handleToggle('no-logo')}
-                className={`flex flex-col items-center justify-center p-2 rounded-lg transition-all ${keepLogoActive ? 'bg-red-500 text-white' : 'bg-gray-700 text-gray-400 hover:text-white'}`}
-                title="No Asignar Logo"
-            >
-                <Image size={18} className="opacity-50" />
-                <span className="text-[10px] mt-1 font-bold">Logo No</span>
-            </button>
-            
-            <button 
-                onClick={() => handleToggle('name')}
-                className={`flex flex-col items-center justify-center p-2 rounded-lg transition-all ${copyNameActive ? 'bg-yellow-500 text-white' : 'bg-gray-700 text-gray-400 hover:text-white'}`}
-                title="Usar Nombre Canal"
-            >
-                <Type size={18} />
-                <span className="text-[10px] mt-1 font-bold">Nom</span>
-            </button>
+                    <button
+                        onClick={() => handleToggle('no-logo')}
+                        className={`flex flex-col items-center justify-center p-1.5 rounded-lg gap-0.5 border transition-all w-[52px] ${
+                            keepLogoActive
+                                ? 'bg-red-800/50 border-red-500 text-red-300'
+                                : 'bg-gray-700/60 border-gray-600/60 text-gray-400 hover:text-gray-200 hover:border-gray-500'
+                        }`}
+                        title="No copiar logo, mantener el logo actual del canal"
+                    >
+                        <Image size={16} className="opacity-40" />
+                        <span className="text-[9px] font-bold leading-none">Logo No</span>
+                    </button>
 
-            <div className="w-px h-8 bg-gray-600 mx-1"></div>
+                    <button
+                        onClick={() => handleToggle('name')}
+                        className={`flex flex-col items-center justify-center p-1.5 rounded-lg gap-0.5 border transition-all w-[52px] ${
+                            copyNameActive
+                                ? 'bg-yellow-800/50 border-yellow-500 text-yellow-300'
+                                : 'bg-gray-700/60 border-gray-600/60 text-gray-400 hover:text-gray-200 hover:border-gray-500'
+                        }`}
+                        title="Copiar el nombre del canal desde EPG"
+                    >
+                        <Type size={16} />
+                        <span className="text-[9px] font-bold leading-none">Nombre</span>
+                    </button>
+                </div>
+            </div>
 
-            <button 
-                onClick={handleAutoAssign}
-                className="flex flex-col items-center justify-center p-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-all"
-                title="Asignación Automática"
-            >
-                <Zap size={18} />
-                <span className="text-[10px] mt-1 font-bold">Auto</span>
-            </button>
+            <div className="w-px h-12 bg-gray-600/50 flex-shrink-0 self-end mb-0.5 mx-0.5"></div>
+
+            {/* Grupo: Acción */}
+            <div className="flex flex-col gap-1 flex-shrink-0">
+                <span className="text-[9px] text-gray-500 uppercase tracking-wider font-semibold leading-none">Acción</span>
+                <div className="flex items-center">
+                    <button
+                        onClick={handleAutoAssign}
+                        className="flex flex-col items-center justify-center p-1.5 rounded-lg gap-0.5 border border-indigo-500/70 bg-indigo-700/60 text-white hover:bg-indigo-600 hover:border-indigo-400 transition-all w-[52px]"
+                        title="Asignar EPG automáticamente a todos los canales visibles por similitud de nombre"
+                    >
+                        <Zap size={16} />
+                        <span className="text-[9px] font-bold leading-none">Auto</span>
+                    </button>
+                </div>
+            </div>
         </>
     );
 
     return (
         <div className="flex flex-col h-[calc(100vh-140px)] sm:h-[calc(100vh-180px)] overflow-hidden">
             {/* Header: Load EPG Source & Tools */}
-            <div className="bg-gray-800 p-2 sm:p-4 shadow-lg z-20 flex-shrink-0">
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                    <h2 className="text-base sm:text-lg font-bold text-white flex items-center truncate">
-                        <Tv className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-blue-400 flex-shrink-0" />
+            <div className="bg-gray-800 p-2 shadow-lg z-20 flex-shrink-0">
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <h2 className="text-sm font-bold text-white flex items-center truncate min-w-0">
+                        <Tv className="mr-1.5 h-4 w-4 text-blue-400 flex-shrink-0" />
                         <span className="truncate">{loadedEpgSourceName || 'Asignar EPG'}</span>
                     </h2>
-                    
-                     <div className="flex items-center gap-2 flex-shrink-0">
-                         {/* Toggle Assignment Mode */}
-                        <div className="flex bg-gray-700/50 rounded-lg p-0.5 border border-gray-600/50">
-                            <button
-                                onClick={() => setAssignmentMode('tvg-id')}
-                                className={`px-2 py-1 rounded-md text-[10px] sm:text-xs font-bold transition-all ${
-                                    assignmentMode === 'tvg-id'
-                                        ? 'bg-blue-600 text-white shadow-sm'
-                                        : 'text-gray-400 hover:text-gray-200'
-                                }`}
-                            >
-                                ID
-                            </button>
-                            <button
-                                onClick={() => setAssignmentMode('tvg-name')}
-                                className={`px-2 py-1 rounded-md text-[10px] sm:text-xs font-bold transition-all ${
-                                    assignmentMode === 'tvg-name'
-                                        ? 'bg-purple-600 text-white shadow-sm'
-                                        : 'text-gray-400 hover:text-gray-200'
-                                }`}
-                            >
-                                NAME
-                            </button>
+
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                        {/* Toggle: controla si se valida por tvg-id o tvg-name */}
+                        <div className="flex flex-col items-end gap-0.5">
+                            <span className="text-[9px] text-gray-500 uppercase tracking-wider font-semibold leading-none">Validar por</span>
+                            <div className="flex bg-gray-700/50 rounded-lg p-0.5 border border-gray-600/50">
+                                <button
+                                    onClick={() => setAssignmentMode('tvg-id')}
+                                    className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all ${
+                                        assignmentMode === 'tvg-id'
+                                            ? 'bg-blue-600 text-white shadow-sm'
+                                            : 'text-gray-400 hover:text-gray-200'
+                                    }`}
+                                >
+                                    ID
+                                </button>
+                                <button
+                                    onClick={() => setAssignmentMode('tvg-name')}
+                                    className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all ${
+                                        assignmentMode === 'tvg-name'
+                                            ? 'bg-purple-600 text-white shadow-sm'
+                                            : 'text-gray-400 hover:text-gray-200'
+                                    }`}
+                                >
+                                    NAME
+                                </button>
+                            </div>
                         </div>
 
                         {/* Settings Button */}
                         {onNavigateToSettings && (
                             <button
                                 onClick={onNavigateToSettings}
-                                className="p-1.5 sm:p-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-300 transition-colors"
+                                className="p-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-300 transition-colors flex-shrink-0"
                                 title="Ir a configuración"
                             >
-                                <SettingsIcon size={16} />
+                                <SettingsIcon size={15} />
                             </button>
                         )}
-                        
                     </div>
                 </div>
 
-
                 {/* Toolbar Horizontal Scrollable */}
-                <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar mask-linear-fade">
+                <div className="flex items-end gap-2 overflow-x-auto pb-0.5 no-scrollbar">
                     <ToolbarContent />
                 </div>
             </div>
 
-            {/* Main Content Split - Vertical Mobile, Horizontal Desktop */}
-            <div className="flex-grow flex flex-col lg:flex-row min-h-0 bg-gray-900">
-                
-                {/* TOP HEADER LIST (Main Channels) */}
-                <div className="flex flex-col h-[40%] lg:h-full lg:w-1/2 min-h-[180px] border-b lg:border-b-0 lg:border-r border-gray-700 bg-gray-800/50">
+            {/* Paneles: apilados en portrait, lado a lado en md+ */}
+            <div className="flex-grow flex flex-col md:flex-row min-h-0 bg-gray-900">
+
+                {/* PANEL IZQUIERDO: Lista principal */}
+                <div className="flex flex-col h-1/2 md:h-full md:w-1/2 border-b md:border-b-0 md:border-r border-gray-700 bg-gray-800/50">
                     
                     {/* Filter Main List */}
-                    <div className="p-2 bg-gray-800 border-b border-gray-700 flex gap-2 flex-shrink-0">
-                        <div className="relative flex-grow min-w-0">
-                            <select
-                                value={selectedGroup}
-                                onChange={(e) => setSelectedGroup(e.target.value)}
-                                className="w-full bg-gray-900 text-white text-xs rounded-lg px-2 py-1.5 border border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 appearance-none pl-8 truncate"
-                            >
-                                {channelGroups.map(g => (
-                                    <option key={g} value={g}>{g === 'all' ? 'Todos los grupos' : g}</option>
-                                ))}
-                            </select>
-                            <List className="absolute left-2.5 top-1.5 h-4 w-4 text-gray-400 pointer-events-none" />
+                    <div className="px-2 pt-1.5 pb-1.5 bg-gray-800 border-b border-gray-700 flex-shrink-0">
+                        <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Mi lista</span>
+                            <span className="text-[10px] text-gray-500 font-mono">{filteredMainChannelsForEpg.length} canales</span>
                         </div>
-                         {/* Search Main List */}
-                         <div className="relative w-1/3 min-w-[100px]">
-                            <input
-                                type="text"
-                                placeholder="Filtrar..."
-                                value={mainListSearch}
-                                onChange={(e) => setMainListSearch(e.target.value)}
-                                className="w-full bg-gray-900 text-white text-xs rounded-lg px-2 py-1.5 pl-7 border border-gray-600 focus:border-blue-500"
-                            />
-                            <Search className="absolute left-2 top-1.5 h-4 w-4 text-gray-500" />
+                        <div className="flex gap-2">
+                            <div className="relative flex-grow min-w-0">
+                                <select
+                                    value={selectedGroup}
+                                    onChange={(e) => setSelectedGroup(e.target.value)}
+                                    className="w-full bg-gray-900 text-white text-xs rounded-lg px-2 py-1.5 border border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 appearance-none pl-8 truncate"
+                                >
+                                    {channelGroups.map(g => (
+                                        <option key={g} value={g}>{g === 'all' ? 'Todos los grupos' : g}</option>
+                                    ))}
+                                </select>
+                                <List className="absolute left-2.5 top-1.5 h-4 w-4 text-gray-400 pointer-events-none" />
+                            </div>
+                            {/* Search Main List */}
+                            <div className="relative w-1/3 min-w-[90px]">
+                                <input
+                                    type="text"
+                                    placeholder="Filtrar..."
+                                    value={mainListSearch}
+                                    onChange={(e) => setMainListSearch(e.target.value)}
+                                    className="w-full bg-gray-900 text-white text-xs rounded-lg px-2 py-1.5 pl-7 border border-gray-600 focus:border-blue-500"
+                                />
+                                <Search className="absolute left-2 top-1.5 h-4 w-4 text-gray-500" />
+                            </div>
                         </div>
                     </div>
 
@@ -341,44 +385,49 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                                 }
                                             }}
                                             className={`
-                                                flex items-center gap-2 p-2 rounded-lg cursor-pointer border h-full select-none transition-all
-                                                ${isTarget 
-                                                    ? 'bg-blue-600 border-blue-400 shadow-lg scale-[1.01] z-10' 
+                                                flex items-center gap-2 p-1.5 rounded-lg cursor-pointer border h-full select-none transition-all
+                                                ${isTarget
+                                                    ? 'bg-blue-600 border-blue-400 shadow-lg scale-[1.01] z-10'
                                                     : hasMatchingEpg
-                                                        ? 'bg-gray-800 border-gray-700 opacity-60'
-                                                        : 'bg-red-900/10 border-red-900/30 hover:bg-red-900/20'
+                                                        ? 'bg-gray-800/80 border-gray-700/80 hover:bg-gray-700/60'
+                                                        : 'bg-gray-800 border-gray-700 hover:bg-gray-700/80'
                                                 }
                                             `}
                                         >
-                                            <div className={`w-1.5 h-8 rounded-full flex-shrink-0 ${hasMatchingEpg ? 'bg-green-500' : 'bg-red-500'}`} />
-                                            
+                                            <div className={`w-1 h-7 rounded-full flex-shrink-0 ${hasMatchingEpg ? 'bg-green-500' : 'bg-gray-600'}`} />
+
                                             {/* Channel Logo */}
-                                            <div className="w-8 h-8 rounded bg-black/40 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                            <div className="w-7 h-7 rounded bg-black/40 flex items-center justify-center flex-shrink-0 overflow-hidden">
                                                 {channel.tvgLogo ? (
                                                     <img src={channel.tvgLogo} alt="" className="w-full h-full object-contain" onError={(e) => e.currentTarget.style.display = 'none'} />
                                                 ) : (
-                                                    <Tv className="w-4 h-4 text-gray-600" />
+                                                    <Tv className="w-3.5 h-3.5 text-gray-600" />
                                                 )}
                                             </div>
 
                                             <div className="min-w-0 flex-1">
-                                                <div className={`text-xs font-bold leading-tight truncate ${isTarget ? 'text-white' : 'text-gray-300'}`}>
+                                                <div className={`text-xs font-semibold leading-tight truncate ${isTarget ? 'text-white' : 'text-gray-100'}`}>
                                                     {channel.name}
                                                 </div>
-                                                <div className="flex items-center gap-2 text-[10px] text-gray-500 mt-0.5">
-                                                    <span className="truncate max-w-[120px]" title={`ID: ${channel.tvgId || 'N/A'} | Name: ${channel.tvgName || 'N/A'}`}>
-                                                        {channel.tvgId ? `ID: ${channel.tvgId}` : 'Sin ID'} | {channel.tvgName ? `Name: ${channel.tvgName}` : 'Sin Name'}
+                                                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                                    <span
+                                                        className={`text-[10px] font-mono truncate max-w-[130px] ${isTarget ? 'text-blue-200' : 'text-gray-400'}`}
+                                                        title={`tvg-id: ${channel.tvgId || 'N/A'} | tvg-name: ${channel.tvgName || 'N/A'}`}
+                                                    >
+                                                        {channel.tvgId || channel.tvgName || '—'}
                                                     </span>
-                                                    {hasMatchingEpg && <span className="text-green-400">EPG OK</span>}
+                                                    {hasMatchingEpg && (
+                                                        <span className="inline-flex items-center text-[9px] font-bold text-green-400 bg-green-900/30 px-1 py-0.5 rounded-full leading-none whitespace-nowrap">✓ EPG</span>
+                                                    )}
                                                     {!hasMatchingEpg && hasAssignedField && epgIdSet.size > 0 && (
-                                                        <span className="text-amber-400">Sin coincidencia</span>
+                                                        <span className="inline-flex items-center text-[9px] font-bold text-amber-400 bg-amber-900/30 px-1 py-0.5 rounded-full leading-none whitespace-nowrap">! Sin EPG</span>
                                                     )}
                                                 </div>
                                             </div>
 
                                             {isTarget && (
-                                                <div className="bg-white text-blue-600 p-1 rounded-full animate-pulse shadow-sm">
-                                                    <ArrowLeftCircle size={16} className="-rotate-90 lg:rotate-0" />
+                                                <div className="bg-white text-blue-600 p-1 rounded-full animate-pulse shadow-sm flex-shrink-0">
+                                                    <ArrowLeftCircle size={14} className="-rotate-90 md:rotate-0" />
                                                 </div>
                                             )}
                                         </div>
@@ -389,8 +438,8 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                     </div>
                 </div>
 
-                {/* BOTTOM/RIGHT LIST (EPG Sources) */}
-                <div className="flex flex-col h-[60%] lg:h-full lg:w-1/2 min-h-[220px] bg-gray-800">
+                {/* PANEL DERECHO: Fuente EPG */}
+                <div className="flex flex-col h-1/2 md:h-full md:w-1/2 bg-gray-800">
                     
                     {/* EPG Tools Header */}
                      <div className="p-2 bg-gray-800 border-b border-gray-700 flex flex-col gap-2 flex-shrink-0 shadow-sm z-10">
@@ -555,8 +604,8 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                                     </div>
                                                     {/* Nombre e ID */}
                                                     <div className="flex flex-col min-w-0 justify-center">
-                                                        <div className="text-xs font-bold text-gray-200 truncate leading-tight">{epg.name || epg.id}</div>
-                                                        <div className="text-[10px] text-gray-500 truncate font-mono leading-tight mt-0.5">{epg.id}</div>
+                                                        <div className="text-xs font-semibold text-white truncate leading-tight">{epg.name || epg.id}</div>
+                                                        <div className="text-[10px] text-gray-400 truncate font-mono leading-tight mt-0.5">{epg.id}</div>
                                                     </div>
                                                 </div>
                                             </SearchResultItem>
