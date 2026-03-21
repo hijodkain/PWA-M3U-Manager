@@ -305,7 +305,7 @@ export default function PWAM3UManager() {
             </div>
             
             {/* 3. Main Content */}
-            <div className="flex-grow p-0 sm:p-6 lg:p-8 max-w-full mx-auto w-full overflow-x-hidden">
+            <div className="flex-grow px-0 py-0 sm:px-6 sm:pt-2 sm:pb-6 lg:px-8 lg:pt-3 lg:pb-8 max-w-full mx-auto w-full overflow-x-hidden">
                 {renderTabContent()}
             </div>
         </div>

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import { Upload, Download, Copy, Zap, ArrowLeftCircle, ChevronsUpDown, Settings as SettingsIcon, X, Tv, Image, Type, List, Plus, Search } from 'lucide-react';
+import { Upload, Download, Copy, Zap, ArrowLeftCircle, Settings as SettingsIcon, X, Tv, Image, Type, List, Plus, Search } from 'lucide-react';
 import { useAsignarEpg } from './useAsignarEpg';
 import { useChannels } from './useChannels';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -8,7 +8,6 @@ import { useSettings } from './useSettings';
 import { useAppMode } from './AppModeContext';
 import EpgChannelItem from './EpgChannelItem';
 import { AttributeKey, Channel } from './index';
-import { SearchResultItem } from './SearchResultComponents';
 
 interface AsignarEpgTabProps {
     epgHook: ReturnType<typeof useAsignarEpg>;
@@ -48,7 +47,6 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
         setAssignmentMode,
         selectedEpgChannels,
         toggleEpgChannelSelection,
-        toggleSelectAllEpgChannels,
         addSelectedEpgChannels,
         assignChannelName,
         autoAssignEpgToVisibleGroup,
@@ -209,17 +207,17 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
         <div className="flex flex-col h-[calc(100dvh-126px)] sm:h-[calc(100dvh-170px)] overflow-hidden">
             {/* Header: Load EPG Source & Tools */}
             <div className={`bg-gray-800 shadow-lg z-20 flex-shrink-0 overflow-y-auto md:h-auto md:min-h-0 md:overflow-visible ${isShortViewport ? 'px-1.5 py-1 h-[24%] min-h-[88px]' : 'px-2 py-1.5 h-[30%] min-h-[140px]'}`}>
-                <div className={`flex items-center justify-between gap-1.5 mb-1 ${isShortViewport ? 'h-5' : 'h-7'}`}>
+                <div className={`flex items-center justify-between gap-1.5 mb-1 ${isShortViewport ? 'h-6' : 'h-8'}`}>
                     <div className="flex items-center gap-1 truncate min-w-0">
-                        <h2 className={`font-bold text-white flex items-center truncate min-w-0 ${isShortViewport ? 'text-xs' : 'text-sm'}`}>
-                            <Tv className={`mr-1 text-blue-400 flex-shrink-0 ${isShortViewport ? 'h-3 w-3' : 'h-3.5 w-3.5'}`} />
+                        <h2 className={`font-bold text-white flex items-center truncate min-w-0 ${isShortViewport ? 'text-sm' : 'text-base'}`}>
+                            <Tv className={`mr-1 text-blue-400 flex-shrink-0 ${isShortViewport ? 'h-3.5 w-3.5' : 'h-4 w-4'}`} />
                             <span className="truncate">{loadedEpgSourceName || 'Asignar EPG'}</span>
                         </h2>
                         
                         {/* Botón OTT */}
                         <button
                             onClick={() => handleToggle('ott')}
-                            className={`flex items-center justify-center rounded-lg border transition-all duration-200 w-auto min-w-fit flex-shrink-0 ${isShortViewport ? 'h-5' : 'h-6'} ${
+                            className={`flex items-center justify-center rounded-lg border transition-all duration-200 w-auto min-w-fit flex-shrink-0 ${isShortViewport ? 'h-6' : 'h-7'} ${
                                 ottModeActive
                                     ? 'bg-orange-900/40 border-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.3)]'
                                     : 'bg-gray-700/60 border-gray-600/60 hover:border-orange-600/60 hover:bg-gray-700'
@@ -232,7 +230,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                         {/* Botón TiviMate */}
                         <button
                             onClick={() => handleToggle('tivimate')}
-                            className={`flex items-center justify-center rounded-lg border transition-all duration-200 w-auto min-w-fit flex-shrink-0 ${isShortViewport ? 'h-5' : 'h-6'} ${
+                            className={`flex items-center justify-center rounded-lg border transition-all duration-200 w-auto min-w-fit flex-shrink-0 ${isShortViewport ? 'h-6' : 'h-7'} ${
                                 tivimateModeActive
                                     ? 'bg-blue-900/40 border-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.3)]'
                                     : 'bg-gray-700/60 border-gray-600/60 hover:border-blue-600/60 hover:bg-gray-700'
@@ -378,7 +376,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                             <div className={`w-1 h-6 rounded-full flex-shrink-0 ${hasMatchingEpg ? 'bg-green-500' : 'bg-gray-600'}`} />
 
                                             {/* Channel Logo */}
-                                            <div className="w-6 h-6 rounded bg-black/40 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                            <div className="aspect-square h-[90%] rounded bg-black/40 flex items-center justify-center flex-shrink-0 overflow-hidden self-center">
                                                 {channel.tvgLogo ? (
                                                     <img src={channel.tvgLogo} alt="" className="w-full h-full object-contain" onError={(e) => e.currentTarget.style.display = 'none'} />
                                                 ) : (
@@ -423,8 +421,42 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                  <div className="flex flex-col min-h-0 bg-gray-800">
                     
                     {/* EPG Tools Header */}
-                     <div className="p-1.5 bg-gray-800 border-b border-gray-700 flex flex-col gap-1.5 flex-shrink-0 shadow-sm z-10">
-                        {/* Smart Search EPG + selector de fuente */}
+                     <div className="px-2 pt-1.5 pb-1.5 bg-gray-800 border-b border-gray-700 flex flex-col gap-1.5 flex-shrink-0 shadow-sm z-10">
+                        <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Fuente EPG</span>
+                            {savedEpgUrls.length > 0 ? (
+                                <select
+                                    defaultValue=""
+                                    onChange={e => {
+                                        const source = savedEpgUrls.find(s => s.id === e.target.value);
+                                        if (source) {
+                                            setLoadedEpgSourceName(source.name);
+                                            handleFetchEpgUrl(source.url);
+                                            e.target.value = '';
+                                        }
+                                    }}
+                                    className="bg-gray-900 border border-gray-600 rounded-lg px-2 py-1.5 text-xs text-white focus:ring-1 focus:ring-blue-500 max-w-[170px]"
+                                    title="Seleccionar fuente EPG"
+                                >
+                                    <option value="" disabled>
+                                        {isEpgLoading ? 'Cargando…' : (loadedEpgSourceName || 'Fuente EPG…')}
+                                    </option>
+                                    {savedEpgUrls.map(s => (
+                                        <option key={s.id} value={s.id}>{s.name}</option>
+                                    ))}
+                                </select>
+                            ) : (
+                                <button
+                                    onClick={onNavigateToSettings}
+                                    className="flex-shrink-0 flex items-center gap-1 text-[11px] text-blue-400 hover:text-blue-300 border border-blue-800 hover:border-blue-600 rounded-lg px-2 py-1.5 transition-colors whitespace-nowrap bg-blue-900/20"
+                                    title="Ir a Ajustes → Fuentes EPG"
+                                >
+                                    <SettingsIcon size={12} />
+                                    Añadir fuente EPG
+                                </button>
+                            )}
+                        </div>
+
                         <div className="flex gap-2 items-start">
                             <div className="relative flex-1 min-w-0">
                                 <input
@@ -443,46 +475,6 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                     title={isSmartSearchEnabled ? 'Búsqueda inteligente activa' : 'Búsqueda inteligente inactiva'}
                                 />
                             </div>
-
-                            {/* Fuente EPG */}
-                            {savedEpgUrls.length > 0 ? (
-                                <div className="flex flex-col gap-1 flex-shrink-0">
-                                    <select
-                                        defaultValue=""
-                                        onChange={e => {
-                                            const source = savedEpgUrls.find(s => s.id === e.target.value);
-                                            if (source) {
-                                                setLoadedEpgSourceName(source.name);
-                                                handleFetchEpgUrl(source.url);
-                                                e.target.value = '';
-                                            }
-                                        }}
-                                        className="bg-gray-900 border border-gray-600 rounded-lg px-2 py-1.5 text-xs text-white focus:ring-1 focus:ring-blue-500 max-w-[140px]"
-                                        title="Seleccionar fuente EPG"
-                                    >
-                                        <option value="" disabled>
-                                            {isEpgLoading ? 'Cargando…' : (loadedEpgSourceName ? `✓ ${loadedEpgSourceName}` : 'Fuente EPG…')}
-                                        </option>
-                                        {savedEpgUrls.map(s => (
-                                            <option key={s.id} value={s.id}>{s.name}</option>
-                                        ))}
-                                    </select>
-                                    {loadedEpgSourceName && !isEpgLoading && (
-                                        <span className="text-[10px] text-green-400 truncate max-w-[140px] text-right px-1">
-                                            ✓ {loadedEpgSourceName}
-                                        </span>
-                                    )}
-                                </div>
-                            ) : (
-                                <button
-                                    onClick={onNavigateToSettings}
-                                    className="flex-shrink-0 flex items-center gap-1 text-[11px] text-blue-400 hover:text-blue-300 border border-blue-800 hover:border-blue-600 rounded-lg px-2 py-1.5 transition-colors whitespace-nowrap bg-blue-900/20"
-                                    title="Ir a Ajustes → Fuentes EPG"
-                                >
-                                    <SettingsIcon size={12} />
-                                    Añadir fuente EPG
-                                </button>
-                            )}
                         </div>
                         <div className="flex items-center gap-2 px-1">
                             <span className="text-[10px] text-green-400 flex-1">
@@ -542,34 +534,16 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                             >
                                 Añadir prefijo
                             </button>
+                            {selectedEpgChannels.size > 0 && !destinationChannelId && (
+                                <button
+                                    onClick={addSelectedEpgChannels}
+                                    className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-[10px] font-bold uppercase transition-transform active:scale-95 whitespace-nowrap"
+                                >
+                                    <Plus className="h-3 w-3" />
+                                    Añadir ({selectedEpgChannels.size})
+                                </button>
+                            )}
                         </div>
-                         {/* Selection Controls */}
-                        {epgChannels.length > 0 && (
-                            <div className="flex items-center justify-between px-1">
-                                <div className="flex items-center gap-2">
-                                     <button
-                                        onClick={toggleSelectAllEpgChannels}
-                                        className="text-[10px] uppercase font-bold text-gray-400 hover:text-white flex items-center gap-1 transition-colors"
-                                    >
-                                        <ChevronsUpDown className="h-3 w-3" />
-                                        {selectedEpgChannels.size === 0 ? 'Seleccionar Todo' : 'Deseleccionar'}
-                                    </button>
-                                     <span className="text-[10px] text-gray-600">|</span>
-                                    <span className="text-[10px] text-gray-400 font-mono">
-                                        {filteredEpgChannels.length} canales
-                                    </span>
-                                </div>
-                                {selectedEpgChannels.size > 0 && (
-                                    <button
-                                        onClick={addSelectedEpgChannels}
-                                        className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-[10px] font-bold uppercase transition-transform active:scale-95"
-                                    >
-                                        <Plus className="h-3 w-3" />
-                                        Añadir ({selectedEpgChannels.size})
-                                    </button>
-                                )}
-                            </div>
-                        )}
                     </div>
 
                     {/* EPG List Virtual Container */}
@@ -619,10 +593,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                             }}
                                                 className="px-1.5 py-0.5"
                                         >
-                                            <SearchResultItem
-                                                score={matchScore}
-                                                matchType={matchType as any}
-                                                isSelected={isSelected}
+                                            <div
                                                 onClick={() => {
                                                     if (destinationChannelId) {
                                                         handleEpgSourceClick(epg, {
@@ -636,24 +607,54 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                                         toggleEpgChannelSelection(epg.id);
                                                     }
                                                 }}
-                                                className={`h-full border border-gray-700/50 ${!destinationChannelId ? 'hover:border-blue-500/50' : ''}`}
+                                                className={`
+                                                    flex items-center gap-1.5 p-1 rounded-lg cursor-pointer border h-full select-none transition-all
+                                                    ${isSelected
+                                                        ? 'bg-blue-600 border-blue-400 shadow-lg scale-[1.01] z-10'
+                                                        : matchScore !== undefined && matchScore >= 0.7
+                                                            ? 'bg-gray-800/80 border-green-700/70 hover:bg-gray-700/60'
+                                                            : 'bg-gray-800 border-gray-700 hover:bg-gray-700/80'
+                                                    }
+                                                `}
                                             >
-                                                <div className="flex items-center gap-1.5">
-                                                    {/* Logo EPG */}
-                                                    <div className="w-7 h-7 rounded bg-black/40 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                                                        {epg.logo ? (
-                                                            <img src={epg.logo} className="w-full h-full object-contain" loading="lazy" onError={(e) => e.currentTarget.style.display = 'none'} />
-                                                        ) : (
-                                                            <Tv className="w-3.5 h-3.5 text-gray-600" />
+                                                <div className={`w-1 h-6 rounded-full flex-shrink-0 ${isSelected ? 'bg-blue-200' : matchScore !== undefined && matchScore >= 0.7 ? 'bg-green-500' : 'bg-gray-600'}`} />
+
+                                                <div className="aspect-square h-[90%] rounded bg-black/40 flex items-center justify-center flex-shrink-0 overflow-hidden self-center">
+                                                    {epg.logo ? (
+                                                        <img src={epg.logo} alt="" className="w-full h-full object-contain" loading="lazy" onError={(e) => e.currentTarget.style.display = 'none'} />
+                                                    ) : (
+                                                        <Tv className="w-3.5 h-3.5 text-gray-600" />
+                                                    )}
+                                                </div>
+
+                                                <div className="min-w-0 flex-1">
+                                                    <div className={`text-xs font-semibold leading-tight truncate ${isSelected ? 'text-white' : 'text-gray-100'}`}>
+                                                        {epg.name || epg.id}
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                                        <span className={`text-[10px] font-mono truncate max-w-[150px] ${isSelected ? 'text-blue-200' : 'text-gray-400'}`}>
+                                                            {epg.id}
+                                                        </span>
+                                                        {matchScore !== undefined && destinationChannelId && (
+                                                            <span className={`inline-flex items-center text-[8px] font-bold px-1 py-0.5 rounded-full leading-none whitespace-nowrap ${
+                                                                matchScore >= 0.9
+                                                                    ? 'text-green-400 bg-green-900/30'
+                                                                    : matchScore >= 0.7
+                                                                        ? 'text-yellow-400 bg-yellow-900/30'
+                                                                        : 'text-blue-300 bg-blue-900/30'
+                                                            }`}>
+                                                                {Math.round(matchScore * 100)}%
+                                                            </span>
                                                         )}
                                                     </div>
-                                                    {/* Nombre e ID */}
-                                                    <div className="flex flex-col min-w-0 justify-center">
-                                                        <div className="text-xs font-semibold text-white truncate leading-tight">{epg.name || epg.id}</div>
-                                                        <div className="text-[10px] text-gray-400 truncate font-mono leading-tight mt-0.5">{epg.id}</div>
-                                                    </div>
                                                 </div>
-                                            </SearchResultItem>
+
+                                                {destinationChannelId && matchType === 'exact' && (
+                                                    <div className="bg-white text-green-600 p-1 rounded-full shadow-sm flex-shrink-0">
+                                                        <ArrowLeftCircle size={12} className="-rotate-90 md:rotate-0" />
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     );
                                 })}
