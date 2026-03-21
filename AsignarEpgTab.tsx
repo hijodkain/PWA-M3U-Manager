@@ -425,26 +425,44 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                         <div className="flex items-center justify-between mb-1.5">
                             <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Fuente EPG</span>
                             {savedEpgUrls.length > 0 ? (
-                                <select
-                                    defaultValue=""
-                                    onChange={e => {
-                                        const source = savedEpgUrls.find(s => s.id === e.target.value);
-                                        if (source) {
-                                            setLoadedEpgSourceName(source.name);
-                                            handleFetchEpgUrl(source.url);
-                                            e.target.value = '';
-                                        }
-                                    }}
-                                    className="bg-gray-900 border border-gray-600 rounded-lg px-2 py-1.5 text-xs text-white focus:ring-1 focus:ring-blue-500 max-w-[170px]"
-                                    title="Seleccionar fuente EPG"
-                                >
-                                    <option value="" disabled>
-                                        {isEpgLoading ? 'Cargando…' : (loadedEpgSourceName || 'Fuente EPG…')}
-                                    </option>
-                                    {savedEpgUrls.map(s => (
-                                        <option key={s.id} value={s.id}>{s.name}</option>
-                                    ))}
-                                </select>
+                                loadedEpgSourceName ? (
+                                    <div className="flex items-center gap-1 max-w-[210px]">
+                                        <span className="text-[10px] text-gray-500 font-mono truncate" title={loadedEpgSourceName}>
+                                            {loadedEpgSourceName}
+                                        </span>
+                                        <button
+                                            onClick={() => {
+                                                setLoadedEpgSourceName('');
+                                                clearEpgChannels();
+                                            }}
+                                            className="flex items-center justify-center w-4 h-4 rounded text-red-400 hover:text-red-300 hover:bg-red-900/30 transition-colors flex-shrink-0"
+                                            title="Quitar fuente EPG seleccionada"
+                                        >
+                                            <X size={12} />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <select
+                                        defaultValue=""
+                                        onChange={e => {
+                                            const source = savedEpgUrls.find(s => s.id === e.target.value);
+                                            if (source) {
+                                                setLoadedEpgSourceName(source.name);
+                                                handleFetchEpgUrl(source.url);
+                                                e.target.value = '';
+                                            }
+                                        }}
+                                        className="bg-gray-900 border border-gray-600 rounded-lg px-2 py-1.5 text-xs text-white focus:ring-1 focus:ring-blue-500 max-w-[170px]"
+                                        title="Seleccionar fuente EPG"
+                                    >
+                                        <option value="" disabled>
+                                            {isEpgLoading ? 'Cargando…' : 'Fuente EPG…'}
+                                        </option>
+                                        {savedEpgUrls.map(s => (
+                                            <option key={s.id} value={s.id}>{s.name}</option>
+                                        ))}
+                                    </select>
+                                )
                             ) : (
                                 <button
                                     onClick={onNavigateToSettings}
