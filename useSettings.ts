@@ -17,7 +17,14 @@ const CHANNEL_PREFIXES_KEY = 'channel_prefixes';
 const CHANNEL_SUFFIXES_KEY = 'channel_suffixes';
 
 // Prefijos y sufijos por defecto
-const DEFAULT_PREFIXES = ['HD ', 'FHD ', 'UHD ', '4K ', 'SD '];
+const DEFAULT_PREFIXES = [
+    // Prefijos con calidad y región (más específicos primero)
+    'ES: (HD REPUESTO)', 'ES:(FHD REPUESTO)',
+    'ES: (FHD)', 'ES: (HD)',
+    'ES:', 'SPO:', 'ESP |', 'ARG I',
+    // Prefijos de calidad simples
+    'HD ', 'FHD ', 'UHD ', '4K ', 'SD ',
+];
 const DEFAULT_SUFFIXES = [
     ' 4K', ' UHD', ' FHD', ' HD', ' SD', ' HEVC', ' H265', ' H264', ' x265', ' x264', 
     ' 1080p', ' 720p', ' DUAL', ' MULTI', ' (4K)', ' (UHD)', ' (FHD)', ' (HD)', ' (SD)',
