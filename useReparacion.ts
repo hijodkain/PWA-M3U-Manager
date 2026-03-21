@@ -736,6 +736,17 @@ export const useReparacion = (
         setSelectedReparacionChannels(new Set());
     };
 
+    const handleDeleteSelectedReparacionChannels = () => {
+        if (selectedReparacionChannels.size === 0) return 0;
+
+        const deletedCount = selectedReparacionChannels.size;
+        setReparacionChannels(prev => prev.filter(c => !selectedReparacionChannels.has(c.id)));
+        setSelectedReparacionChannels(new Set());
+        setLastSelectedIndex(null);
+
+        return deletedCount;
+    };
+
     // Función para buscar canales similares automáticamente
     const findSimilarChannels = useCallback((channelName: string, sourceChannels: Channel[] = reparacionChannels) => {
         if (!channelName.trim()) return [];
@@ -787,6 +798,7 @@ export const useReparacion = (
         setMainListSearch,
         reparacionListSearch,
         setReparacionListSearch,
+        reparacionChannels,
         setReparacionChannels,
         verificationInfo,
         verificationProgress,
@@ -812,5 +824,6 @@ export const useReparacion = (
         smartSearch,
         mainStatusFilter,
         setMainStatusFilter,
+        handleDeleteSelectedReparacionChannels,
     };
 };

@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Upload, Copy, CheckSquare, ArrowLeftCircle, RotateCcw, Trash2, Link, Check, Search, X } from 'lucide-react';
+import { Upload, Copy, CheckSquare, ArrowLeftCircle, RotateCcw, Trash2, Link, Check, Search, X, RefreshCw } from 'lucide-react';
 import { useReparacion } from './useReparacion';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useChannels } from './useChannels';
@@ -26,6 +26,8 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
     const [showClearConfirm, setShowClearConfirm] = useState(false);
     const [savedMedicinaLists, setSavedMedicinaLists] = useState<Array<{ id: string; name: string; url: string; content?: string }>>([]);
     const [bulkActionType, setBulkActionType] = useState('offline_repair');
+    const [hasPendingReparacionChanges, setHasPendingReparacionChanges] = useState(false);
+    const [isUpdatingReparacionList, setIsUpdatingReparacionList] = useState(false);
 
     const {
         selectedReparacionChannels,
@@ -58,6 +60,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         setMainListSearch,
         reparacionListSearch,
         setReparacionListSearch,
+        reparacionChannels,
         verificationInfo,
         verificationProgress,
         cancelVerification,
@@ -78,6 +81,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         mainStatusFilter,
         setMainStatusFilter,
         selectMultipleChannels,
+        handleDeleteSelectedReparacionChannels,
     } = reparacionHook;
     
     const { normalizeChannelName } = smartSearch;
@@ -150,6 +154,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
     const onUrlLoad = async () => {
         const urlToLoad = reparacionUrl;
         await handleReparacionUrlLoad();
+        setHasPendingReparacionChanges(false);
         if (urlToLoad) {
             try {
                 const urlObj = new URL(urlToLoad);
@@ -171,6 +176,168 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         if (file) {
             setReparacionListName(file.name);
             await handleReparacionFileUpload(e);
+            setHasPendingReparacionChanges(false);
+        }
+    };
+
+    const getDropboxAccessToken = async () => {
+        const tokenRes = await fetch('https://api.dropboxapi.com/oauth2/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                grant_type: 'refresh_token',
+                refresh_token: settingsHook.dropboxRefreshToken,
+                client_id: settingsHook.dropboxAppKey,
+            }),
+        });
+
+        if (!tokenRes.ok) {
+            throw new Error('No se pudo obtener el token de Dropbox.');
+        }
+
+        const tokenData = await tokenRes.json();
+        return tokenData.access_token as string;
+    };
+
+    const convertDropboxUrl = (url: string): string => {
+        return url.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('dl=0', 'dl=1');
+    };
+
+    const getReparacionFileName = (): string => {
+        const base = (reparacionListName || 'lista_reparadora').trim().replace(/\s+/g, '_');
+        return base.endsWith('.m3u') || base.endsWith('.m3u8') ? base : `${base}.m3u`;
+    };
+
+    const generateReparacionM3UContent = () => {
+        let content = '#EXTM3U\n';
+        reparacionChannels.forEach((channel) => {
+            let attributes = '';
+            if (channel.tvgId) attributes += ` tvg-id="${channel.tvgId}"`;
+            if (channel.tvgName) attributes += ` tvg-name="${channel.tvgName}"`;
+            if (channel.tvgLogo) attributes += ` tvg-logo="${channel.tvgLogo}"`;
+            if (channel.groupTitle) attributes += ` group-title="${channel.groupTitle}"`;
+            content += `#EXTINF:-1${attributes},${channel.name}\n${channel.url}\n`;
+        });
+        return content;
+    };
+
+    const handleUpdateReparacionList = async () => {
+        if (!reparacionListName) {
+            alert('No hay una lista reparadora cargada para actualizar.');
+            return;
+        }
+        if (!settingsHook.dropboxRefreshToken || !settingsHook.dropboxAppKey) {
+            alert('Debes configurar Dropbox en Ajustes para actualizar la lista reparadora.');
+            return;
+        }
+
+        setIsUpdatingReparacionList(true);
+        try {
+            const accessToken = await getDropboxAccessToken();
+            const filename = getReparacionFileName();
+            const uploadPath = `/Listas Reparadoras/${filename}`;
+            const content = generateReparacionM3UContent();
+
+            const uploadRes = await fetch('https://content.dropboxapi.com/2/files/upload', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Dropbox-API-Arg': JSON.stringify({
+                        path: uploadPath,
+                        mode: 'overwrite',
+                        autorename: false,
+                        mute: false,
+                        strict_conflict: false,
+                    }),
+                    'Content-Type': 'application/octet-stream',
+                },
+                body: content,
+            });
+
+            if (!uploadRes.ok) {
+                const errText = await uploadRes.text();
+                throw new Error(`Dropbox upload error: ${uploadRes.status} ${errText}`);
+            }
+
+            const uploaded = await uploadRes.json();
+
+            let sharedUrl = '';
+            const shareResponse = await fetch('https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ path: uploaded.path_display }),
+            });
+
+            if (shareResponse.ok) {
+                const shareData = await shareResponse.json();
+                sharedUrl = convertDropboxUrl(shareData.url);
+            } else {
+                const listLinks = await fetch('https://api.dropboxapi.com/2/sharing/list_shared_links', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ path: uploaded.path_display }),
+                });
+                if (listLinks.ok) {
+                    const existing = await listLinks.json();
+                    if (existing.links && existing.links.length > 0) {
+                        sharedUrl = convertDropboxUrl(existing.links[0].url);
+                    }
+                }
+            }
+
+            if (sharedUrl) {
+                const stored = JSON.parse(localStorage.getItem('medicinaLists') || '[]');
+                const updated = Array.isArray(stored)
+                    ? stored.map((list: any) =>
+                        list.name === reparacionListName
+                            ? { ...list, url: sharedUrl }
+                            : list
+                    )
+                    : [];
+
+                const exists = updated.some((list: any) => list.name === reparacionListName);
+                const finalLists = exists
+                    ? updated
+                    : [
+                        ...updated,
+                        {
+                            id: Date.now().toString(),
+                            name: reparacionListName,
+                            url: sharedUrl,
+                        },
+                    ];
+
+                localStorage.setItem('medicinaLists', JSON.stringify(finalLists));
+                setSavedMedicinaLists(finalLists);
+                setReparacionUrl(sharedUrl);
+            }
+
+            setHasPendingReparacionChanges(false);
+            alert('Lista reparadora actualizada en Dropbox correctamente.');
+        } catch (error) {
+            console.error('Error actualizando lista reparadora', error);
+            alert(`No se pudo actualizar la lista reparadora: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+        } finally {
+            setIsUpdatingReparacionList(false);
+        }
+    };
+
+    const handleDeleteSelectedFromReparacionList = () => {
+        if (selectedReparacionChannels.size === 0) return;
+
+        if (!confirm(`Se van a eliminar ${selectedReparacionChannels.size} canales de la lista reparadora. ¿Deseas continuar?`)) {
+            return;
+        }
+
+        const deletedCount = handleDeleteSelectedReparacionChannels();
+        if (deletedCount > 0) {
+            setHasPendingReparacionChanges(true);
         }
     };
 
@@ -321,6 +488,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         if(!list) return;
 
         setReparacionListName(list.name);
+        setHasPendingReparacionChanges(false);
         
         if (list.url === 'local' && list.content) {
             // Emulate file upload
@@ -337,6 +505,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         setReparacionListName('');
         setReparacionUrl('');
         setReparacionChannels([]);
+        setHasPendingReparacionChanges(false);
     };
 
 
@@ -749,12 +918,34 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 {/* Botón Añadir — visible al seleccionar canales */}
                 {selectedReparacionChannels.size > 0 && (
                     <div className="pt-2 border-t border-gray-700 mt-1">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <button
+                                onClick={handleAddSelectedFromReparacion}
+                                className="w-full py-2 bg-green-600 hover:bg-green-500 text-white text-sm font-bold rounded-lg flex items-center justify-center gap-2 transition-colors shadow"
+                            >
+                                <Check size={15} />
+                                Añadir {selectedReparacionChannels.size}
+                            </button>
+                            <button
+                                onClick={handleDeleteSelectedFromReparacionList}
+                                className="w-full py-2 bg-red-700 hover:bg-red-600 text-white text-sm font-bold rounded-lg flex items-center justify-center gap-2 transition-colors shadow"
+                            >
+                                <Trash2 size={15} />
+                                Eliminar {selectedReparacionChannels.size}
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {hasPendingReparacionChanges && reparacionListName && (
+                    <div className="pt-2 border-t border-gray-700 mt-2">
                         <button
-                            onClick={handleAddSelectedFromReparacion}
-                            className="w-full py-2 bg-green-600 hover:bg-green-500 text-white text-sm font-bold rounded-lg flex items-center justify-center gap-2 transition-colors shadow"
+                            onClick={handleUpdateReparacionList}
+                            disabled={isUpdatingReparacionList}
+                            className="w-full py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white text-sm font-bold rounded-lg flex items-center justify-center gap-2 transition-colors shadow"
                         >
-                            <Check size={15} />
-                            Añadir {selectedReparacionChannels.size} canal{selectedReparacionChannels.size !== 1 ? 'es' : ''} seleccionado{selectedReparacionChannels.size !== 1 ? 's' : ''}
+                            {isUpdatingReparacionList ? <RefreshCw size={15} className="animate-spin" /> : <RefreshCw size={15} />}
+                            {isUpdatingReparacionList ? 'Actualizando lista reparadora...' : 'Actualizar lista reparadora'}
                         </button>
                     </div>
                 )}
