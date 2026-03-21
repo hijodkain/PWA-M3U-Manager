@@ -436,9 +436,9 @@ export const useAsignarEpg = (
         setSelectedEpgChannels(new Set());
     }, [selectedEpgChannels, epgChannels, setChannels, saveStateToHistory]);
 
-    // Función para alternar entre modos de asignación
-    const toggleAssignmentMode = useCallback(() => {
-        setAssignmentMode(prev => prev === 'tvg-id' ? 'tvg-name' : 'tvg-id');
+    // Función para seleccionar explícitamente el modo de comprobación/asignación
+    const setAssignmentModeExplicit = useCallback((mode: 'tvg-id' | 'tvg-name') => {
+        setAssignmentMode(mode);
     }, []);
 
     // Función para limpiar la fuente EPG cargada
@@ -482,7 +482,7 @@ export const useAsignarEpg = (
         smartSearch,
         // Nuevas funciones para modo de asignación y añadir canales
         assignmentMode,
-        toggleAssignmentMode,
+        setAssignmentMode: setAssignmentModeExplicit,
         selectedEpgChannels,
         toggleEpgChannelSelection,
         toggleSelectAllEpgChannels,

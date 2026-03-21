@@ -46,7 +46,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
         // getEpgSimilarityScore, // Removed as unused
         smartSearch,
         assignmentMode,
-        toggleAssignmentMode,
+        setAssignmentMode,
         selectedEpgChannels,
         toggleEpgChannelSelection,
         toggleSelectAllEpgChannels,
@@ -90,6 +90,21 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
         }
         return channelsToFilter;
     }, [channels, selectedGroup, mainListSearch, isSmartSearchEnabled, epgSearchChannels]);
+
+    const doesChannelMatchLoadedEpg = useCallback((channel: Channel) => {
+        if (epgIdSet.size === 0) {
+            return false;
+        }
+
+        const valueToCheck = assignmentMode === 'tvg-id' ? channel.tvgId : channel.tvgName;
+        const normalizedValue = valueToCheck?.trim();
+
+        if (!normalizedValue) {
+            return false;
+        }
+
+        return epgIdSet.has(normalizedValue);
+    }, [assignmentMode, epgIdSet]);
 
     // Virtualizers
     const mainListParentRef = useRef<HTMLDivElement>(null);
@@ -211,7 +226,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                          {/* Toggle Assignment Mode */}
                         <div className="flex bg-gray-700/50 rounded-lg p-0.5 border border-gray-600/50">
                             <button
-                                onClick={toggleAssignmentMode}
+                                onClick={() => setAssignmentMode('tvg-id')}
                                 className={`px-2 py-1 rounded-md text-[10px] sm:text-xs font-bold transition-all ${
                                     assignmentMode === 'tvg-id'
                                         ? 'bg-blue-600 text-white shadow-sm'
@@ -221,7 +236,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                 ID
                             </button>
                             <button
-                                onClick={toggleAssignmentMode}
+                                onClick={() => setAssignmentMode('tvg-name')}
                                 className={`px-2 py-1 rounded-md text-[10px] sm:text-xs font-bold transition-all ${
                                     assignmentMode === 'tvg-name'
                                         ? 'bg-purple-600 text-white shadow-sm'
@@ -298,7 +313,8 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                             {mainListRowVirtualizer.getVirtualItems().map((virtualRow) => {
                                 const channel = filteredMainChannelsForEpg[virtualRow.index];
                                 const isTarget = destinationChannelId === channel.id;
-                                const hasEpg = !!channel.tvgId;
+                                const hasAssignedField = assignmentMode === 'tvg-id' ? !!channel.tvgId : !!channel.tvgName;
+                                const hasMatchingEpg = doesChannelMatchLoadedEpg(channel);
 
                                 return (
                                     <div
@@ -328,13 +344,13 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                                 flex items-center gap-2 p-2 rounded-lg cursor-pointer border h-full select-none transition-all
                                                 ${isTarget 
                                                     ? 'bg-blue-600 border-blue-400 shadow-lg scale-[1.01] z-10' 
-                                                    : hasEpg
+                                                    : hasMatchingEpg
                                                         ? 'bg-gray-800 border-gray-700 opacity-60'
                                                         : 'bg-red-900/10 border-red-900/30 hover:bg-red-900/20'
                                                 }
                                             `}
                                         >
-                                            <div className={`w-1.5 h-8 rounded-full flex-shrink-0 ${hasEpg ? 'bg-green-500' : 'bg-red-500'}`} />
+                                            <div className={`w-1.5 h-8 rounded-full flex-shrink-0 ${hasMatchingEpg ? 'bg-green-500' : 'bg-red-500'}`} />
                                             
                                             {/* Channel Logo */}
                                             <div className="w-8 h-8 rounded bg-black/40 flex items-center justify-center flex-shrink-0 overflow-hidden">
@@ -353,7 +369,10 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                                     <span className="truncate max-w-[120px]" title={`ID: ${channel.tvgId || 'N/A'} | Name: ${channel.tvgName || 'N/A'}`}>
                                                         {channel.tvgId ? `ID: ${channel.tvgId}` : 'Sin ID'} | {channel.tvgName ? `Name: ${channel.tvgName}` : 'Sin Name'}
                                                     </span>
-                                                    {hasEpg && <span className="text-green-400">EPG OK</span>}
+                                                    {hasMatchingEpg && <span className="text-green-400">EPG OK</span>}
+                                                    {!hasMatchingEpg && hasAssignedField && epgIdSet.size > 0 && (
+                                                        <span className="text-amber-400">Sin coincidencia</span>
+                                                    )}
                                                 </div>
                                             </div>
 
