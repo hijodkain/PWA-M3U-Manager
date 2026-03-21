@@ -287,7 +287,7 @@ export default function PWAM3UManager() {
             {/* 2. Sticky Navigation Bar */}
             <div className="sticky top-0 z-50 bg-gray-900/95 backdrop-blur-sm shadow-xl border-b border-gray-800">
                 <div className={`max-w-full mx-auto ${isShortViewport ? 'px-1 sm:px-3' : 'px-1 sm:px-6 lg:px-8'}`}>
-                     <nav className={`flex items-center justify-center space-x-1 sm:space-x-2 overflow-x-auto no-scrollbar ${isShortViewport ? 'py-1' : 'py-2'}`} aria-label="Tabs">
+                     <nav className={`flex items-center justify-center space-x-0.5 sm:space-x-1 overflow-x-auto no-scrollbar ${isShortViewport ? 'py-0.5' : 'py-2'}`} aria-label="Tabs">
                         {TABS.map((tab) => (
                             <button
                                 key={tab.id}
@@ -295,7 +295,7 @@ export default function PWAM3UManager() {
                                 className={`${activeTab === tab.id
                                         ? 'bg-blue-600/20 text-blue-400 border border-blue-500/50'
                                         : 'text-gray-400 hover:text-white hover:bg-gray-800 border border-transparent'
-                                    } ${isShortViewport ? 'px-2 sm:px-3 py-1.5 text-xs' : 'px-2 sm:px-4 py-2 text-xs sm:text-sm'} rounded-lg font-medium transition-all focus:outline-none whitespace-nowrap`}
+                                    } ${isShortViewport ? 'px-1 sm:px-2 py-1 text-[10px] sm:text-xs' : 'px-2 sm:px-4 py-2 text-xs sm:text-sm'} rounded-lg font-medium transition-all focus:outline-none whitespace-nowrap`}
                             >
                                 {getTabContent(tab.id)}
                             </button>

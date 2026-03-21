@@ -209,17 +209,17 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
         <div className="flex flex-col h-[calc(100dvh-126px)] sm:h-[calc(100dvh-170px)] overflow-hidden">
             {/* Header: Load EPG Source & Tools */}
             <div className={`bg-gray-800 shadow-lg z-20 flex-shrink-0 overflow-y-auto md:h-auto md:min-h-0 md:overflow-visible ${isShortViewport ? 'px-1.5 py-1 h-[24%] min-h-[88px]' : 'px-2 py-1.5 h-[30%] min-h-[140px]'}`}>
-                <div className="flex items-center justify-between gap-1.5 mb-1 h-7">
-                    <div className="flex items-center gap-1.5 truncate min-w-0">
-                        <h2 className="text-sm font-bold text-white flex items-center truncate min-w-0">
-                            <Tv className="mr-1 h-3.5 w-3.5 text-blue-400 flex-shrink-0" />
+                <div className={`flex items-center justify-between gap-1.5 mb-1 ${isShortViewport ? 'h-5' : 'h-7'}`}>
+                    <div className="flex items-center gap-1 truncate min-w-0">
+                        <h2 className={`font-bold text-white flex items-center truncate min-w-0 ${isShortViewport ? 'text-xs' : 'text-sm'}`}>
+                            <Tv className={`mr-1 text-blue-400 flex-shrink-0 ${isShortViewport ? 'h-3 w-3' : 'h-3.5 w-3.5'}`} />
                             <span className="truncate">{loadedEpgSourceName || 'Asignar EPG'}</span>
                         </h2>
                         
                         {/* Botón OTT */}
                         <button
                             onClick={() => handleToggle('ott')}
-                            className={`flex items-center justify-center rounded-lg border transition-all duration-200 h-[80%] w-auto min-w-fit flex-shrink-0 ${
+                            className={`flex items-center justify-center rounded-lg border transition-all duration-200 w-auto min-w-fit flex-shrink-0 ${isShortViewport ? 'h-5' : 'h-6'} ${
                                 ottModeActive
                                     ? 'bg-orange-900/40 border-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.3)]'
                                     : 'bg-gray-700/60 border-gray-600/60 hover:border-orange-600/60 hover:bg-gray-700'
@@ -232,7 +232,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                         {/* Botón TiviMate */}
                         <button
                             onClick={() => handleToggle('tivimate')}
-                            className={`flex items-center justify-center rounded-lg border transition-all duration-200 h-[80%] w-auto min-w-fit flex-shrink-0 ${
+                            className={`flex items-center justify-center rounded-lg border transition-all duration-200 w-auto min-w-fit flex-shrink-0 ${isShortViewport ? 'h-5' : 'h-6'} ${
                                 tivimateModeActive
                                     ? 'bg-blue-900/40 border-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.3)]'
                                     : 'bg-gray-700/60 border-gray-600/60 hover:border-blue-600/60 hover:bg-gray-700'
