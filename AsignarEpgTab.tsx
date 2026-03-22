@@ -666,7 +666,15 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
 
                     {/* EPG List Virtual Container */}
                     <div className="flex-grow overflow-auto relative bg-gray-900" ref={epgListParentRef}>
-                         {epgChannels.length === 0 ? (
+                         {isEpgLoading ? (
+                            <div className="flex flex-col items-center justify-center h-full text-gray-400 p-8 text-center gap-3">
+                                <svg className="animate-spin h-8 w-8 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                </svg>
+                                <p className="text-sm">Cargando fuente EPG…</p>
+                            </div>
+                        ) : epgChannels.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-full text-gray-500 p-8 text-center opacity-50">
                                 <Tv className="h-12 w-12 mb-2 text-gray-600" />
                                 <p className="text-sm">No hay fuente EPG cargada</p>
