@@ -142,7 +142,7 @@ export const useSmartSearch = ({ channelPrefixes, channelSuffixes }: UseSmartSea
             }
             // 2. Coincidencia exacta (normalizada)
             else if (normalizedName === normalizedSearchTerm) {
-                score = 0.95;
+                score = 1.0;
                 matchType = 'exact';
             }
             // 3. Contiene la búsqueda (original)

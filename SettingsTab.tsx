@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ExternalLink, PlusCircle, Trash2, Filter, List, Cloud, Zap, Plus } from 'lucide-react';
 import { useSettings } from './useSettings';
-import { setStorageItem } from './utils/storage';
+import { getStorageItem, removeStorageItem, setStorageItem } from './utils/storage';
 
 interface SettingsTabProps {
     settingsHook: ReturnType<typeof useSettings>;
@@ -67,6 +67,14 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
         setLocalPrefixes(channelPrefixes.join(', '));
         setLocalSuffixes(channelSuffixes.join(', '));
     }, [channelPrefixes, channelSuffixes]);
+
+    useEffect(() => {
+        const targetSubTab = getStorageItem('settings_target_subtab');
+        if (targetSubTab === 'filters') {
+            setActiveSubTab('filters');
+            removeStorageItem('settings_target_subtab');
+        }
+    }, []);
 
     const handleDropboxAuth = async () => {
         if (!appKey) {
@@ -343,7 +351,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
 
                 {/* 3. FILTROS SMART SEARCH */}
                 {activeSubTab === 'filters' && (
-                    <div className="max-w-2xl mx-auto space-y-6 animate-fadeIn">
+                    <div id="settings-filtros-busqueda" className="max-w-2xl mx-auto space-y-6 animate-fadeIn">
                         <div className="mb-8 border-b border-gray-800 pb-4">
                             <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
                                 <Filter className="text-yellow-500" /> Filtros de Búsqueda Inteligente

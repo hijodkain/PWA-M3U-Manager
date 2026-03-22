@@ -38,6 +38,7 @@ const TABS: { id: Tab; icon: React.ElementType; label: string }[] = [
 export default function PWAM3UManager() {
     const [activeTab, setActiveTab] = useState<Tab>('inicio');
     const [failedChannels, setFailedChannels] = useState<Channel[]>([]);
+    const [isShortViewport, setIsShortViewport] = useState(false);
     const { mode, toggleMode } = useAppMode();
     const channelsHook = useChannels(setFailedChannels);
     const settingsHook = useSettings();
@@ -156,6 +157,13 @@ export default function PWAM3UManager() {
         handleDropboxCallback();
     }, []);
 
+    useEffect(() => {
+        const checkViewport = () => setIsShortViewport(window.innerHeight <= 560);
+        checkViewport();
+        window.addEventListener('resize', checkViewport);
+        return () => window.removeEventListener('resize', checkViewport);
+    }, []);
+
     const renderTabContent = () => {
         switch (activeTab) {
             case 'inicio':
@@ -252,18 +260,18 @@ export default function PWAM3UManager() {
             {/* 1. Static Header (Scrolls away) */}
              <div className="bg-gray-900 border-b border-gray-800">
                 <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-between py-3">
+                    <div className={`flex items-center justify-between ${isShortViewport ? 'py-1.5' : 'py-3'}`}>
                         <div className="flex items-center">
-                            <img src="/logo.svg" alt="Logo" className="h-8 w-8 mr-3" />
+                            <img src="/logo.svg" alt="Logo" className={`${isShortViewport ? 'h-6 w-6 mr-2' : 'h-8 w-8 mr-3'}`} />
                              <div>
-                                <h1 className="text-xl font-bold text-blue-400">M3U Manager</h1>
-                                <p className="text-xs text-gray-400 hidden sm:block">Gestión inteligente de listas IPTV</p>
+                                <h1 className={`${isShortViewport ? 'text-lg' : 'text-xl'} font-bold text-blue-400`}>M3U Manager</h1>
+                                <p className={`text-xs text-gray-400 ${isShortViewport ? 'hidden' : 'hidden sm:block'}`}>Gestión inteligente de listas IPTV</p>
                             </div>
                         </div>
                         <div>
                             <button
                                 onClick={toggleMode}
-                                className={`px-4 py-1.5 rounded-full text-xs font-bold tracking-wide transition-all shadow-lg ${
+                                className={`${isShortViewport ? 'px-3 py-1 text-[11px]' : 'px-4 py-1.5 text-xs'} rounded-full font-bold tracking-wide transition-all shadow-lg ${
                                     mode === 'pro'
                                         ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-purple-900/50'
                                         : 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-emerald-900/50'
@@ -278,8 +286,8 @@ export default function PWAM3UManager() {
 
             {/* 2. Sticky Navigation Bar */}
             <div className="sticky top-0 z-50 bg-gray-900/95 backdrop-blur-sm shadow-xl border-b border-gray-800">
-                <div className="max-w-full mx-auto px-1 sm:px-6 lg:px-8">
-                     <nav className="flex items-center justify-center space-x-1 sm:space-x-2 py-2 overflow-x-auto no-scrollbar" aria-label="Tabs">
+                <div className={`max-w-full mx-auto ${isShortViewport ? 'px-1 sm:px-3' : 'px-1 sm:px-6 lg:px-8'}`}>
+                     <nav className={`flex items-center justify-center space-x-0.5 sm:space-x-1 overflow-x-auto no-scrollbar ${isShortViewport ? 'py-0.5' : 'py-2'}`} aria-label="Tabs">
                         {TABS.map((tab) => (
                             <button
                                 key={tab.id}
@@ -287,7 +295,7 @@ export default function PWAM3UManager() {
                                 className={`${activeTab === tab.id
                                         ? 'bg-blue-600/20 text-blue-400 border border-blue-500/50'
                                         : 'text-gray-400 hover:text-white hover:bg-gray-800 border border-transparent'
-                                    } px-2 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all focus:outline-none whitespace-nowrap`}
+                                    } ${isShortViewport ? 'px-1 sm:px-2 py-1 text-[10px] sm:text-xs' : 'px-2 sm:px-4 py-2 text-xs sm:text-sm'} rounded-lg font-medium transition-all focus:outline-none whitespace-nowrap`}
                             >
                                 {getTabContent(tab.id)}
                             </button>
@@ -297,7 +305,13 @@ export default function PWAM3UManager() {
             </div>
             
             {/* 3. Main Content */}
-            <div className="flex-grow p-0 sm:p-6 lg:p-8 max-w-full mx-auto w-full overflow-x-hidden">
+            <div
+                className={`flex-grow px-0 py-0 max-w-full mx-auto w-full overflow-x-hidden ${
+                    activeTab === 'asignar-epg'
+                        ? 'sm:px-6 sm:pt-0 sm:pb-0 lg:px-8 lg:pt-0 lg:pb-0'
+                        : 'sm:px-6 sm:pt-2 sm:pb-6 lg:px-8 lg:pt-3 lg:pb-8'
+                }`}
+            >
                 {renderTabContent()}
             </div>
         </div>
