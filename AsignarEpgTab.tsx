@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import { Upload, Download, Copy, Zap, ArrowLeftCircle, Settings as SettingsIcon, X, Tv, Image, Type, List, Plus, Search, Filter } from 'lucide-react';
+import { Upload, Download, Copy, Zap, ArrowLeftCircle, Settings as SettingsIcon, X, Tv, Image, List, Plus, Search, Filter } from 'lucide-react';
 import { useAsignarEpg } from './useAsignarEpg';
 import { useChannels } from './useChannels';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -71,6 +71,15 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
     const [selectedLettersCount, setSelectedLettersCount] = useState(0);
     const [showEpgControls, setShowEpgControls] = useState(false);
     const [showOnlyNoEpg, setShowOnlyNoEpg] = useState(false);
+
+    useEffect(() => {
+        const attrs = new Set<AttributeKey>();
+        if (tivimateModeActive) attrs.add('tvgId');
+        if (ottModeActive) attrs.add('tvgName');
+        if (transferLogoActive) attrs.add('tvgLogo');
+        if (copyNameActive) attrs.add('name');
+        setAttributesToCopy(attrs);
+    }, [tivimateModeActive, ottModeActive, transferLogoActive, copyNameActive, setAttributesToCopy]);
 
     useEffect(() => {
         const checkViewport = () => setIsShortViewport(window.innerHeight <= 560);
@@ -179,16 +188,10 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
             case 'ott': 
                 setOttModeActive(!ottModeActive);
                 setAssignmentMode('tvg-name');
-                if (!ottModeActive && !copyNameActive) {
-                    setCopyNameActive(true);
-                }
                 break;
             case 'tivimate': 
                 setTivimateModeActive(!tivimateModeActive);
                 setAssignmentMode('tvg-id');
-                if (!tivimateModeActive && !copyNameActive) {
-                    setCopyNameActive(true);
-                }
                 break;
             case 'logo': 
                 setTransferLogoActive(!transferLogoActive); 
@@ -304,8 +307,10 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                         }`}
                         title="Copiar el nombre del canal desde EPG"
                     >
-                        <Type size={14} />
+                        <span className="text-[10px] font-bold leading-none">Nombre</span>
                     </button>
+
+                    <div className="w-full border-t border-gray-700/80" />
 
                     <button
                         onClick={handleAutoAssign}
@@ -685,7 +690,11 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                     if (destinationChannelId && smartSearch) {
                                         const targetChannel = channels.find(c => c.id === destinationChannelId);
                                         if (targetChannel) {
-                                            const score = smartSearch.calculateSimilarity(targetChannel.name, epg.name);
+                                            const normalizedTargetName = smartSearch.normalizeChannelName(targetChannel.name).toLowerCase();
+                                            const normalizedEpgName = smartSearch.normalizeChannelName(epg.name).toLowerCase();
+                                            const score = normalizedTargetName === normalizedEpgName
+                                                ? 1
+                                                : smartSearch.calculateSimilarity(normalizedTargetName, normalizedEpgName);
                                             matchScore = score;
                                             if (score > 0.9) matchType = 'exact';
                                             else if (score > 0.7) matchType = 'partial';
