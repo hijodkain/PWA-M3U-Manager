@@ -313,10 +313,10 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
     );
 
     return (
-        <div className="flex flex-col h-[calc(100dvh-126px)] sm:h-[calc(100dvh-170px)] overflow-hidden">
+        <div className="flex min-h-0 flex-col h-[calc(100dvh-126px)] sm:h-[calc(100dvh-170px)] overflow-hidden">
             {/* Header: Load EPG Source & Tools */}
-            <div className={`bg-gray-800 shadow-lg z-20 flex-shrink-0 overflow-y-auto md:h-auto md:min-h-0 md:overflow-visible ${isShortViewport ? 'px-1.5 py-1 h-[24%] min-h-[88px]' : 'px-2 py-1.5 h-[30%] min-h-[140px]'}`}>
-                <div className={`flex items-center justify-between gap-1.5 mb-1 ${isShortViewport ? 'h-6' : 'h-8'}`}>
+            <div className={`bg-gray-800 shadow-lg z-20 flex-shrink-0 md:h-auto md:min-h-0 md:overflow-visible ${isShortViewport ? 'px-1.5 py-1' : 'px-2 py-1.5'}`}>
+                <div className={`flex items-center justify-between gap-1.5 ${isShortViewport ? 'min-h-6' : 'min-h-8'}`}>
                     <div className="flex items-center gap-1 truncate min-w-0">
                         <h2 className={`font-bold text-white flex items-center truncate min-w-0 ${isShortViewport ? 'text-sm' : 'text-base'}`}>
                             <Tv className={`mr-1 text-blue-400 flex-shrink-0 ${isShortViewport ? 'h-3.5 w-3.5' : 'h-4 w-4'}`} />
@@ -331,7 +331,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
             </div>
 
             {/* Paneles de listas con columna central de acciones */}
-            <div className={`md:h-auto md:flex-1 grid min-h-0 bg-gray-900 h-full grid-cols-[minmax(0,1fr)_3.75rem_minmax(0,1fr)] sm:grid-cols-[minmax(0,1fr)_4.5rem_minmax(0,1fr)]`}>
+            <div className="flex-1 min-h-0 grid bg-gray-900 grid-cols-[minmax(0,1fr)_3.75rem_minmax(0,1fr)] sm:grid-cols-[minmax(0,1fr)_4.5rem_minmax(0,1fr)]">
 
                 {/* PANEL IZQUIERDO: Lista principal */}
                 <div className="flex flex-col min-h-0 bg-gray-800/50">
