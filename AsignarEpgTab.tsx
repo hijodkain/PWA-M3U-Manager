@@ -199,52 +199,117 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
         }
     };
 
-    const ToolbarContent = () => (
-        <>
-            <button
-                onClick={() => handleToggle('logo')}
-                className={`flex items-center justify-center rounded-lg border transition-all w-9 h-9 ${
-                    transferLogoActive
-                        ? 'bg-green-800/50 border-green-500 text-green-300'
-                        : 'bg-gray-700/60 border-gray-600/60 text-gray-400 hover:text-gray-200 hover:border-gray-500'
-                }`}
-                title="Copiar logo desde EPG al canal"
-            >
-                <Image size={14} />
-            </button>
+    const CenterActionColumn = () => (
+        <div className="flex h-full min-h-0 flex-col items-center gap-2 border-x border-gray-700 bg-gray-900/90 px-1.5 py-2">
+            <div className="flex w-full flex-col items-stretch gap-1">
+                <span className="text-center text-[8px] font-semibold uppercase tracking-wider text-gray-500">Validar por</span>
+                <button
+                    onClick={() => setAssignmentMode('tvg-id')}
+                    className={`flex h-9 items-center justify-center rounded-lg border text-[11px] font-bold transition-all ${
+                        assignmentMode === 'tvg-id'
+                            ? 'border-blue-500 bg-blue-600 text-white shadow-sm'
+                            : 'border-gray-600/60 bg-gray-700/60 text-gray-400 hover:border-gray-500 hover:text-gray-200'
+                    }`}
+                >
+                    ID
+                </button>
+                <button
+                    onClick={() => setAssignmentMode('tvg-name')}
+                    className={`flex h-9 items-center justify-center rounded-lg border text-[11px] font-bold transition-all ${
+                        assignmentMode === 'tvg-name'
+                            ? 'border-purple-500 bg-purple-600 text-white shadow-sm'
+                            : 'border-gray-600/60 bg-gray-700/60 text-gray-400 hover:border-gray-500 hover:text-gray-200'
+                    }`}
+                >
+                    NAME
+                </button>
+            </div>
 
-            <button
-                onClick={() => handleToggle('no-logo')}
-                className={`flex items-center justify-center rounded-lg border transition-all w-9 h-9 ${
-                    keepLogoActive
-                        ? 'bg-red-800/50 border-red-500 text-red-300'
-                        : 'bg-gray-700/60 border-gray-600/60 text-gray-400 hover:text-gray-200 hover:border-gray-500'
-                }`}
-                title="No copiar logo, mantener el logo actual del canal"
-            >
-                <Image size={14} className="opacity-40" />
-            </button>
+            <div className="w-full border-t border-gray-700/80" />
 
-            <button
-                onClick={() => handleToggle('name')}
-                className={`flex items-center justify-center rounded-lg border transition-all w-9 h-9 ${
-                    copyNameActive
-                        ? 'bg-yellow-800/50 border-yellow-500 text-yellow-300'
-                        : 'bg-gray-700/60 border-gray-600/60 text-gray-400 hover:text-gray-200 hover:border-gray-500'
-                }`}
-                title="Copiar el nombre del canal desde EPG"
-            >
-                <Type size={14} />
-            </button>
+            <div className="flex w-full flex-col items-stretch gap-1">
+                <button
+                    onClick={() => handleToggle('ott')}
+                    className={`flex h-9 items-center justify-center rounded-lg border transition-all duration-200 ${
+                        ottModeActive
+                            ? 'border-orange-500 bg-orange-900/40 shadow-[0_0_8px_rgba(249,115,22,0.3)]'
+                            : 'border-gray-600/60 bg-gray-700/60 hover:border-orange-600/60 hover:bg-gray-700'
+                    }`}
+                    title="Usar formato para OTT Navigator"
+                >
+                    <img src="/ott-logo.png" alt="OTT" className="h-full w-auto object-contain px-1" onError={(e) => e.currentTarget.style.display = 'none'} />
+                </button>
+                <button
+                    onClick={() => handleToggle('tivimate')}
+                    className={`flex h-9 items-center justify-center rounded-lg border transition-all duration-200 ${
+                        tivimateModeActive
+                            ? 'border-blue-500 bg-blue-900/40 shadow-[0_0_8px_rgba(59,130,246,0.3)]'
+                            : 'border-gray-600/60 bg-gray-700/60 hover:border-blue-600/60 hover:bg-gray-700'
+                    }`}
+                    title="Usar formato para TiviMate"
+                >
+                    <img src="/tivimate-logo.png" alt="TiviMate" className="h-full w-auto object-contain px-1" onError={(e) => e.currentTarget.style.display = 'none'} />
+                </button>
+            </div>
 
-            <button
-                onClick={handleAutoAssign}
-                className="flex items-center justify-center rounded-lg border border-indigo-500/70 bg-indigo-700/60 text-white hover:bg-indigo-600 hover:border-indigo-400 transition-all w-9 h-9"
-                title="Asignar EPG automáticamente a todos los canales visibles por similitud de nombre"
-            >
-                <Zap size={14} />
-            </button>
-        </>
+            <div className="w-full border-t border-gray-700/80" />
+
+            <div className="flex w-full flex-col items-stretch gap-1">
+                <button
+                    onClick={() => handleToggle('logo')}
+                    className={`flex h-9 items-center justify-center rounded-lg border transition-all ${
+                        transferLogoActive
+                            ? 'border-green-500 bg-green-800/50 text-green-300'
+                            : 'border-gray-600/60 bg-gray-700/60 text-gray-400 hover:border-gray-500 hover:text-gray-200'
+                    }`}
+                    title="Copiar logo desde EPG al canal"
+                >
+                    <Image size={14} />
+                </button>
+
+                <button
+                    onClick={() => handleToggle('no-logo')}
+                    className={`flex h-9 items-center justify-center rounded-lg border transition-all ${
+                        keepLogoActive
+                            ? 'border-red-500 bg-red-800/50 text-red-300'
+                            : 'border-gray-600/60 bg-gray-700/60 text-gray-400 hover:border-gray-500 hover:text-gray-200'
+                    }`}
+                    title="No copiar logo, mantener el logo actual del canal"
+                >
+                    <Image size={14} className="opacity-40" />
+                </button>
+
+                <button
+                    onClick={() => handleToggle('name')}
+                    className={`flex h-9 items-center justify-center rounded-lg border transition-all ${
+                        copyNameActive
+                            ? 'border-yellow-500 bg-yellow-800/50 text-yellow-300'
+                            : 'border-gray-600/60 bg-gray-700/60 text-gray-400 hover:border-gray-500 hover:text-gray-200'
+                    }`}
+                    title="Copiar el nombre del canal desde EPG"
+                >
+                    <Type size={14} />
+                </button>
+
+                <button
+                    onClick={handleAutoAssign}
+                    className="flex h-9 items-center justify-center rounded-lg border border-indigo-500/70 bg-indigo-700/60 text-white transition-all hover:border-indigo-400 hover:bg-indigo-600"
+                    title="Asignar EPG automáticamente a todos los canales visibles por similitud de nombre"
+                >
+                    <Zap size={14} />
+                </button>
+
+                {onNavigateToSettings && (
+                    <button
+                        onClick={onNavigateToSettings}
+                        className="flex h-9 items-center justify-center rounded-lg border border-gray-600/60 bg-gray-700/60 text-gray-300 transition-colors hover:border-gray-500 hover:bg-gray-600"
+                        title="Ir a configuración"
+                    >
+                        <SettingsIcon size={14} />
+                    </button>
+                )}
+            </div>
+        </div>
     );
 
     return (
@@ -257,83 +322,19 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                             <Tv className={`mr-1 text-blue-400 flex-shrink-0 ${isShortViewport ? 'h-3.5 w-3.5' : 'h-4 w-4'}`} />
                             <span className="truncate">{loadedEpgSourceName || 'Asignar EPG'}</span>
                         </h2>
-                        
-                        {/* Botón OTT */}
-                        <button
-                            onClick={() => handleToggle('ott')}
-                            className={`flex items-center justify-center rounded-lg border transition-all duration-200 w-auto min-w-fit flex-shrink-0 ${isShortViewport ? 'h-6' : 'h-7'} ${
-                                ottModeActive
-                                    ? 'bg-orange-900/40 border-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.3)]'
-                                    : 'bg-gray-700/60 border-gray-600/60 hover:border-orange-600/60 hover:bg-gray-700'
-                            }`}
-                            title="Usar formato para OTT Navigator"
-                        >
-                            <img src="/ott-logo.png" alt="OTT" className="h-full w-auto object-contain px-1" onError={(e) => e.currentTarget.style.display = 'none'} />
-                        </button>
-                        
-                        {/* Botón TiviMate */}
-                        <button
-                            onClick={() => handleToggle('tivimate')}
-                            className={`flex items-center justify-center rounded-lg border transition-all duration-200 w-auto min-w-fit flex-shrink-0 ${isShortViewport ? 'h-6' : 'h-7'} ${
-                                tivimateModeActive
-                                    ? 'bg-blue-900/40 border-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.3)]'
-                                    : 'bg-gray-700/60 border-gray-600/60 hover:border-blue-600/60 hover:bg-gray-700'
-                            }`}
-                            title="Usar formato para TiviMate"
-                        >
-                            <img src="/tivimate-logo.png" alt="TiviMate" className="h-full w-auto object-contain px-1" onError={(e) => e.currentTarget.style.display = 'none'} />
-                        </button>
                     </div>
 
                     <div className="flex items-center gap-1 flex-shrink-0 min-w-0 overflow-x-auto no-scrollbar">
-                        {/* Toggle: controla si se valida por tvg-id o tvg-name */}
-                        <div className="flex flex-col items-end gap-0.5">
-                            <span className="text-[8px] text-gray-500 uppercase tracking-wider font-semibold leading-none">Validar por</span>
-                            <div className="flex bg-gray-700/50 rounded-lg p-0.5 border border-gray-600/50">
-                                <button
-                                    onClick={() => setAssignmentMode('tvg-id')}
-                                    className={`px-2 py-0.5 rounded-md text-[11px] font-bold transition-all ${
-                                        assignmentMode === 'tvg-id'
-                                            ? 'bg-blue-600 text-white shadow-sm'
-                                            : 'text-gray-400 hover:text-gray-200'
-                                    }`}
-                                >
-                                    ID
-                                </button>
-                                <button
-                                    onClick={() => setAssignmentMode('tvg-name')}
-                                    className={`px-2 py-0.5 rounded-md text-[11px] font-bold transition-all ${
-                                        assignmentMode === 'tvg-name'
-                                            ? 'bg-purple-600 text-white shadow-sm'
-                                            : 'text-gray-400 hover:text-gray-200'
-                                    }`}
-                                >
-                                    NAME
-                                </button>
-                            </div>
-                        </div>
-
-                        <ToolbarContent />
-
-                        {/* Settings Button */}
-                        {onNavigateToSettings && (
-                            <button
-                                onClick={onNavigateToSettings}
-                                className="p-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-300 transition-colors flex-shrink-0 w-9 h-9"
-                                title="Ir a configuración"
-                            >
-                                <SettingsIcon size={14} />
-                            </button>
-                        )}
+                        <span className="text-[10px] font-mono text-gray-500">{filteredEpgChannels.length} EPG</span>
                     </div>
                 </div>
             </div>
 
-            {/* Paneles de listas: 70% del alto, lado a lado para maximizar filas visibles */}
-            <div className={`md:h-auto md:flex-1 grid grid-cols-2 min-h-0 bg-gray-900 h-full`}>
+            {/* Paneles de listas con columna central de acciones */}
+            <div className={`md:h-auto md:flex-1 grid min-h-0 bg-gray-900 h-full grid-cols-[minmax(0,1fr)_3.75rem_minmax(0,1fr)] sm:grid-cols-[minmax(0,1fr)_4.5rem_minmax(0,1fr)]`}>
 
                 {/* PANEL IZQUIERDO: Lista principal */}
-                <div className="flex flex-col min-h-0 border-r border-gray-700 bg-gray-800/50">
+                <div className="flex flex-col min-h-0 bg-gray-800/50">
                     
                     {/* Filter Main List */}
                     <div className="px-2 pt-1.5 pb-1.5 bg-gray-800 border-b border-gray-700 flex-shrink-0 flex flex-col gap-1.5">
@@ -474,6 +475,8 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                         </div>
                     </div>
                 </div>
+
+                <CenterActionColumn />
 
                 {/* PANEL DERECHO: Fuente EPG */}
                  <div className="flex flex-col min-h-0 bg-gray-800">
