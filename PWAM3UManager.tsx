@@ -305,7 +305,13 @@ export default function PWAM3UManager() {
             </div>
             
             {/* 3. Main Content */}
-            <div className="flex-grow px-0 py-0 sm:px-6 sm:pt-2 sm:pb-6 lg:px-8 lg:pt-3 lg:pb-8 max-w-full mx-auto w-full overflow-x-hidden">
+            <div
+                className={`flex-grow px-0 py-0 max-w-full mx-auto w-full overflow-x-hidden ${
+                    activeTab === 'asignar-epg'
+                        ? 'sm:px-6 sm:pt-0 sm:pb-0 lg:px-8 lg:pt-0 lg:pb-0'
+                        : 'sm:px-6 sm:pt-2 sm:pb-6 lg:px-8 lg:pt-3 lg:pb-8'
+                }`}
+            >
                 {renderTabContent()}
             </div>
         </div>

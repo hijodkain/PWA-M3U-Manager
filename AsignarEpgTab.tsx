@@ -177,12 +177,14 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
         switch(type) {
             case 'ott': 
                 setOttModeActive(!ottModeActive);
+                setAssignmentMode('tvg-name');
                 if (!ottModeActive && !copyNameActive) {
                     setCopyNameActive(true);
                 }
                 break;
             case 'tivimate': 
                 setTivimateModeActive(!tivimateModeActive);
+                setAssignmentMode('tvg-id');
                 if (!tivimateModeActive && !copyNameActive) {
                     setCopyNameActive(true);
                 }
@@ -204,7 +206,10 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
             <div className="flex w-full flex-col items-stretch gap-1">
                 <span className="text-center text-[8px] font-semibold uppercase tracking-wider text-gray-500">Validar por</span>
                 <button
-                    onClick={() => setAssignmentMode('tvg-id')}
+                    onClick={() => {
+                        setAssignmentMode('tvg-id');
+                        setTivimateModeActive(true);
+                    }}
                     className={`flex h-9 items-center justify-center rounded-lg border text-[11px] font-bold transition-all ${
                         assignmentMode === 'tvg-id'
                             ? 'border-blue-500 bg-blue-600 text-white shadow-sm'
@@ -214,7 +219,10 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                     ID
                 </button>
                 <button
-                    onClick={() => setAssignmentMode('tvg-name')}
+                    onClick={() => {
+                        setAssignmentMode('tvg-name');
+                        setOttModeActive(true);
+                    }}
                     className={`flex h-9 items-center justify-center rounded-lg border text-[11px] font-bold transition-all ${
                         assignmentMode === 'tvg-name'
                             ? 'border-purple-500 bg-purple-600 text-white shadow-sm'
