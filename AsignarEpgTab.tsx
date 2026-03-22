@@ -68,7 +68,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
     const [copyNameActive, setCopyNameActive] = useState(false);
     const [isShortViewport, setIsShortViewport] = useState(false);
     const [selectedLettersCount, setSelectedLettersCount] = useState(0);
-    const [showEpgControls, setShowEpgControls] = useState(true);
+    const [showEpgControls, setShowEpgControls] = useState(false);
     const [showOnlyNoEpg, setShowOnlyNoEpg] = useState(false);
 
     useEffect(() => {
@@ -313,7 +313,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
     );
 
     return (
-        <div className="flex min-h-0 flex-col h-[calc(100dvh-126px)] sm:h-[calc(100dvh-170px)] overflow-hidden">
+        <div className="flex min-h-0 h-full flex-col overflow-hidden">
             {/* Header: Load EPG Source & Tools */}
             <div className={`bg-gray-800 shadow-lg z-20 flex-shrink-0 md:h-auto md:min-h-0 md:overflow-visible ${isShortViewport ? 'px-1.5 py-1' : 'px-2 py-1.5'}`}>
                 <div className={`flex items-center justify-between gap-1.5 ${isShortViewport ? 'min-h-6' : 'min-h-8'}`}>
