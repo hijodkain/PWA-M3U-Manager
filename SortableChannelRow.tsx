@@ -86,6 +86,12 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
 
     // State for local editing of Logo
     const [isEditingLogo, setIsEditingLogo] = React.useState(false);
+    const [logoError, setLogoError] = React.useState(false);
+
+    // Reiniciar el error si cambia la URL del canal
+    useEffect(() => {
+        setLogoError(false);
+    }, [channel.tvgLogo]);
 
     // Marquee helper: container with overflow hidden, child with animation on hover
     // Using simple truncate for now as base, and hover effect via CSS classes defined globally or locally.
@@ -188,18 +194,12 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
                             className="w-full text-xs bg-gray-900 text-white border border-blue-500 rounded px-1 py-0.5"
                             onClick={(e) => e.stopPropagation()}
                         />
-                     ) : channel.tvgLogo ? (
+                     ) : (channel.tvgLogo && !logoError) ? (
                         <img
                             src={channel.tvgLogo}
                             alt="logo"
                             className="h-8 w-auto object-contain rounded-sm cursor-pointer hover:opacity-80 transition-opacity"
-                            onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                                const parent = e.currentTarget.parentElement;
-                                if (parent && !parent.querySelector('span')) {
-                                    parent.innerHTML += '<span class="text-gray-500 text-xs">Sin Logo</span>';
-                                }
-                            }}
+                            onError={() => setLogoError(true)}
                         />
                     ) : (
                         <span className="text-gray-500 text-xs cursor-text select-text">Sin Logo</span>

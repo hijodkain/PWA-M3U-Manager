@@ -70,8 +70,8 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
 
     useEffect(() => {
         const targetSubTab = getStorageItem('settings_target_subtab');
-        if (targetSubTab === 'filters') {
-            setActiveSubTab('filters');
+        if (targetSubTab === 'filters' || targetSubTab === 'epg') {
+            setActiveSubTab(targetSubTab as SettingsSubTab);
             removeStorageItem('settings_target_subtab');
         }
     }, []);
