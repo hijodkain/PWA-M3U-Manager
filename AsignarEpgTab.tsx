@@ -335,10 +335,10 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
             </div>
 
             {/* Paneles de listas con columna central de acciones */}
-            <div className="flex-1 min-h-0 overflow-hidden grid bg-gray-900 grid-cols-[minmax(0,1fr)_3.75rem_minmax(0,1fr)] sm:grid-cols-[minmax(0,1fr)_4.5rem_minmax(0,1fr)]">
+            <div className="flex-1 min-h-0 grid bg-gray-900 grid-cols-[minmax(0,1fr)_3.75rem_minmax(0,1fr)] sm:grid-cols-[minmax(0,1fr)_4.5rem_minmax(0,1fr)]">
 
                 {/* PANEL IZQUIERDO: Lista principal */}
-                <div className="flex flex-col min-h-0 h-full overflow-hidden bg-gray-800/50">
+                <div className="flex flex-col min-h-0 bg-gray-800/50 h-full">
                     
                     {/* Filter Main List */}
                     <div className="px-2 pt-1.5 pb-1.5 bg-gray-800 border-b border-gray-700 flex-shrink-0 flex flex-col gap-1.5 relative z-20 shadow-sm">
@@ -386,7 +386,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                     </div>
 
                     {/* Main List Virtual Container */}
-                    <div className="flex-1 min-h-0 h-0 overflow-y-auto relative bg-gray-900 overscroll-contain" ref={mainListParentRef}>
+                    <div className="flex-grow overflow-y-auto relative bg-gray-900 overscroll-contain" ref={mainListParentRef}>
                          <div
                             style={{
                                 height: `${mainListRowVirtualizer.getTotalSize()}px`,
@@ -482,10 +482,10 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                 <CenterActionColumn />
 
                 {/* PANEL DERECHO: Fuente EPG */}
-                 <div className="flex flex-col min-h-0 h-full overflow-hidden bg-gray-800">
+                 <div className="flex flex-col min-h-0 bg-gray-800 h-full">
                     
                     {/* EPG Tools Header */}
-                     <div className="sticky top-0 z-20 px-2 pt-1.5 pb-1.5 bg-gray-800 border-b border-gray-700 flex flex-col gap-1.5 flex-shrink-0 shadow-sm">
+                     <div className="px-2 pt-1.5 pb-1.5 bg-gray-800 border-b border-gray-700 flex flex-col gap-1.5 flex-shrink-0 relative z-20 shadow-sm">
                         <div className="flex items-center justify-between mb-1.5">
                             <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Fuente EPG</span>
                             {savedEpgUrls.length > 0 ? (
@@ -646,7 +646,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                     </div>
 
                     {/* EPG List Virtual Container */}
-                    <div className="flex-1 min-h-0 h-0 overflow-y-auto relative bg-gray-900 overscroll-contain" ref={epgListParentRef}>
+                    <div className="flex-grow overflow-y-auto relative bg-gray-900 overscroll-contain" ref={epgListParentRef}>
                          {isEpgLoading ? (
                             <div className="flex flex-col items-center justify-center h-full text-gray-400 p-8 text-center gap-3">
                                 <svg className="animate-spin h-8 w-8 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -667,6 +667,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                     width: '100%',
                                     position: 'relative',
                                 }}
+                                className="pb-20"
                             >
                                 {epgListRowVirtualizer.getVirtualItems().map((virtualRow) => {
                                     const epg = filteredEpgChannels[virtualRow.index];
