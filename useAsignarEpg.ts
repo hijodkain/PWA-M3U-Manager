@@ -233,11 +233,18 @@ export const useAsignarEpg = (
             return;
         }
 
-        // Filtrar solo canales sin EPG asignado
-        const channelsWithoutEpg = visibleChannels.filter(ch => !ch.tvgId && !ch.tvgName);
+        const targetField = assignmentMode === 'tvg-id' ? 'tvgId' : 'tvgName';
+        const alternateField = assignmentMode === 'tvg-id' ? 'tvgName' : 'tvgId';
+        const targetFieldLabel = assignmentMode === 'tvg-id' ? 'tvg-id' : 'tvg-name';
+
+        // Filtrar solo canales sin un valor válido en el campo objetivo seleccionado.
+        const channelsWithoutEpg = visibleChannels.filter((channel) => {
+            const targetValue = channel[targetField]?.trim();
+            return !targetValue || !epgIdSet.has(targetValue);
+        });
 
         if (channelsWithoutEpg.length === 0) {
-            alert('Todos los canales visibles ya tienen EPG asignado');
+            alert(`Todos los canales visibles ya tienen ${targetFieldLabel} asignado y válido en la fuente EPG`);
             return;
         }
 
@@ -246,14 +253,23 @@ export const useAsignarEpg = (
         
         channelsWithoutEpg.forEach((channel) => {
             let exactMatch: EpgChannel | undefined;
+
+            // Prioridad 1: si el otro campo ya contiene un channel id válido del EPG,
+            // reutilizarlo para rellenar el campo objetivo seleccionado.
+            const alternateValue = channel[alternateField]?.trim();
+            if (alternateValue && epgIdSet.has(alternateValue)) {
+                exactMatch = epgChannels.find((epgCh) => epgCh.id === alternateValue);
+            }
             
-            // Intento 1: Comparación exacta (case-insensitive y trim)
-            const channelNameClean = channel.name.trim().toLowerCase();
-            exactMatch = epgChannels.find(epgCh => 
-                epgCh.name.trim().toLowerCase() === channelNameClean
-            );
+            // Intento 2: Comparación exacta por nombre visible del canal.
+            if (!exactMatch) {
+                const channelNameClean = channel.name.trim().toLowerCase();
+                exactMatch = epgChannels.find(epgCh => 
+                    epgCh.name.trim().toLowerCase() === channelNameClean
+                );
+            }
             
-            // Intento 2: Si no encuentra, probar con normalización (eliminar prefijos/sufijos)
+            // Intento 3: Si no encuentra, probar con normalización (eliminar prefijos/sufijos)
             if (!exactMatch) {
                 const normalizedChannelName = normalizeChannelName(channel.name).toLowerCase();
                 exactMatch = epgChannels.find(epgCh => {
@@ -262,7 +278,7 @@ export const useAsignarEpg = (
                 });
             }
             
-            // Intento 3: Si aún no encuentra, probar sin espacios
+            // Intento 4: Si aún no encuentra, probar sin espacios.
             if (!exactMatch) {
                 const channelNameNoSpaces = channel.name.trim().toLowerCase().replace(/\s+/g, '');
                 exactMatch = epgChannels.find(epgCh => 
@@ -276,7 +292,7 @@ export const useAsignarEpg = (
         });
 
         if (matches.size === 0) {
-            alert(`No se encontraron coincidencias exactas para los ${channelsWithoutEpg.length} canales sin EPG`);
+            alert(`No se encontraron coincidencias para los ${channelsWithoutEpg.length} canales visibles sin ${targetFieldLabel} válido`);
             return;
         }
 
@@ -326,7 +342,7 @@ export const useAsignarEpg = (
         } else {
             alert(`EPG asignado automáticamente a ${matches.size} de ${channelsWithoutEpg.length} canales. Se asignó: ${assignedTypes.join(', ')}.`);
         }
-    }, [epgChannels, normalizeChannelName, setChannels, saveStateToHistory, attributesToCopy]);
+    }, [assignmentMode, epgChannels, epgIdSet, normalizeChannelName, setChannels, saveStateToHistory, attributesToCopy]);
 
     // Función para buscar canales EPG similares automáticamente
     const findSimilarEpgChannels = useCallback((channelName: string) => {

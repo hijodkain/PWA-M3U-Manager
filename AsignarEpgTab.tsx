@@ -93,6 +93,11 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
         return ['all', ...Array.from(groups)];
     }, [channels]);
 
+    const getChannelAssignmentValue = useCallback((channel: Channel) => {
+        const value = assignmentMode === 'tvg-id' ? channel.tvgId : channel.tvgName;
+        return value?.trim() || '';
+    }, [assignmentMode]);
+
     const filteredMainChannelsForEpg = useMemo(() => {
         let channelsToFilter = channels;
         if (selectedGroup !== 'all') {
@@ -109,52 +114,26 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
         // Filtro de canales sin EPG
         if (showOnlyNoEpg && epgIdSet.size > 0) {
             channelsToFilter = channelsToFilter.filter(channel => {
-                const valueToCheck = assignmentMode === 'tvg-id' ? channel.tvgId : channel.tvgName;
-                const normalizedValue = valueToCheck?.trim();
-                if (!normalizedValue) return true; // Sin relleno = sin EPG
-                return !epgIdSet.has(normalizedValue);
+                const assignmentValue = getChannelAssignmentValue(channel);
+                if (!assignmentValue) return true;
+                return !epgIdSet.has(assignmentValue);
             });
         }
         return channelsToFilter;
-    }, [channels, selectedGroup, mainListSearch, isSmartSearchEnabled, epgSearchChannels, showOnlyNoEpg, assignmentMode, epgIdSet]);
+    }, [channels, selectedGroup, mainListSearch, isSmartSearchEnabled, epgSearchChannels, showOnlyNoEpg, epgIdSet, getChannelAssignmentValue]);
 
     const doesChannelMatchLoadedEpg = useCallback((channel: Channel) => {
         if (epgIdSet.size === 0) {
             return false;
         }
 
-        // Modo dual: ambos OTT y TiviMate activos => validar contra AMBOS tvg-id y tvg-name
-        if (ottModeActive && tivimateModeActive) {
-            const hasTvgId = !!channel.tvgId?.trim();
-            const hasTvgName = !!channel.tvgName?.trim();
-            
-            // Ambos campos deben estar presentes
-            if (!hasTvgId || !hasTvgName) {
-                return false;
-            }
-            
-            const idNormalized = channel.tvgId.trim();
-            const nameNormalized = channel.tvgName.trim();
-            
-            // Validar que tvg-id coincida en el EPG
-            const hasIdMatch = epgIdSet.has(idNormalized);
-            
-            // Validar que tvg-name coincida en el EPG (buscar por nombre)
-            const hasNameMatch = epgChannels.some(epg => epg.name === nameNormalized);
-            
-            return hasIdMatch && hasNameMatch;
-        }
-
-        // Modo simple: usar assignmentMode para seleccionar campo
-        const valueToCheck = assignmentMode === 'tvg-id' ? channel.tvgId : channel.tvgName;
-        const normalizedValue = valueToCheck?.trim();
-
-        if (!normalizedValue) {
+        const assignmentValue = getChannelAssignmentValue(channel);
+        if (!assignmentValue) {
             return false;
         }
 
-        return epgIdSet.has(normalizedValue);
-    }, [assignmentMode, epgIdSet, ottModeActive, tivimateModeActive, epgChannels]);
+        return epgIdSet.has(assignmentValue);
+    }, [epgIdSet, getChannelAssignmentValue]);
 
     // Virtualizers
     const mainListParentRef = useRef<HTMLDivElement>(null);
@@ -356,10 +335,10 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
             <div className="flex-1 min-h-0 grid bg-gray-900 grid-cols-[minmax(0,1fr)_3.75rem_minmax(0,1fr)] sm:grid-cols-[minmax(0,1fr)_4.5rem_minmax(0,1fr)]">
 
                 {/* PANEL IZQUIERDO: Lista principal */}
-                <div className="flex flex-col min-h-0 bg-gray-800/50">
+                <div className="flex flex-col min-h-0 bg-gray-800/50 h-full">
                     
                     {/* Filter Main List */}
-                    <div className="sticky top-0 z-20 px-2 pt-1.5 pb-1.5 bg-gray-800 border-b border-gray-700 flex-shrink-0 flex flex-col gap-1.5">
+                    <div className="px-2 pt-1.5 pb-1.5 bg-gray-800 border-b border-gray-700 flex-shrink-0 flex flex-col gap-1.5 relative z-20 shadow-sm">
                         <div className="flex items-center justify-between mb-1.5">
                             <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Mi lista</span>
                             <span className="text-[10px] text-gray-500 font-mono">{filteredMainChannelsForEpg.length} canales</span>
@@ -404,20 +383,19 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                     </div>
 
                     {/* Main List Virtual Container */}
-                    <div className="flex-grow overflow-auto relative bg-gray-900" ref={mainListParentRef}>
+                    <div className="flex-grow overflow-y-auto relative bg-gray-900 overscroll-contain" ref={mainListParentRef}>
                          <div
                             style={{
                                 height: `${mainListRowVirtualizer.getTotalSize()}px`,
                                 width: '100%',
                                 position: 'relative',
                             }}
+                            className="pb-20"  // Espacio para evitar scroll "justo" en móviles 
                         >
                             {mainListRowVirtualizer.getVirtualItems().map((virtualRow) => {
                                 const channel = filteredMainChannelsForEpg[virtualRow.index];
                                 const isTarget = destinationChannelId === channel.id;
-                                const hasAssignedField = ottModeActive && tivimateModeActive 
-                                    ? !!channel.tvgId && !!channel.tvgName
-                                    : (assignmentMode === 'tvg-id' ? !!channel.tvgId : !!channel.tvgName);
+                                const hasAssignedField = !!getChannelAssignmentValue(channel);
                                 const hasMatchingEpg = doesChannelMatchLoadedEpg(channel);
 
                                 return (
@@ -501,10 +479,10 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                 <CenterActionColumn />
 
                 {/* PANEL DERECHO: Fuente EPG */}
-                 <div className="flex flex-col min-h-0 bg-gray-800">
+                 <div className="flex flex-col min-h-0 bg-gray-800 h-full">
                     
                     {/* EPG Tools Header */}
-                     <div className="sticky top-0 z-20 px-2 pt-1.5 pb-1.5 bg-gray-800 border-b border-gray-700 flex flex-col gap-1.5 flex-shrink-0 shadow-sm">
+                     <div className="px-2 pt-1.5 pb-1.5 bg-gray-800 border-b border-gray-700 flex flex-col gap-1.5 flex-shrink-0 relative z-20 shadow-sm">
                         <div className="flex items-center justify-between mb-1.5">
                             <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Fuente EPG</span>
                             {savedEpgUrls.length > 0 ? (
@@ -665,7 +643,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                     </div>
 
                     {/* EPG List Virtual Container */}
-                    <div className="flex-grow overflow-auto relative bg-gray-900" ref={epgListParentRef}>
+                    <div className="flex-grow overflow-y-auto relative bg-gray-900 overscroll-contain" ref={epgListParentRef}>
                          {isEpgLoading ? (
                             <div className="flex flex-col items-center justify-center h-full text-gray-400 p-8 text-center gap-3">
                                 <svg className="animate-spin h-8 w-8 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -686,6 +664,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                     width: '100%',
                                     position: 'relative',
                                 }}
+                                className="pb-20"
                             >
                                 {epgListRowVirtualizer.getVirtualItems().map((virtualRow) => {
                                     const epg = filteredEpgChannels[virtualRow.index];
