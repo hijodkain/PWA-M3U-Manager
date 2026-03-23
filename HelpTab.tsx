@@ -51,18 +51,89 @@ const HelpTab: React.FC = () => {
                 </div>
             </Section>
 
-            <Section title="Guía EPG: Sincronización Visual" icon={<Tv className="text-green-400" />}>
+            <Section title="Guía EPG: Tutorial de Asignación Automática" icon={<Tv className="text-green-400" />}>
                 <p>
-                    ¿Cansado de ver "Sin información" en tu reproductor? Asigna la guía de programación (EPG) fácilmente:
+                    Si quieres que tu reproductor muestre la programación de cada canal, en la pestaña <strong>EPG</strong> puedes vincular tu lista M3U con una <strong>fuente EPG</strong>. La app compara tus canales con los <strong>channel id</strong> de la guía y rellena automáticamente <strong>tvg-id</strong> o <strong>tvg-name</strong> según el modo que elijas.
+                </p>
+
+                <h3 className="font-bold text-white mt-4 mb-2">Paso 1: Añade una fuente EPG</h3>
+                <ol className="list-decimal list-inside space-y-2 mt-2">
+                    <li>Ve a <strong>Ajustes</strong> → <strong>Fuentes EPG</strong>.</li>
+                    <li>Añade la URL de tu guía EPG y ponle un nombre reconocible.</li>
+                    <li>Vuelve a la pestaña <strong>EPG</strong> y cárgala desde el bloque <strong>Fuente EPG</strong>.</li>
+                </ol>
+
+                <h3 className="font-bold text-white mt-4 mb-2">Paso 2: Elige cómo quieres asignar la guía</h3>
+                <p>
+                    En la columna central verás los botones <strong>ID</strong> y <strong>NAME</strong>:
+                </p>
+                <ul className="list-disc list-inside space-y-2 mt-2">
+                    <li><strong className="text-white">ID</strong>: compara y rellena el campo <strong>tvg-id</strong>.</li>
+                    <li><strong className="text-white">NAME</strong>: compara y rellena el campo <strong>tvg-name</strong>.</li>
+                </ul>
+                <p className="mt-2">
+                    Debajo del nombre de cada canal de tu lista principal se mostrará el valor activo: si has elegido <strong>ID</strong> verás el <strong>tvg-id</strong>, y si has elegido <strong>NAME</strong> verás el <strong>tvg-name</strong>.
+                </p>
+
+                <h3 className="font-bold text-white mt-4 mb-2">Paso 3: Usa los botones de la columna central</h3>
+                <ul className="list-disc list-inside space-y-2 mt-2">
+                    <li><strong className="text-white">OTT</strong>: copia el <strong>channel id</strong> de la fuente EPG al campo <strong>tvg-name</strong>.</li>
+                    <li><strong className="text-white">TiviMate</strong>: copia el <strong>channel id</strong> de la fuente EPG al campo <strong>tvg-id</strong>.</li>
+                    <li><strong className="text-white">Logo</strong>: copia el logo de la fuente EPG a tu canal.</li>
+                    <li><strong className="text-white">NO LOGO</strong>: mantiene el logo actual del canal.</li>
+                    <li><strong className="text-white">Nombre</strong>: copia el nombre del canal de la fuente EPG a tu lista.</li>
+                    <li><strong className="text-white">Auto</strong>: intenta asignar automáticamente EPG a todos los canales visibles.</li>
+                    <li><strong className="text-white">Rueda de ajustes</strong>: te lleva directamente a <strong>Ajustes</strong> → <strong>Fuentes EPG</strong>.</li>
+                </ul>
+
+                <div className="mt-4 bg-green-900/20 p-4 rounded-lg border-l-4 border-green-500">
+                    <p className="font-bold text-white mb-2">Ejemplo práctico</p>
+                    <p>
+                        Supón que en tu lista tienes un canal llamado <strong>ES: LA 1 HD</strong>, pero en tu fuente EPG aparece como <strong>LA 1 HD</strong>. Si el prefijo <strong>ES: </strong> molesta en la búsqueda, puedes enseñarle a la app a ignorarlo y así aumentar mucho las coincidencias automáticas.
+                    </p>
+                </div>
+
+                <h3 className="font-bold text-white mt-4 mb-2">Paso 4: Asignación automática</h3>
+                <ol className="list-decimal list-inside space-y-2 mt-2">
+                    <li>Activa <strong>ID</strong> o <strong>NAME</strong>, según el campo que quieras completar.</li>
+                    <li>Activa también <strong>OTT</strong>, <strong>TiviMate</strong> o ambos, según tu reproductor.</li>
+                    <li>Opcionalmente activa <strong>Logo</strong> y/o <strong>Nombre</strong>.</li>
+                    <li>Pulsa el botón <strong>Sin EPG</strong> si quieres trabajar solo con los canales pendientes.</li>
+                    <li>Pulsa <strong>Auto</strong>.</li>
+                </ol>
+                <p className="mt-2">
+                    La app comprobará el campo seleccionado (<strong>tvg-id</strong> o <strong>tvg-name</strong>) contra los <strong>channel id</strong> reales de la fuente EPG cargada. Si encuentra coincidencia, marcará el canal como <strong>EPG OK</strong> y rellenará el atributo correspondiente.
+                </p>
+
+                <h3 className="font-bold text-white mt-4 mb-2">¿Qué hacer con los canales que no tienen coincidencia del 100%?</h3>
+                <ol className="list-decimal list-inside space-y-2 mt-2">
+                    <li>Pulsa el canal de tu lista principal a la izquierda.</li>
+                    <li>La lista de la derecha se filtrará automáticamente con una búsqueda inteligente.</li>
+                    <li>Si ves una coincidencia correcta aunque no llegue al <strong>100%</strong>, puedes pulsarla manualmente y quedará asignada igualmente.</li>
+                    <li>Si no aparece arriba del todo, refina el texto del buscador usando los controles <strong>+</strong>, <strong>−</strong> y <strong>Añadir prefijo</strong>.</li>
+                </ol>
+                <p className="mt-2 text-sm text-gray-400">
+                    No necesitas que todos estén al 100%. Muchas veces una coincidencia del 70%-90% ya es el canal correcto, especialmente si el nombre tiene prefijos del país, calidad o etiquetas adicionales.
+                </p>
+
+                <h3 className="font-bold text-white mt-4 mb-2">Cómo usar los botones + y − para añadir prefijos</h3>
+                <p>
+                    Cuando seleccionas un canal de tu lista, su nombre pasa al buscador de la derecha. Los botones <strong>+</strong> y <strong>−</strong> sirven para elegir cuántas letras iniciales quieres tomar como prefijo a eliminar en búsquedas futuras.
                 </p>
                 <ol className="list-decimal list-inside space-y-2 mt-2">
-                    <li>Ve a <strong>Ajustes</strong>, pestaña Fuentes EPG, y añade la URL de tu fuente EPG favorita (o usa las sugeridas).</li>
-                    <li>En la pestaña <strong>EPG</strong>, verás tus canales en <span className="text-red-400 font-bold">ROJO</span> (sin asignar).</li>
-                    <li>Carga tu fuente EPG. Los canales que coincidan automáticamente se pondrán en <span className="text-white font-bold">BLANCO</span>.</li>
-                    <li>Para los restantes: Pulsa el canal rojo → El buscador encuentra el programa → Pulsa el correcto → ¡Asignado!</li>
+                    <li>Selecciona un canal con nombre <strong>ES: LA 1 HD</strong>.</li>
+                    <li>En el buscador aparecerá ese texto.</li>
+                    <li>Pulsa <strong>+</strong> hasta seleccionar el tramo inicial <strong>ES: </strong>.</li>
+                    <li>Si te pasas, usa <strong>−</strong> para quitar la última letra seleccionada.</li>
+                    <li>Cuando el prefijo seleccionado sea exactamente <strong>ES: </strong>, pulsa <strong>Añadir prefijo</strong>.</li>
                 </ol>
-                <p className="mt-4 font-bold text-yellow-400">
-                    ¡Olvídate de tener que sincronizar manualmente cada canal en cada reproductor IPTV que uses! Hazlo aquí una vez y sirve para siempre.
+                <p className="mt-2">
+                    A partir de ese momento, el buscador inteligente ignorará ese prefijo en futuras comparaciones y será más fácil que <strong>ES: LA 1 HD</strong> coincida con <strong>LA 1 HD</strong> en la fuente EPG.
+                </p>
+
+                <h3 className="font-bold text-white mt-4 mb-2">Consejo final</h3>
+                <p className="font-bold text-yellow-400">
+                    Si no sabes qué modo usa tu reproductor, deja activos <strong>OTT</strong> y <strong>TiviMate</strong> para rellenar ambos campos. Así tendrás más compatibilidad con distintos reproductores IPTV.
                 </p>
             </Section>
 
