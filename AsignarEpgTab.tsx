@@ -301,9 +301,12 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
 
                     {onNavigateToSettings && (
                         <button
-                            onClick={onNavigateToSettings}
+                            onClick={() => {
+                                setStorageItem('settings_target_subtab', 'epg');
+                                onNavigateToSettings();
+                            }}
                             className={`flex ${buttonHeightClass} items-center justify-center rounded-lg border border-gray-600/60 bg-gray-700/60 text-gray-300 transition-colors hover:border-gray-500 hover:bg-gray-600`}
-                            title="Ir a configuración"
+                            title="Ir a Ajustes → Fuentes EPG"
                         >
                             <SettingsIcon size={14} />
                         </button>
@@ -450,9 +453,9 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                                 <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                                                     <span
                                                         className={`text-[10px] font-mono truncate max-w-[130px] ${isTarget ? 'text-blue-200' : 'text-gray-400'}`}
-                                                        title={`tvg-id: ${channel.tvgId || 'N/A'} | tvg-name: ${channel.tvgName || 'N/A'}`}
+                                                        title={assignmentMode === 'tvg-id' ? `tvg-id: ${channel.tvgId || 'N/A'}` : `tvg-name: ${channel.tvgName || 'N/A'}`}
                                                     >
-                                                        {channel.tvgId || channel.tvgName || '—'}
+                                                        {assignmentMode === 'tvg-id' ? (channel.tvgId || '—') : (channel.tvgName || '—')}
                                                     </span>
                                                     {hasMatchingEpg && (
                                                         <span className="inline-flex items-center text-[8px] font-bold text-green-400 bg-green-900/30 px-1 py-0.5 rounded-full leading-none whitespace-nowrap">✓ EPG</span>
@@ -527,11 +530,11 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                             ) : (
                                 <button
                                     onClick={() => {
-                                        setStorageItem('settings_target_subtab', 'filters');
+                                        setStorageItem('settings_target_subtab', 'epg');
                                         onNavigateToSettings?.();
                                     }}
                                     className="flex-shrink-0 flex items-center gap-1 text-[11px] text-blue-400 hover:text-blue-300 border border-blue-800 hover:border-blue-600 rounded-lg px-2 py-1.5 transition-colors whitespace-nowrap bg-blue-900/20"
-                                    title="Ir a Ajustes → Filtros de búsqueda"
+                                    title="Ir a Ajustes → Fuentes EPG"
                                 >
                                     <SettingsIcon size={12} />
                                     Añadir fuente EPG
