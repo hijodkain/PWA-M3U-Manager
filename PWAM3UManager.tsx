@@ -255,7 +255,7 @@ export default function PWAM3UManager() {
     };
 
     return (
-        <div className="bg-gray-900 text-white min-h-screen font-sans flex flex-col">
+        <div className={`bg-gray-900 text-white font-sans flex flex-col ${activeTab === 'asignar-epg' ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
             
             {/* 1. Static Header (Scrolls away) */}
              <div className="bg-gray-900 border-b border-gray-800">
@@ -306,7 +306,7 @@ export default function PWAM3UManager() {
             
             {/* 3. Main Content */}
             <div
-                className={`flex-grow px-0 py-0 max-w-full mx-auto w-full overflow-x-hidden ${
+                className={`${activeTab === 'asignar-epg' ? 'flex-1 min-h-0 overflow-hidden' : 'flex-grow'} px-0 py-0 max-w-full mx-auto w-full overflow-x-hidden ${
                     activeTab === 'asignar-epg'
                         ? 'sm:px-6 sm:pt-0 sm:pb-0 lg:px-8 lg:pt-0 lg:pb-0'
                         : 'sm:px-6 sm:pt-2 sm:pb-6 lg:px-8 lg:pt-3 lg:pb-8'
