@@ -1,5 +1,5 @@
 import React, { useRef, useState, useMemo, useEffect } from 'react';
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, TouchSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Upload, Download, Plus, Trash2, GripVertical, ShieldCheck, ShieldX, ShieldQuestion, Undo2, Redo2, HelpCircle, SlidersHorizontal } from 'lucide-react';
@@ -147,6 +147,13 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         useSensor(PointerSensor, {
             activationConstraint: {
                 distance: 8, // Requiere mover 8px antes de activar el drag
+            },
+        }),
+        useSensor(TouchSensor, {
+            // Ajustes específicos para móviles
+            activationConstraint: {
+                delay: 250, // Esperar 250ms antes de activar drag (previene scroll accidental)
+                tolerance: 5, // Permitir 5px de movimiento durante el delay
             },
         }),
         useSensor(KeyboardSensor)
