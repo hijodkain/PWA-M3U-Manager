@@ -482,10 +482,10 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                 <CenterActionColumn />
 
                 {/* PANEL DERECHO: Fuente EPG */}
-                 <div className="flex flex-col min-h-0 bg-gray-800 h-full">
+                 <div className="flex flex-col min-h-0 bg-gray-800">
                     
                     {/* EPG Tools Header */}
-                     <div className="px-2 pt-1.5 pb-1.5 bg-gray-800 border-b border-gray-700 flex flex-col gap-1.5 flex-shrink-0 relative z-20 shadow-sm">
+                     <div className="sticky top-0 z-20 px-2 pt-1.5 pb-1.5 bg-gray-800 border-b border-gray-700 flex flex-col gap-1.5 flex-shrink-0 shadow-sm">
                         <div className="flex items-center justify-between mb-1.5">
                             <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Fuente EPG</span>
                             {savedEpgUrls.length > 0 ? (
@@ -646,7 +646,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                     </div>
 
                     {/* EPG List Virtual Container */}
-                    <div className="flex-grow overflow-y-auto relative bg-gray-900 overscroll-contain" ref={epgListParentRef}>
+                    <div className="flex-grow overflow-auto relative bg-gray-900" ref={epgListParentRef}>
                          {isEpgLoading ? (
                             <div className="flex flex-col items-center justify-center h-full text-gray-400 p-8 text-center gap-3">
                                 <svg className="animate-spin h-8 w-8 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -667,7 +667,6 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                     width: '100%',
                                     position: 'relative',
                                 }}
-                                className="pb-20"
                             >
                                 {epgListRowVirtualizer.getVirtualItems().map((virtualRow) => {
                                     const epg = filteredEpgChannels[virtualRow.index];
