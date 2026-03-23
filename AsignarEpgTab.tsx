@@ -386,7 +386,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                     </div>
 
                     {/* Main List Virtual Container */}
-                    <div className="flex-grow overflow-y-auto relative bg-gray-900 overscroll-contain" ref={mainListParentRef}>
+                    <div className="flex-1 min-h-0 h-0 overflow-y-auto relative bg-gray-900 overscroll-contain" ref={mainListParentRef}>
                          <div
                             style={{
                                 height: `${mainListRowVirtualizer.getTotalSize()}px`,
