@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Upload, Copy, CheckSquare, ArrowLeftCircle, RotateCcw, Trash2, Link, Check, Search, X, RefreshCw } from 'lucide-react';
+import { Upload, Copy, CheckSquare, ArrowLeftCircle, RotateCcw, Trash2, Link, Check, Search, X, RefreshCw, SlidersHorizontal, Filter, Database } from 'lucide-react';
 import { useReparacion } from './useReparacion';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useChannels } from './useChannels';
@@ -18,8 +18,35 @@ interface ReparacionTabProps {
     onNavigateToInicio?: () => void;
 }
 
+type ColumnVisibilityConfig = {
+    logo: boolean;
+    name: boolean;
+    tvgId: boolean;
+    tvgName: boolean;
+    url: boolean;
+    verifyButton: boolean;
+    playButton: boolean;
+    statusIndicator: boolean;
+    selectionCheckbox: boolean;
+};
+
+const DEFAULT_COLUMN_VISIBILITY: ColumnVisibilityConfig = {
+    logo: true,
+    name: true,
+    tvgId: true,
+    tvgName: true,
+    url: true,
+    verifyButton: true,
+    playButton: true,
+    statusIndicator: true,
+    selectionCheckbox: true,
+};
+
+const REPARACION_MAIN_VISIBLE_FIELDS_KEY = 'reparacion_main_visible_fields';
+const REPARACION_AUX_VISIBLE_FIELDS_KEY = 'reparacion_aux_visible_fields';
+
 const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsHook, settingsHook, onNavigateToSave, onNavigateToInicio }) => {
-    const { isSencillo } = useAppMode();
+    const { isSencillo, isPro } = useAppMode();
     
     // States for UI Toggles
     const [showMainSearch, setShowMainSearch] = useState(false);
@@ -28,6 +55,12 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
     const [bulkActionType, setBulkActionType] = useState('offline_repair');
     const [hasPendingReparacionChanges, setHasPendingReparacionChanges] = useState(false);
     const [isUpdatingReparacionList, setIsUpdatingReparacionList] = useState(false);
+    const [showMainColumnsMenu, setShowMainColumnsMenu] = useState(false);
+    const [showReparacionColumnsMenu, setShowReparacionColumnsMenu] = useState(false);
+    const [showMedicinaSearchControls, setShowMedicinaSearchControls] = useState(false);
+    const [selectedMedicinaLettersCount, setSelectedMedicinaLettersCount] = useState(0);
+    const [mainVisibleFields, setMainVisibleFields] = useState<ColumnVisibilityConfig>(DEFAULT_COLUMN_VISIBILITY);
+    const [reparacionVisibleFields, setReparacionVisibleFields] = useState<ColumnVisibilityConfig>(DEFAULT_COLUMN_VISIBILITY);
 
     const {
         selectedReparacionChannels,
@@ -89,12 +122,43 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
 
     const mainListParentRef = useRef<HTMLDivElement>(null);
     const reparacionListParentRef = useRef<HTMLDivElement>(null);
+    const mainColumnsMenuRef = useRef<HTMLDivElement>(null);
+    const reparacionColumnsMenuRef = useRef<HTMLDivElement>(null);
+    const medicinaSearchInputRef = useRef<HTMLInputElement>(null);
 
     // Initial Load of Medicina Lists
     useEffect(() => {
         const stored = getStorageItem('medicinaLists');
         if (stored) setSavedMedicinaLists(JSON.parse(stored));
+
+        const storedMainFields = getStorageItem(REPARACION_MAIN_VISIBLE_FIELDS_KEY);
+        if (storedMainFields) {
+            try {
+                const parsed = JSON.parse(storedMainFields);
+                setMainVisibleFields(prev => ({ ...prev, ...parsed }));
+            } catch {
+                // Ignorar valores corruptos y seguir con defaults
+            }
+        }
+
+        const storedAuxFields = getStorageItem(REPARACION_AUX_VISIBLE_FIELDS_KEY);
+        if (storedAuxFields) {
+            try {
+                const parsed = JSON.parse(storedAuxFields);
+                setReparacionVisibleFields(prev => ({ ...prev, ...parsed }));
+            } catch {
+                // Ignorar valores corruptos y seguir con defaults
+            }
+        }
     }, []);
+
+    useEffect(() => {
+        setStorageItem(REPARACION_MAIN_VISIBLE_FIELDS_KEY, JSON.stringify(mainVisibleFields));
+    }, [mainVisibleFields]);
+
+    useEffect(() => {
+        setStorageItem(REPARACION_AUX_VISIBLE_FIELDS_KEY, JSON.stringify(reparacionVisibleFields));
+    }, [reparacionVisibleFields]);
 
     // Virtualizers
     const mainListRowVirtualizer = useVirtualizer({
@@ -137,6 +201,32 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         window.addEventListener('resize', checkMobile);
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            const target = event.target as Node;
+            if (mainColumnsMenuRef.current && !mainColumnsMenuRef.current.contains(target)) {
+                setShowMainColumnsMenu(false);
+            }
+            if (reparacionColumnsMenuRef.current && !reparacionColumnsMenuRef.current.contains(target)) {
+                setShowReparacionColumnsMenu(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    useEffect(() => {
+        // Mantener el selector dentro del rango actual del texto buscado
+        setSelectedMedicinaLettersCount(prev => Math.min(prev, reparacionListSearch.length));
+    }, [reparacionListSearch]);
+
+    useEffect(() => {
+        if (!medicinaSearchInputRef.current) return;
+        medicinaSearchInputRef.current.focus();
+        medicinaSearchInputRef.current.setSelectionRange(0, selectedMedicinaLettersCount);
+    }, [selectedMedicinaLettersCount]);
     
     // --- Computed Values ---
     const isAllInGroupSelected = filteredReparacionChannels.length > 0 && filteredReparacionChannels.every(c => selectedReparacionChannels.has(c.id));
@@ -149,6 +239,30 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         { key: 'tvgId', label: 'tvg-id' },
         { key: 'tvgName', label: 'tvg-name' },
     ];
+
+    const mainVisibilityOptions: Array<{ key: keyof ColumnVisibilityConfig; label: string }> = [
+        { key: 'logo', label: 'Logo' },
+        { key: 'name', label: 'Nombre del canal' },
+        { key: 'tvgId', label: 'ID' },
+        { key: 'tvgName', label: 'Name' },
+        { key: 'url', label: 'URL' },
+        { key: 'verifyButton', label: 'Botón Verify' },
+        { key: 'playButton', label: 'Play en VLC' },
+        { key: 'statusIndicator', label: 'Texto estado (Pending/OK)' },
+    ];
+
+    const reparacionVisibilityOptions: Array<{ key: keyof ColumnVisibilityConfig; label: string }> = [
+        ...mainVisibilityOptions,
+        { key: 'selectionCheckbox', label: 'Selector para añadir (+)' },
+    ];
+
+    const toggleVisibilityField = (
+        listType: 'main' | 'reparacion',
+        field: keyof ColumnVisibilityConfig
+    ) => {
+        const setConfig = listType === 'main' ? setMainVisibleFields : setReparacionVisibleFields;
+        setConfig(prev => ({ ...prev, [field]: !prev[field] }));
+    };
 
     // Actualizar nombre de lista cuando se carga por URL
     const onUrlLoad = async () => {
@@ -558,24 +672,66 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 {/* Header Lista Principal */}
                 <div className="flex justify-between items-center mb-3 pb-2 border-b border-gray-700 shrink-0">
                     <div className="flex items-center gap-2 overflow-hidden">
-                        <h3 className="font-bold text-lg truncate text-white">
-                            {channels.length > 0 ? `Mi lista: ${fileName}` : 'Lista Principal'}
+                        <h3 className="font-bold text-lg truncate text-blue-400 flex items-center gap-2 min-w-0">
+                            <img src="/Dropbox_Icon.svg" alt="Dropbox" className="w-5 h-5 flex-shrink-0" />
+                            <span className="hidden sm:inline">Mi lista:</span>
+                            <span className="sm:hidden" title="Mi lista">ML:</span>
                         </h3>
-                        {channels.length > 0 && (
-                             <button onClick={handleClearMainListClick} className="text-red-500 hover:text-red-400 p-1 hover:bg-gray-700 rounded transition-colors">
-                                <X size={18} />
-                            </button>
+                        {channels.length > 0 ? (
+                            <div className="flex items-center gap-1.5 ml-2 bg-gray-700/50 px-2 py-1 rounded-md max-w-full">
+                                <span className="text-sm font-bold text-gray-200 truncate">{fileName}</span>
+                                <button
+                                    onClick={handleClearMainListClick}
+                                    className="text-red-400 hover:text-red-300 p-0.5 hover:bg-gray-600 rounded transition-colors flex-shrink-0"
+                                    title="Cerrar lista principal"
+                                >
+                                    <X size={16} />
+                                </button>
+                            </div>
+                        ) : (
+                            <span className="text-sm font-bold text-gray-400 truncate">Lista Principal</span>
                         )}
                     </div>
                     {/* Botón Lupa (Search Toggle) */}
-                    {channels.length > 0 && (
-                        <button 
-                            onClick={() => setShowMainSearch(!showMainSearch)}
-                            className={`p-1.5 rounded transition-colors ${showMainSearch ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-700'}`}
-                        >
-                            <Search size={18} />
-                        </button>
-                    )}
+                    <div className="flex items-center gap-2">
+                        {isPro && channels.length > 0 && (
+                            <div className="relative" ref={mainColumnsMenuRef}>
+                                <button
+                                    onClick={() => setShowMainColumnsMenu(prev => !prev)}
+                                    className={`p-1.5 rounded transition-colors ${showMainColumnsMenu ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-700'}`}
+                                    title="Elegir columnas visibles en lista principal"
+                                >
+                                    <SlidersHorizontal size={18} />
+                                </button>
+                                {showMainColumnsMenu && (
+                                    <div className="absolute right-0 mt-2 w-64 bg-gray-900/95 border border-gray-600 rounded-lg shadow-xl p-3 z-40 backdrop-blur-sm">
+                                        <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Mostrar en lista principal</p>
+                                        <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+                                            {mainVisibilityOptions.map(option => (
+                                                <label key={`main-${option.key}`} className="flex items-center justify-between gap-2 rounded-lg border border-gray-700 bg-gray-800/70 hover:bg-gray-700/70 px-2 py-1.5 text-xs text-gray-200 cursor-pointer transition-colors">
+                                                    <span>{option.label}</span>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={mainVisibleFields[option.key]}
+                                                        onChange={() => toggleVisibilityField('main', option.key)}
+                                                        className="h-3.5 w-3.5 rounded border-gray-500 bg-gray-900 text-blue-500 focus:ring-blue-500"
+                                                    />
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                        {channels.length > 0 && (
+                            <button 
+                                onClick={() => setShowMainSearch(!showMainSearch)}
+                                className={`p-1.5 rounded transition-colors ${showMainSearch ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-700'}`}
+                            >
+                                <Search size={18} />
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 {/* Modal Confirmación Borrado (Overlay absoluto) */}
@@ -615,7 +771,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                         <select
                             value={mainListFilter}
                             onChange={(e) => setMainListFilter(e.target.value)}
-                            className={`bg-gray-700 border border-gray-600 rounded-md px-3 py-1.5 text-white text-sm focus:ring-blue-500 focus:border-blue-500 truncate ${mainListFilter !== 'Todos los canales' ? 'w-1/3' : 'w-2/3'}`}
+                            className={`bg-gray-900 border border-gray-600 rounded-lg px-3 py-1.5 text-white text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 truncate ${mainListFilter !== 'Todos los canales' ? 'w-1/3' : 'w-2/3'}`}
                         >
                             <option value="Todos los canales">Todos los canales</option>
                             {mainListUniqueGroups.map((g) => {
@@ -640,7 +796,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                         <select
                             value={mainStatusFilter}
                             onChange={(e) => setMainStatusFilter(e.target.value)}
-                            className={`bg-gray-700 border border-gray-600 rounded-md px-2 py-1.5 text-xs font-bold focus:ring-blue-500 focus:border-blue-500 truncate ${mainListFilter !== 'Todos los canales' ? 'w-1/3' : 'w-1/3'} ${mainStatusFilter !== 'Todos' ? 'text-yellow-400 border-yellow-500/50 bg-yellow-900/40' : 'text-gray-400'} ${mainStatusFilter === 'Todos' ? 'text-white' : ''}`}
+                            className={`bg-gray-900 border border-gray-600 rounded-lg px-2 py-1.5 text-xs font-bold focus:ring-1 focus:ring-blue-500 focus:border-blue-500 truncate ${mainListFilter !== 'Todos los canales' ? 'w-1/3' : 'w-1/3'} ${mainStatusFilter !== 'Todos' ? 'text-yellow-400 border-yellow-500/50 bg-yellow-900/40' : 'text-gray-400'} ${mainStatusFilter === 'Todos' ? 'text-white' : ''}`}
                             title="Filtrar por estado de verificación"
                         >
                             <option value="Todos" style={{ color: 'white' }}>Todos</option>
@@ -653,7 +809,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                     {!isSencillo && (
                         <div className="flex gap-2 w-full mt-2 mb-2">
                             <select
-                                className="w-1/3 bg-gray-900 text-xs border border-gray-700 rounded p-1.5 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 truncate"
+                                className="w-1/3 bg-gray-900 text-xs border border-gray-600 rounded-lg p-1.5 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 truncate"
                                 value={mainDomainFilter}
                                 onChange={(e) => setMainDomainFilter(e.target.value)}
                             >
@@ -662,7 +818,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                 ))}
                             </select>
                             <select
-                                className="w-1/3 bg-gray-900 text-xs border border-gray-700 rounded p-1.5 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 truncate"
+                                className="w-1/3 bg-gray-900 text-xs border border-gray-600 rounded-lg p-1.5 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 truncate"
                                 value={bulkActionType}
                                 onChange={(e) => setBulkActionType(e.target.value)}
                             >
@@ -699,6 +855,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                         } else {
                                             setDestinationChannelId(ch.id);
                                             setReparacionListSearch(normalizeChannelName(ch.name));
+                                            reparacionListParentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
                                         }
                                     }}
                                     isSelected={destinationChannelId === ch.id}
@@ -709,6 +866,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     onVerifyClick={() => verifyChannel(ch.id, ch.url)}
                                     onPlayClick={shouldShowPlayButton ? () => openInVLC(ch.url) : undefined}
                                     isSencillo={isSencillo}
+                                    visibleFields={isPro ? mainVisibleFields : undefined}
                                     style={{
                                         position: 'absolute',
                                         top: 0,
@@ -773,8 +931,10 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 <div className="mb-4">
                     <div className="flex justify-between items-start mb-2">
                         <div className="flex-grow flex items-center gap-2">
-                            <h3 className="font-bold text-lg text-gray-300">
-                                {isSencillo ? 'Lista Reparadora: ' : 'Lista reparadora: '}
+                            <h3 className="font-bold text-lg text-purple-400 flex items-center gap-2">
+                                <Database size={20} className="flex-shrink-0" />
+                                <span className="hidden sm:inline">Lista Reparadora:</span>
+                                <span className="sm:hidden" title="Lista Reparadora">LR:</span>
                             </h3>
                             {reparacionListName && (
                                 <div className="flex items-center gap-1.5 ml-2 bg-gray-700/50 px-2 py-1 rounded-md max-w-full">
@@ -789,18 +949,49 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                 </div>
                             )}
                         </div>
-                        {!reparacionListName && savedMedicinaLists.length > 0 && (
-                            <select
-                                onChange={(e) => loadRepairList(e.target.value)}
-                                value=""
-                                className="ml-2 w-48 bg-gray-700 border border-gray-600 text-xs rounded px-2 py-1.5 text-white"
-                            >
-                                <option value="">Cargar guardada...</option>
-                                {savedMedicinaLists.map(l => (
-                                    <option key={l.id} value={l.id}>{l.name}</option>
-                                ))}
-                            </select>
-                        )}
+                        <div className="flex items-center gap-2 ml-2">
+                            {isPro && (
+                                <div className="relative" ref={reparacionColumnsMenuRef}>
+                                    <button
+                                        onClick={() => setShowReparacionColumnsMenu(prev => !prev)}
+                                        className={`p-1.5 rounded transition-colors ${showReparacionColumnsMenu ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-700'}`}
+                                        title="Elegir columnas visibles en lista reparadora"
+                                    >
+                                        <SlidersHorizontal size={18} />
+                                    </button>
+                                    {showReparacionColumnsMenu && (
+                                        <div className="absolute right-0 mt-2 w-64 bg-gray-900/95 border border-gray-600 rounded-lg shadow-xl p-3 z-40 backdrop-blur-sm">
+                                            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Mostrar en lista reparadora</p>
+                                            <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+                                                {reparacionVisibilityOptions.map(option => (
+                                                    <label key={`reparacion-${option.key}`} className="flex items-center justify-between gap-2 rounded-lg border border-gray-700 bg-gray-800/70 hover:bg-gray-700/70 px-2 py-1.5 text-xs text-gray-200 cursor-pointer transition-colors">
+                                                        <span>{option.label}</span>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={reparacionVisibleFields[option.key]}
+                                                            onChange={() => toggleVisibilityField('reparacion', option.key)}
+                                                            className="h-3.5 w-3.5 rounded border-gray-500 bg-gray-900 text-blue-500 focus:ring-blue-500"
+                                                        />
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                            {!reparacionListName && savedMedicinaLists.length > 0 && (
+                                <select
+                                    onChange={(e) => loadRepairList(e.target.value)}
+                                    value=""
+                                    className="w-48 bg-gray-900 border border-gray-600 text-xs rounded-lg px-2 py-1.5 text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                >
+                                    <option value="">Cargar guardada...</option>
+                                    {savedMedicinaLists.map(l => (
+                                        <option key={l.id} value={l.id}>{l.name}</option>
+                                    ))}
+                                </select>
+                            )}
+                        </div>
                     </div>
                     {/* Si no hay lista, mostramos la caja de inputs */}
                     {!reparacionListName ? (
@@ -827,22 +1018,103 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 {/* Filtros e Inputs de la lista reparadora */}
                 {(filteredReparacionChannels.length > 0 || !!reparacionListSearch || !!reparacionListName) && (
                     <div className="space-y-2 mb-2">
-                        {/* Buscador Reparación - Visible siempre en Pro, o Sencillo si hay necesidad */}
-                         <SmartSearchInput
-                            searchTerm={reparacionListSearch}
-                            onSearchChange={setReparacionListSearch}
-                            isSmartSearchEnabled={isSmartSearchEnabled}
-                            onToggleSmartSearch={toggleSmartSearch}
-                            placeholder="Buscar en medicina..."
-                            showResults={false} // Simple input here vs suggestions
-                            className="bg-gray-900"
-                        />
+                        {/* Buscador de medicina con estilo EPG */}
+                        <div className="space-y-2">
+                            <div className="flex gap-2 items-start">
+                                <div className="relative flex-1 min-w-0">
+                                    <input
+                                        ref={medicinaSearchInputRef}
+                                        type="text"
+                                        value={reparacionListSearch}
+                                        onChange={(e) => setReparacionListSearch(e.target.value)}
+                                        placeholder="Buscar en medicina..."
+                                        className="w-full bg-gray-900 text-white text-xs rounded-lg px-2 py-1.5 pl-7 pr-8 border border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                                    />
+                                    <Search className="absolute left-2 top-1.5 h-4 w-4 text-gray-500" />
+                                    <button
+                                        onClick={toggleSmartSearch}
+                                        className={`absolute right-1.5 top-1.5 h-4 w-4 rounded-full border transition-colors ${isSmartSearchEnabled ? 'border-green-400 bg-green-500/20' : 'border-gray-500 bg-transparent'}`}
+                                        title={isSmartSearchEnabled ? 'Búsqueda inteligente activa' : 'Búsqueda inteligente inactiva'}
+                                    />
+                                </div>
+
+                                <button
+                                    onClick={() => setShowMedicinaSearchControls(!showMedicinaSearchControls)}
+                                    className={`px-2.5 py-1.5 rounded-lg border transition-all flex-shrink-0 flex items-center justify-center h-8 w-8 ${
+                                        showMedicinaSearchControls
+                                            ? 'bg-gray-700/60 border-gray-600/60 text-gray-400 hover:bg-gray-700'
+                                            : 'bg-red-900/40 border-red-600/60 text-red-400 hover:bg-red-900/60'
+                                    }`}
+                                    title={showMedicinaSearchControls ? 'Ocultar controles de búsqueda' : 'Mostrar controles de búsqueda'}
+                                >
+                                    <Filter className="h-4 w-4" />
+                                </button>
+                            </div>
+
+                            {showMedicinaSearchControls && (
+                                <div className="flex items-center gap-2 px-1 flex-wrap">
+                                    <span className="text-[10px] text-green-400 flex-1">
+                                        {isSmartSearchEnabled ? 'Búsqueda inteligente activa' : 'Búsqueda inteligente inactiva'}
+                                    </span>
+
+                                    <button
+                                        onClick={() => {
+                                            if (selectedMedicinaLettersCount > 0) {
+                                                setSelectedMedicinaLettersCount(selectedMedicinaLettersCount - 1);
+                                            }
+                                        }}
+                                        disabled={selectedMedicinaLettersCount === 0}
+                                        className="text-xs font-bold px-2 py-1 rounded bg-red-900/40 border border-red-600/60 text-red-400 hover:bg-red-900/60 hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                        title="Deseleccionar última letra"
+                                    >
+                                        −
+                                    </button>
+
+                                    <button
+                                        onClick={() => {
+                                            if (selectedMedicinaLettersCount < reparacionListSearch.length) {
+                                                setSelectedMedicinaLettersCount(selectedMedicinaLettersCount + 1);
+                                            }
+                                        }}
+                                        disabled={selectedMedicinaLettersCount >= reparacionListSearch.length || reparacionListSearch.length === 0}
+                                        className="text-xs font-bold px-2 py-1 rounded bg-green-900/40 border border-green-600/60 text-green-400 hover:bg-green-900/60 hover:text-green-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                        title="Seleccionar siguiente letra"
+                                    >
+                                        +
+                                    </button>
+
+                                    <button
+                                        onClick={() => {
+                                            const selectedText = reparacionListSearch.substring(0, selectedMedicinaLettersCount);
+                                            if (selectedText.trim()) {
+                                                const newPrefix = selectedText;
+                                                const currentPrefixes = settingsHook.channelPrefixes || [];
+
+                                                if (!currentPrefixes.includes(newPrefix)) {
+                                                    const updatedPrefixes = [newPrefix, ...currentPrefixes];
+                                                    settingsHook.updateChannelPrefixes(updatedPrefixes);
+                                                    alert(`Prefijo "${newPrefix}" añadido a la búsqueda inteligente`);
+                                                    setSelectedMedicinaLettersCount(0);
+                                                } else {
+                                                    alert(`El prefijo "${newPrefix}" ya existe`);
+                                                }
+                                            }
+                                        }}
+                                        disabled={selectedMedicinaLettersCount === 0}
+                                        className="text-xs font-bold px-3 py-1 rounded bg-blue-900/40 border border-blue-600/60 text-blue-400 hover:bg-blue-900/60 hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all whitespace-nowrap"
+                                        title="Añadir texto seleccionado como prefijo"
+                                    >
+                                        Añadir prefijo
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                          
                          <div className="flex gap-2 items-center">
                             <select
                                 value={reparacionListFilter}
                                 onChange={(e) => setReparacionListFilter(e.target.value)}
-                                className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-xs text-white"
+                                className="flex-1 bg-gray-900 border border-gray-600 rounded-lg px-2 py-1.5 text-xs text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                             >
                                 <option value="Todos los canales">Todos los Grupos</option>
                                 {reparacionListUniqueGroups.map(g => (
@@ -876,6 +1148,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     key={ch.id}
                                     channel={ch}
                                     isSelected={isChSelected}
+                                    animateMarqueeWhenSelected={false}
                                     isChecked={isChSelected}
                                     showCheckbox={true}
                                     onSelectClick={(e) => toggleReparacionSelection(ch.id, virtualItem.index, e.shiftKey, e.metaKey, e.ctrlKey)}
@@ -897,6 +1170,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     resolution={channelInfo.resolution}
                                     onVerifyClick={() => verifyChannel(ch.id, ch.url)}
                                     onPlayClick={shouldShowPlayButton ? () => openInVLC(ch.url) : undefined}
+                                    visibleFields={isPro ? reparacionVisibleFields : undefined}
                                     style={{
                                         position: 'absolute',
                                         top: 0,

@@ -422,6 +422,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                                 } else {
                                                     setDestinationChannelId(channel.id);
                                                     setEpgSearchTerm(epgNormalizeChannelName(channel.name));
+                                                    epgListParentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
                                                     if (!isSmartSearchEnabled) toggleSmartSearch();
                                                 }
                                             }}
