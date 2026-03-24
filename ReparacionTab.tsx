@@ -247,7 +247,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         { key: 'tvgName', label: 'Name' },
         { key: 'url', label: 'URL' },
         { key: 'verifyButton', label: 'Botón Verify' },
-        { key: 'playButton', label: 'Botón VLC' },
+        { key: 'playButton', label: 'Play en VLC' },
         { key: 'statusIndicator', label: 'Texto estado (Pending/OK)' },
     ];
 
@@ -676,12 +676,20 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                             <img src="/Dropbox_Icon.svg" alt="Dropbox" className="w-5 h-5 flex-shrink-0" />
                             <span className="hidden sm:inline">Mi lista:</span>
                             <span className="sm:hidden" title="Mi lista">ML:</span>
-                            <span className="truncate text-white">{channels.length > 0 ? fileName : 'Lista Principal'}</span>
                         </h3>
-                        {channels.length > 0 && (
-                             <button onClick={handleClearMainListClick} className="text-red-500 hover:text-red-400 p-1 hover:bg-gray-700 rounded transition-colors">
-                                <X size={18} />
-                            </button>
+                        {channels.length > 0 ? (
+                            <div className="flex items-center gap-1.5 ml-2 bg-gray-700/50 px-2 py-1 rounded-md max-w-full">
+                                <span className="text-sm font-bold text-gray-200 truncate">{fileName}</span>
+                                <button
+                                    onClick={handleClearMainListClick}
+                                    className="text-red-400 hover:text-red-300 p-0.5 hover:bg-gray-600 rounded transition-colors flex-shrink-0"
+                                    title="Cerrar lista principal"
+                                >
+                                    <X size={16} />
+                                </button>
+                            </div>
+                        ) : (
+                            <span className="text-sm font-bold text-gray-400 truncate">Lista Principal</span>
                         )}
                     </div>
                     {/* Botón Lupa (Search Toggle) */}
