@@ -200,7 +200,8 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         const checkMobile = () => {
             const mobile = window.innerWidth < 1024;
             setIsMobile(mobile);
-            setIsMobileLandscape(mobile && window.innerWidth > window.innerHeight && window.innerWidth <= 900);
+            // Landscape: cuando el ancho es mayor que alto (sin límite de 900px)
+            setIsMobileLandscape(window.innerWidth > window.innerHeight && window.innerWidth < 1024);
         };
         checkMobile();
         window.addEventListener('resize', checkMobile);
@@ -208,10 +209,10 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
     }, []);
 
     const rootLayoutClass = isMobileLandscape
-        ? 'grid grid-cols-2 gap-3 h-[calc(100vh-120px)]'
+        ? 'grid grid-cols-2 gap-1 h-[calc(100vh-60px)]'
         : isMobile
-            ? 'grid grid-cols-1 gap-4 h-[calc(100vh-140px)] overflow-y-auto'
-            : 'grid grid-cols-1 lg:grid-cols-11 gap-4 h-[calc(100vh-140px)]';
+            ? 'grid grid-cols-1 gap-4 h-[calc(100vh-140px)] overflow-y-auto px-2'
+            : 'grid grid-cols-1 lg:grid-cols-11 gap-4 h-[calc(100vh-140px)] px-4';
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -678,80 +679,73 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
             )}
 
             {isMobileLandscape && (
-                <div className="col-span-2 bg-gray-800 p-2 rounded-lg border border-gray-700 shadow-lg">
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                        <h4 className="font-bold text-[10px] uppercase text-gray-400">Atributos y acciones</h4>
-                        <div className="flex gap-2">
-                            {!isSencillo && (
-                                <button
-                                    onClick={handleAddSelectedFromReparacion}
-                                    disabled={selectedReparacionChannels.size === 0}
-                                    className="text-[10px] py-1 px-2 bg-green-600 hover:bg-green-700 text-white rounded disabled:opacity-50"
-                                >
-                                    + Añadir
-                                </button>
-                            )}
-                            <button
-                                onClick={undo}
-                                disabled={history.length === 0}
-                                className="text-[10px] py-1 px-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded disabled:opacity-50"
-                            >
-                                <RotateCcw size={11} />
-                            </button>
-                        </div>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
+                <div className="col-span-2 bg-gray-800 px-2 py-1.5 border-b border-gray-700 shadow-lg flex items-center gap-2 flex-wrap z-10">
+                    <h4 className="font-bold text-[10px] uppercase text-gray-400 whitespace-nowrap">Atributos y acciones</h4>
+                    <div className="flex gap-1 items-center flex-wrap">
                         {attributeLabels
                             .filter(({ key }) => isSencillo ? (key !== 'tvgId' && key !== 'tvgName') : true)
                             .map(({ key, label }) => (
-                                <button
-                                    key={key}
-                                    onClick={() => toggleAttributeToCopy(key)}
-                                    className={`text-[10px] py-1 px-1.5 rounded flex items-center justify-center gap-1 transition-colors ${attributesToCopy.has(key) ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-                                >
-                                    {attributesToCopy.has(key) ? <CheckSquare size={11} /> : <Copy size={11} />} {label}
-                                </button>
-                            ))}
+                            <button
+                                key={key}
+                                onClick={() => toggleAttributeToCopy(key)}
+                                className={`text-[8px] py-1 px-1.5 rounded flex items-center justify-center gap-1 transition-colors whitespace-nowrap ${attributesToCopy.has(key) ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                            >
+                                {attributesToCopy.has(key) ? <CheckSquare size={10} /> : <Copy size={10} />} {label}
+                            </button>
+                        ))}
                     </div>
+                    <div className="flex gap-1 ml-auto">
+                        {!isSencillo && (
+                            <button
+                                onClick={handleAddSelectedFromReparacion}
+                                disabled={selectedReparacionChannels.size === 0}
+                                className="text-[8px] py-1 px-1.5 bg-green-600 hover:bg-green-700 text-white rounded disabled:opacity-50 whitespace-nowrap"
+                            >
+                                + Añadir
+                            </button>
+                        )}
+                        <button
+                            onClick={undo}
+                            disabled={history.length === 0}
+                            className="text-[8px] py-1 px-1.5 bg-yellow-600 hover:bg-yellow-700 text-white rounded disabled:opacity-50"
+                        >
+                            <RotateCcw size={10} />
+                        </button>
                 </div>
             )}
 
             {/* --- PANEL IZQUIERDO (Lista Principal) --- */}
-            <div className={`bg-gray-800 ${isMobileLandscape ? 'p-2' : 'p-4'} rounded-lg flex flex-col border border-gray-700 min-h-0 ${isMobileLandscape ? 'col-span-1 h-full' : 'lg:col-span-5'} ${isMobileLandscape ? '' : (isMobile ? 'h-[400px] mb-4' : 'h-full')}`}>
+            <div className={`bg-gray-800 ${isMobileLandscape ? 'p-1' : 'p-4'} flex flex-col min-h-0 ${isMobileLandscape ? 'col-span-1 h-full border-r border-gray-700' : `lg:col-span-5 ${isMobile ? 'h-[400px] mb-4 rounded-lg border border-gray-700' : 'h-full'}`}`}>
                 
                 {/* Header Lista Principal */}
-                <div className="flex justify-between items-center mb-3 pb-2 border-b border-gray-700 shrink-0">
-                    <div className="flex items-center gap-2 overflow-hidden">
-                        <h3 className={`font-bold ${isMobileLandscape ? 'text-base' : 'text-lg'} truncate text-blue-400 flex items-center gap-2 min-w-0`}>
-                            <img src="/Dropbox_Icon.svg" alt="Dropbox" className="w-5 h-5 flex-shrink-0" />
-                            <span className="hidden sm:inline">Mi lista:</span>
-                            <span className="sm:hidden" title="Mi lista">ML:</span>
-                        </h3>
+                <div className={`flex justify-between items-center ${isMobileLandscape ? 'pb-1 mb-1 border-b border-gray-700' : 'pb-2 mb-3 border-b border-gray-700'} shrink-0`}>
+                    <div className="flex items-center gap-1 overflow-hidden min-w-0">
+                        <img src="/Dropbox_Icon.svg" alt="Dropbox" className={`flex-shrink-0 text-blue-400 ${isMobileLandscape ? 'w-4 h-4' : 'w-5 h-5'}`} />
                         {channels.length > 0 ? (
-                            <div className="flex items-center gap-1.5 ml-2 bg-gray-700/50 px-2 py-1 rounded-md max-w-full">
-                                <span className="text-sm font-bold text-gray-200 truncate">{fileName}</span>
+                            <div className="flex items-center gap-1 min-w-0 flex-1">
+                                <span className={`font-bold truncate text-blue-400 ${isMobileLandscape ? 'text-sm' : 'text-base'}`}>{fileName}</span>
                                 <button
                                     onClick={handleClearMainListClick}
                                     className="text-red-400 hover:text-red-300 p-0.5 hover:bg-gray-600 rounded transition-colors flex-shrink-0"
                                     title="Cerrar lista principal"
                                 >
-                                    <X size={16} />
+                                    <X size={isMobileLandscape ? 14 : 16} />
                                 </button>
                             </div>
                         ) : (
-                            <span className="text-sm font-bold text-gray-400 truncate">Lista Principal</span>
+                            <span className={`font-bold text-gray-400 truncate ${isMobileLandscape ? 'text-sm' : 'text-base'}`}>Mi lista</span>
                         )}
                     </div>
-                    {/* Botón Lupa (Search Toggle) */}
-                    <div className="flex items-center gap-2">
+                    {/* Botones Acciones */}
+                    <div className="flex items-center gap-1 flex-shrink-0">
                         {isPro && channels.length > 0 && (
                             <div className="relative" ref={mainColumnsMenuRef}>
                                 <button
                                     onClick={() => setShowMainColumnsMenu(prev => !prev)}
-                                    className={`p-1.5 rounded transition-colors ${showMainColumnsMenu ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-700'}`}
+                                    className={`p-1 rounded transition-colors ${showMainColumnsMenu ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-700'}`}
                                     title="Elegir columnas visibles en lista principal"
                                 >
-                                    <SlidersHorizontal size={18} />
+                                    <SlidersHorizontal size={isMobileLandscape ? 14 : 18} />
                                 </button>
                                 {showMainColumnsMenu && (
                                     <div className="absolute right-0 mt-2 w-64 bg-gray-900/95 border border-gray-600 rounded-lg shadow-xl p-3 z-40 backdrop-blur-sm">
@@ -776,9 +770,9 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                         {channels.length > 0 && (
                             <button 
                                 onClick={() => setShowMainSearch(!showMainSearch)}
-                                className={`p-1.5 rounded transition-colors ${showMainSearch ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-700'}`}
+                                className={`p-1 rounded transition-colors ${showMainSearch ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-700'}`}
                             >
-                                <Search size={18} />
+                                <Search size={isMobileLandscape ? 14 : 18} />
                             </button>
                         )}
                     </div>
@@ -801,7 +795,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 
                 {/* Buscador (Condicional) */}
                 {showMainSearch && (
-                    <div className="mb-3 animate-fadeIn">
+                    <div className={`${isMobileLandscape ? 'mb-1' : 'mb-3'} animate-fadeIn`}>
                         <SmartSearchInput
                             searchTerm={mainListSearch}
                             onSearchChange={setMainListSearch}
@@ -814,78 +808,74 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                     </div>
                 )}
                 
-                {/* Filtros y Verificación */}
-                <div className="space-y-2 mb-2">
-                    {/* Fila: Filtro Grupo + Toggle Unverified + Verificación Rápida */}
-                    <div className="flex gap-2 w-full">
-                        <select
-                            value={mainListFilter}
-                            onChange={(e) => setMainListFilter(e.target.value)}
-                            className={`bg-gray-900 border border-gray-600 rounded-lg px-3 py-1.5 text-white text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 truncate ${mainListFilter !== 'Todos los canales' ? 'w-1/3' : 'w-2/3'}`}
+                {/* Filtros estilo EPG */}
+                {channels.length > 0 && (
+                <div className={`${isMobileLandscape ? 'mb-1 gap-1' : 'mb-2 gap-2'} flex flex-wrap items-center`}>
+                    <select
+                        value={mainListFilter}
+                        onChange={(e) => setMainListFilter(e.target.value)}
+                        className={`bg-gray-900 border border-gray-600 rounded-lg px-2 py-1 text-xs text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 truncate flex-1 min-w-[100px] ${isMobileLandscape ? 'py-1' : 'py-1.5'}`}
+                    >
+                        <option value="Todos los canales">Todos los grupos</option>
+                        {mainListUniqueGroups.map((g) => {
+                            if (g === 'Todos los canales') return null;
+                            return (
+                                <option key={g} value={g}>{g}</option>
+                            );
+                        })}
+                    </select>
+                    {mainListFilter !== 'Todos los canales' && (
+                        <button
+                            onClick={handleQuickVerify}
+                            className={`text-xs px-2 rounded-md flex items-center justify-center gap-1 transition-colors bg-blue-600 hover:bg-blue-700 shadow-sm text-white whitespace-nowrap ${isMobileLandscape ? 'py-1' : 'py-1.5'}`}
+                            title="Verificación rápida de grupo"
                         >
-                            <option value="Todos los canales">Todos los canales</option>
-                            {mainListUniqueGroups.map((g) => {
-                                if (g === 'Todos los canales') return null;
-                                const failedCount = failedChannelsByGroup[g] || 0;
-                                return (
-                                    <option key={g} value={g} className={failedCount > 0 ? 'text-yellow-400' : ''}>
-                                        {g} {failedCount > 0 ? `(${failedCount})` : ''}
-                                    </option>
-                                );
-                            })}
-                        </select>
-                        {mainListFilter !== 'Todos los canales' && (
-                            <button
-                                onClick={handleQuickVerify}
-                                className="w-1/3 text-xs py-1.5 px-1 rounded-md flex items-center justify-center gap-1 transition-colors bg-blue-600 hover:bg-blue-700 shadow-sm"
-                                title="Verificación rápida de grupo"
-                            >
-                                <Check size={14} /> <span className="hidden xl:inline">Verif. Rápida</span><span className="xl:hidden">Verif.</span>
-                            </button>
-                        )}
-                        <select
-                            value={mainStatusFilter}
-                            onChange={(e) => setMainStatusFilter(e.target.value)}
-                            className={`bg-gray-900 border border-gray-600 rounded-lg px-2 py-1.5 text-xs font-bold focus:ring-1 focus:ring-blue-500 focus:border-blue-500 truncate ${mainListFilter !== 'Todos los canales' ? 'w-1/3' : 'w-1/3'} ${mainStatusFilter !== 'Todos' ? 'text-yellow-400 border-yellow-500/50 bg-yellow-900/40' : 'text-gray-400'} ${mainStatusFilter === 'Todos' ? 'text-white' : ''}`}
-                            title="Filtrar por estado de verificación"
-                        >
-                            <option value="Todos" style={{ color: 'white' }}>Todos</option>
-                            <option value="Rotos" style={{ color: '#ef4444' }}>❌ Offline</option>
-                            <option value="Pendientes" style={{ color: '#9ca3af' }}>○ Pendientes</option>
-                            <option value="ResDesconocida" style={{ color: 'white', backgroundColor: '#4b5563' }}>❓ Res. desconocida</option>
-                        </select>
-                    </div>
-                    
-                    {!isSencillo && (
-                        <div className="flex gap-2 w-full mt-2 mb-2">
-                            <select
-                                className="w-1/3 bg-gray-900 text-xs border border-gray-600 rounded-lg p-1.5 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 truncate"
-                                value={mainDomainFilter}
-                                onChange={(e) => setMainDomainFilter(e.target.value)}
-                            >
-                                {mainListUniqueDomains.map(domain => (
-                                    <option key={domain} value={domain}>{domain}</option>
-                                ))}
-                            </select>
-                            <select
-                                className="w-1/3 bg-gray-900 text-xs border border-gray-600 rounded-lg p-1.5 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 truncate"
-                                value={bulkActionType}
-                                onChange={(e) => setBulkActionType(e.target.value)}
-                            >
-                                <option value="offline_repair">Offline a reparar</option>
-                                <option value="res_desconocida_repair">Res desconocida a reparar</option>
-                                <option value="eliminar">Eliminar canal</option>
-                            </select>
-                            <button
-                                onClick={() => executeBulkAction(bulkActionType, filteredMainChannels)}
-                                className="w-1/3 text-xs py-1.5 px-0 rounded border border-red-900/50 text-red-500 hover:bg-red-900/20 flex items-center justify-center gap-1"
-                                title="Aplicar acción"
-                            >
-                                <Trash2 size={12} /> <span className="hidden sm:inline">Aplicar</span>
-                            </button>
-                        </div>
+                            <Check size={12} /> Verif.
+                        </button>
                     )}
+                    <select
+                        value={mainStatusFilter}
+                        onChange={(e) => setMainStatusFilter(e.target.value)}
+                        className={`bg-gray-900 border border-gray-600 rounded-lg px-2 text-xs font-bold focus:ring-1 focus:ring-blue-500 focus:border-blue-500 truncate flex-1 min-w-[80px] ${isMobileLandscape ? 'py-1' : 'py-1.5'} ${mainStatusFilter !== 'Todos' ? 'text-yellow-400 border-yellow-500/50 bg-yellow-900/40' : 'text-white'}`}
+                        title="Filtrar por estado de verificación"
+                    >
+                        <option value="Todos" style={{ color: 'white' }}>Todos</option>
+                        <option value="Rotos" style={{ color: '#ef4444' }}>❌ Offline</option>
+                        <option value="Pendientes" style={{ color: '#9ca3af' }}>○ Pendientes</option>
+                        <option value="ResDesconocida" style={{ color: 'white' }}>❓ Desconocida</option>
+                    </select>
                 </div>
+                )}
+                
+                {!isSencillo && channels.length > 0 && (
+                <div className={`${isMobileLandscape ? 'mb-1 gap-1' : 'mb-2 gap-2'} flex flex-wrap items-center`}>
+                    <select
+                        className={`flex-1 min-w-[100px] bg-gray-900 text-xs border border-gray-600 rounded-lg px-2 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 truncate ${isMobileLandscape ? 'py-1' : 'py-1.5'}`}
+                        value={mainDomainFilter}
+                        onChange={(e) => setMainDomainFilter(e.target.value)}
+                    >
+                        {mainListUniqueDomains.map(domain => (
+                            <option key={domain} value={domain}>{domain}</option>
+                        ))}
+                    </select>
+                    <select
+                        className={`flex-1 min-w-[100px] bg-gray-900 text-xs border border-gray-600 rounded-lg px-2 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 truncate ${isMobileLandscape ? 'py-1' : 'py-1.5'}`}
+                        value={bulkActionType}
+                        onChange={(e) => setBulkActionType(e.target.value)}
+                    >
+                        <option value="offline_repair">Offline a reparar</option>
+                        <option value="res_desconocida_repair">Res desconocida</option>
+                        <option value="eliminar">Eliminar canal</option>
+                    </select>
+                    <button
+                        onClick={() => executeBulkAction(bulkActionType, filteredMainChannels)}
+                        className={`text-xs px-2 rounded border border-red-900/50 text-red-500 hover:bg-red-900/20 flex items-center justify-center gap-1 whitespace-nowrap ${isMobileLandscape ? 'py-1' : 'py-1.5'}`}
+                        title="Aplicar acción"
+                    >
+                        <Trash2 size={12} />
+                    </button>
+                </div>
+                )}
 
                 {/* Lista de Canales */}
                 <div ref={mainListParentRef} className="flex-1 overflow-y-auto min-h-0 pr-1">
@@ -975,94 +965,72 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
             )}
 
             {/* --- PANEL DERECHO (Lista Reparadora) --- */}
-            <div className={`bg-gray-800 ${isMobileLandscape ? 'p-2' : 'p-4'} rounded-lg flex flex-col border border-gray-700 min-h-0 ${isMobileLandscape ? 'col-span-1 h-full' : 'lg:col-span-5'} ${isMobileLandscape ? '' : (isMobile ? 'h-[400px]' : 'h-full')}`}>
+            <div className={`bg-gray-800 ${isMobileLandscape ? 'p-1' : 'p-4'} flex flex-col min-h-0 ${isMobileLandscape ? 'col-span-1 h-full border-l border-gray-700' : `lg:col-span-5 ${isMobile ? 'h-[400px] rounded-lg border border-gray-700' : 'h-full'}`}`}>
                 
                 {/* Header Lista Reparadora */}
-                <div className="mb-4">
-                    <div className="flex justify-between items-start mb-2">
-                        <div className="flex-grow flex items-center gap-2">
-                            <h3 className={`font-bold ${isMobileLandscape ? 'text-base' : 'text-lg'} text-purple-400 flex items-center gap-2`}>
-                                <Database size={20} className="flex-shrink-0" />
-                                <span className="hidden sm:inline">Lista Reparadora:</span>
-                                <span className="sm:hidden" title="Lista Reparadora">LR:</span>
-                            </h3>
-                            {reparacionListName && (
-                                <div className="flex items-center gap-1.5 ml-2 bg-gray-700/50 px-2 py-1 rounded-md max-w-full">
-                                    <span className="text-sm font-bold text-gray-200 truncate">{reparacionListName}</span>
-                                    <button
-                                        onClick={clearReparacion}
-                                        className="text-red-400 hover:text-red-300 p-0.5 hover:bg-gray-600 rounded transition-colors flex-shrink-0"
-                                        title="Eliminar y descargar lista actual"
-                                    >
-                                        <X size={16} />
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                        <div className="flex items-center gap-2 ml-2">
-                            {isPro && (
-                                <div className="relative" ref={reparacionColumnsMenuRef}>
-                                    <button
-                                        onClick={() => setShowReparacionColumnsMenu(prev => !prev)}
-                                        className={`p-1.5 rounded transition-colors ${showReparacionColumnsMenu ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-700'}`}
-                                        title="Elegir columnas visibles en lista reparadora"
-                                    >
-                                        <SlidersHorizontal size={18} />
-                                    </button>
-                                    {showReparacionColumnsMenu && (
-                                        <div className="absolute right-0 mt-2 w-64 bg-gray-900/95 border border-gray-600 rounded-lg shadow-xl p-3 z-40 backdrop-blur-sm">
-                                            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Mostrar en lista reparadora</p>
-                                            <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
-                                                {reparacionVisibilityOptions.map(option => (
-                                                    <label key={`reparacion-${option.key}`} className="flex items-center justify-between gap-2 rounded-lg border border-gray-700 bg-gray-800/70 hover:bg-gray-700/70 px-2 py-1.5 text-xs text-gray-200 cursor-pointer transition-colors">
-                                                        <span>{option.label}</span>
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={reparacionVisibleFields[option.key]}
-                                                            onChange={() => toggleVisibilityField('reparacion', option.key)}
-                                                            className="h-3.5 w-3.5 rounded border-gray-500 bg-gray-900 text-blue-500 focus:ring-blue-500"
-                                                        />
-                                                    </label>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                            {!reparacionListName && savedMedicinaLists.length > 0 && (
-                                <select
-                                    onChange={(e) => loadRepairList(e.target.value)}
-                                    value=""
-                                    className="w-48 bg-gray-900 border border-gray-600 text-xs rounded-lg px-2 py-1.5 text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                <div className={`flex justify-between items-center ${isMobileLandscape ? 'pb-1 mb-1 border-b border-gray-700' : 'pb-2 mb-3 border-b border-gray-700'} flex-wrap shrink-0`}>
+                    <div className="flex items-center gap-1 overflow-hidden min-w-0">
+                        <Database size={isMobileLandscape ? 16 : 20} className="flex-shrink-0 text-purple-400" />
+                        {reparacionListName && (
+                            <div className="flex items-center gap-1 min-w-0">
+                                <span className={`font-bold truncate text-purple-400 ${isMobileLandscape ? 'text-sm' : 'text-base'}`}>{reparacionListName}</span>
+                                <button
+                                    onClick={clearReparacion}
+                                    className="text-red-400 hover:text-red-300 p-0.5 hover:bg-gray-600 rounded transition-colors flex-shrink-0"
+                                    title="Eliminar y descargar lista actual"
                                 >
-                                    <option value="">Cargar guardada...</option>
-                                    {savedMedicinaLists.map(l => (
-                                        <option key={l.id} value={l.id}>{l.name}</option>
-                                    ))}
-                                </select>
-                            )}
-                        </div>
+                                    <X size={isMobileLandscape ? 14 : 16} />
+                                </button>
+                            </div>
+                        )}
+                        {!reparacionListName && (
+                            <span className={`font-bold text-gray-400 ${isMobileLandscape ? 'text-sm' : 'text-base'}`}>Lista reparadora</span>
+                        )}
                     </div>
-                    {/* Si no hay lista, mostramos la caja de inputs */}
-                    {!reparacionListName ? (
-                        <div className="bg-gray-700/30 p-3 rounded border border-gray-700 flex flex-wrap gap-2 items-center">
-                            <input
-                                type="text"
-                                placeholder="URL..."
-                                value={reparacionUrl}
-                                onChange={(e) => setReparacionUrl(e.target.value)}
-                                className="flex-1 min-w-[150px] bg-gray-900 border border-gray-600 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
-                            />
-                            <button onClick={() => onUrlLoad()} className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm font-medium">
-                                Cargar
-                            </button>
-                            <div className="w-px h-6 bg-gray-600 mx-1"></div>
-                            <label className="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded text-sm flex items-center gap-1">
-                                <Upload size={14} /> Subir
-                                <input id="rep-file" type="file" className="hidden" onChange={onFileUpload} accept=".m3u,.m3u8" />
-                            </label>
-                        </div>
-                    ) : null}
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                        {isPro && (
+                            <div className="relative" ref={reparacionColumnsMenuRef}>
+                                <button
+                                    onClick={() => setShowReparacionColumnsMenu(prev => !prev)}
+                                    className={`p-1 rounded transition-colors ${showReparacionColumnsMenu ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-700'}`}
+                                    title="Elegir columnas visibles en lista reparadora"
+                                >
+                                    <SlidersHorizontal size={isMobileLandscape ? 14 : 18} />
+                                </button>
+                                {showReparacionColumnsMenu && (
+                                    <div className="absolute right-0 mt-2 w-64 bg-gray-900/95 border border-gray-600 rounded-lg shadow-xl p-3 z-40 backdrop-blur-sm">
+                                        <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Mostrar en lista reparadora</p>
+                                        <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+                                            {reparacionVisibilityOptions.map(option => (
+                                                <label key={`reparacion-${option.key}`} className="flex items-center justify-between gap-2 rounded-lg border border-gray-700 bg-gray-800/70 hover:bg-gray-700/70 px-2 py-1.5 text-xs text-gray-200 cursor-pointer transition-colors">
+                                                    <span>{option.label}</span>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={reparacionVisibleFields[option.key]}
+                                                        onChange={() => toggleVisibilityField('reparacion', option.key)}
+                                                        className="h-3.5 w-3.5 rounded border-gray-500 bg-gray-900 text-blue-500 focus:ring-blue-500"
+                                                    />
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                        {!reparacionListName && savedMedicinaLists.length > 0 && (
+                            <select
+                                onChange={(e) => loadRepairList(e.target.value)}
+                                value=""
+                                className={`bg-gray-900 border border-gray-600 rounded-lg px-2 py-1 text-xs text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${isMobileLandscape ? 'w-auto' : 'w-48'}`}
+                                title="Seleccionar fuente reparadora"
+                            >
+                                <option value="">Cargar guardada</option>
+                                {savedMedicinaLists.map(l => (
+                                    <option key={l.id} value={l.id}>{l.name}</option>
+                                ))}
+                            </select>
+                        )}
+                    </div>
                 </div>
 
                 {/* Filtros e Inputs de la lista reparadora */}
