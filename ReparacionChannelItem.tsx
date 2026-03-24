@@ -53,7 +53,7 @@ const MarqueeText: React.FC<{ text: string; className?: string; isSelected?: boo
         return () => window.removeEventListener('resize', checkOverflow);
     }, [text]);
 
-    const shouldAnimate = isOverflowing && ((isSelected && animateWhenSelected) || isHovered);
+    const shouldAnimate = isOverflowing && isHovered;
     
     return (
         <div 
@@ -182,9 +182,9 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
         <div
             style={style}
             onClick={onBodyClick}
-            className={`group/item flex items-center ${compact ? 'gap-1.5 p-1.5 min-h-[52px]' : 'gap-2 p-2 min-h-[60px]'} rounded-lg border-2 ${
-                isSelected ? 'border-blue-500 bg-blue-900/50' : 'border-transparent'
-            } cursor-pointer hover:bg-gray-700 transition-colors relative ${className}`} // Add relative and className
+            className={`group/item flex items-center ${compact ? 'gap-1.5 p-1.5 min-h-[52px]' : 'gap-2 p-2 min-h-[60px]'} rounded-lg border ${
+                isSelected ? 'border-blue-500 bg-blue-900/50' : 'border-gray-700/80'
+            } cursor-pointer hover:bg-gray-700 hover:border-gray-500 transition-colors relative ${className}`} // Add relative and className
         >
             {fields.logo && (
                 <img

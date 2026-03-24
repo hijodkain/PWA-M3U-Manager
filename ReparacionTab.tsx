@@ -768,6 +768,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                             placeholder="Buscar canal..."
                             showResults={true}
                             resultCount={filteredMainChannels.length}
+                            compact={true}
                         />
                     </div>
                 )}
@@ -778,7 +779,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                     <select
                         value={mainListFilter}
                         onChange={(e) => setMainListFilter(e.target.value)}
-                        className={`bg-gray-900 border border-gray-600 rounded-lg px-2 py-1 text-xs text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 truncate flex-1 min-w-[100px] ${isMobileLandscape ? 'py-1' : 'py-1.5'}`}
+                        className={`bg-gray-900 border border-gray-600 rounded-lg px-2 py-1 text-[11px] text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 truncate flex-1 min-w-[100px]`}
                     >
                         <option value="Todos los canales">Todos los grupos</option>
                         {mainListUniqueGroups.map((g) => {
@@ -791,7 +792,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                     {mainListFilter !== 'Todos los canales' && (
                         <button
                             onClick={handleQuickVerify}
-                            className={`text-xs px-2 rounded-md flex items-center justify-center gap-1 transition-colors bg-blue-600 hover:bg-blue-700 shadow-sm text-white whitespace-nowrap ${isMobileLandscape ? 'py-1' : 'py-1.5'}`}
+                            className="text-[10px] px-2 py-1 rounded-md flex items-center justify-center gap-1 transition-colors bg-blue-600 hover:bg-blue-700 shadow-sm text-white whitespace-nowrap"
                             title="Verificación rápida de grupo"
                         >
                             <Check size={12} /> Verif.
@@ -800,7 +801,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                     <select
                         value={mainStatusFilter}
                         onChange={(e) => setMainStatusFilter(e.target.value)}
-                        className={`bg-gray-900 border border-gray-600 rounded-lg px-2 text-xs font-bold focus:ring-1 focus:ring-blue-500 focus:border-blue-500 truncate flex-1 min-w-[80px] ${isMobileLandscape ? 'py-1' : 'py-1.5'} ${mainStatusFilter !== 'Todos' ? 'text-yellow-400 border-yellow-500/50 bg-yellow-900/40' : 'text-white'}`}
+                        className={`bg-gray-900 border border-gray-600 rounded-lg px-2 py-1 text-[11px] font-bold focus:ring-1 focus:ring-blue-500 focus:border-blue-500 truncate flex-1 min-w-[80px] ${mainStatusFilter !== 'Todos' ? 'text-yellow-400 border-yellow-500/50 bg-yellow-900/40' : 'text-white'}`}
                         title="Filtrar por estado de verificación"
                     >
                         <option value="Todos" style={{ color: 'white' }}>Todos</option>
@@ -814,7 +815,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 {!isSencillo && channels.length > 0 && (
                 <div className={`${isMobileLandscape ? 'mb-1 gap-1' : 'mb-2 gap-2'} flex flex-wrap items-center`}>
                     <select
-                        className={`flex-1 min-w-[100px] bg-gray-900 text-xs border border-gray-600 rounded-lg px-2 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 truncate ${isMobileLandscape ? 'py-1' : 'py-1.5'}`}
+                        className="flex-1 min-w-[100px] bg-gray-900 text-[11px] border border-gray-600 rounded-lg px-2 py-1 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 truncate"
                         value={mainDomainFilter}
                         onChange={(e) => setMainDomainFilter(e.target.value)}
                     >
@@ -823,7 +824,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                         ))}
                     </select>
                     <select
-                        className={`flex-1 min-w-[100px] bg-gray-900 text-xs border border-gray-600 rounded-lg px-2 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 truncate ${isMobileLandscape ? 'py-1' : 'py-1.5'}`}
+                        className="flex-1 min-w-[100px] bg-gray-900 text-[11px] border border-gray-600 rounded-lg px-2 py-1 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 truncate"
                         value={bulkActionType}
                         onChange={(e) => setBulkActionType(e.target.value)}
                     >
@@ -833,7 +834,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                     </select>
                     <button
                         onClick={() => executeBulkAction(bulkActionType, filteredMainChannels)}
-                        className={`text-xs px-2 rounded border border-red-900/50 text-red-500 hover:bg-red-900/20 flex items-center justify-center gap-1 whitespace-nowrap ${isMobileLandscape ? 'py-1' : 'py-1.5'}`}
+                        className="text-[10px] px-2 py-1 rounded-md border border-red-900/50 text-red-500 hover:bg-red-900/20 flex items-center justify-center gap-1 whitespace-nowrap"
                         title="Aplicar acción"
                     >
                         <Trash2 size={12} />
@@ -1035,19 +1036,19 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                         value={reparacionListSearch}
                                         onChange={(e) => setReparacionListSearch(e.target.value)}
                                         placeholder="Buscar en medicina..."
-                                        className="w-full bg-gray-900 text-white text-xs rounded-lg px-2 py-1.5 pl-7 pr-8 border border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                                        className="w-full bg-gray-900 text-white text-[11px] rounded-lg px-2 py-1 pl-6 pr-7 border border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                                     />
-                                    <Search className="absolute left-2 top-1.5 h-4 w-4 text-gray-500" />
+                                    <Search className="absolute left-1.5 top-1.5 h-3.5 w-3.5 text-gray-500" />
                                     <button
                                         onClick={toggleSmartSearch}
-                                        className={`absolute right-1.5 top-1.5 h-4 w-4 rounded-full border transition-colors ${isSmartSearchEnabled ? 'border-green-400 bg-green-500/20' : 'border-gray-500 bg-transparent'}`}
+                                        className={`absolute right-1.5 top-1.5 h-3.5 w-3.5 rounded-full border transition-colors ${isSmartSearchEnabled ? 'border-green-400 bg-green-500/20' : 'border-gray-500 bg-transparent'}`}
                                         title={isSmartSearchEnabled ? 'Búsqueda inteligente activa' : 'Búsqueda inteligente inactiva'}
                                     />
                                 </div>
 
                                 <button
                                     onClick={() => setShowMedicinaSearchControls(!showMedicinaSearchControls)}
-                                    className={`px-2.5 py-1.5 rounded-lg border transition-all flex-shrink-0 flex items-center justify-center h-8 w-8 ${
+                                    className={`px-2 py-1 rounded-lg border transition-all flex-shrink-0 flex items-center justify-center h-7 w-7 ${
                                         showMedicinaSearchControls
                                             ? 'bg-gray-700/60 border-gray-600/60 text-gray-400 hover:bg-gray-700'
                                             : 'bg-red-900/40 border-red-600/60 text-red-400 hover:bg-red-900/60'
@@ -1121,7 +1122,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                             <select
                                 value={reparacionListFilter}
                                 onChange={(e) => setReparacionListFilter(e.target.value)}
-                                className="flex-1 bg-gray-900 border border-gray-600 rounded-lg px-2 py-1.5 text-xs text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                className="flex-1 bg-gray-900 border border-gray-600 rounded-lg px-2 py-1 text-[11px] text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                             >
                                 <option value="Todos los canales">Todos los Grupos</option>
                                 {reparacionListUniqueGroups.map(g => (
@@ -1129,7 +1130,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                 ))}
                             </select>
                             
-                            <button onClick={() => toggleSelectAllReparacionGroup()} className="px-2 py-1.5 bg-gray-600 hover:bg-gray-500 rounded text-xs text-white whitespace-nowrap">
+                            <button onClick={() => toggleSelectAllReparacionGroup()} className="px-2 py-1 bg-gray-600 hover:bg-gray-500 rounded-md text-[10px] text-white whitespace-nowrap">
                                 {isAllInGroupSelected ? 'Deseleccionar Grupo' : 'Seleccionar Grupo'}
                             </button>
                         </div>
