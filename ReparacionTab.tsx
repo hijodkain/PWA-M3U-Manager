@@ -998,6 +998,30 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                     </div>
                 </div>
 
+                {/* Caja de carga por URL/archivo cuando no hay lista reparadora cargada */}
+                {!reparacionListName && (
+                    <div className="bg-gray-700/30 p-3 rounded border border-gray-700 flex flex-wrap gap-2 items-center mb-2">
+                        <input
+                            type="text"
+                            placeholder="URL..."
+                            value={reparacionUrl}
+                            onChange={(e) => setReparacionUrl(e.target.value)}
+                            className="flex-1 min-w-[150px] bg-gray-900 border border-gray-600 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
+                        />
+                        <button
+                            onClick={() => onUrlLoad()}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm font-medium"
+                        >
+                            Cargar
+                        </button>
+                        <div className="w-px h-6 bg-gray-600 mx-1" />
+                        <label className="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded text-sm flex items-center gap-1">
+                            <Upload size={14} /> Subir
+                            <input id="rep-file" type="file" className="hidden" onChange={onFileUpload} accept=".m3u,.m3u8" />
+                        </label>
+                    </div>
+                )}
+
                 {/* Filtros e Inputs de la lista reparadora */}
                 {(filteredReparacionChannels.length > 0 || !!reparacionListSearch || !!reparacionListName) && (
                     <div className="space-y-2 mb-2">

@@ -38,6 +38,7 @@ const MarqueeText: React.FC<{ text: string; className?: string; isSelected?: boo
     const containerRef = useRef<HTMLDivElement>(null);
     const textRef = useRef<HTMLDivElement>(null);
     const [isOverflowing, setIsOverflowing] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
 
     useEffect(() => {
         const checkOverflow = () => {
@@ -52,14 +53,14 @@ const MarqueeText: React.FC<{ text: string; className?: string; isSelected?: boo
         return () => window.removeEventListener('resize', checkOverflow);
     }, [text]);
 
-    // We use data-attributes to styling in CSS
-    // Logic: If overflow, on hover OR if selected, animate.
-    // We duplicate text to clear gap for smooth marquee
+    const shouldAnimate = isOverflowing && ((isSelected && animateWhenSelected) || isHovered);
     
     return (
         <div 
             ref={containerRef} 
             className={`relative overflow-hidden whitespace-nowrap ${className}`}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
         >
              <style>{`
                 @keyframes marquee {
@@ -74,12 +75,9 @@ const MarqueeText: React.FC<{ text: string; className?: string; isSelected?: boo
              `}</style>
              
             {isOverflowing ? (
-                      <div 
-                    ref={textRef as any}
-                          className={`inline-flex transition-transform ${(isSelected && animateWhenSelected) ? 'animate-marquee' : 'group-hover/item:animate-marquee'}`}
-                 >
-                    <span className="pr-8">{text}</span>
-                    <span>{text}</span>
+                <div ref={textRef as any} className={shouldAnimate ? 'inline-flex animate-marquee' : 'truncate'}>
+                    <span className={shouldAnimate ? 'pr-8' : ''}>{text}</span>
+                    {shouldAnimate && <span>{text}</span>}
                 </div>
             ) : (
                 <div ref={textRef as any} className="truncate">{text}</div>
