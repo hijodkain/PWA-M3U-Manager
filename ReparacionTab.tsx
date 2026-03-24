@@ -209,7 +209,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
     }, []);
 
     const rootLayoutClass = isMobileLandscape
-        ? 'grid grid-cols-2 gap-0 h-screen'
+        ? 'grid grid-cols-11 gap-1 h-screen px-1'
         : isMobile
             ? 'grid grid-cols-1 gap-0 h-screen overflow-y-auto'
             : 'grid grid-cols-1 lg:grid-cols-11 gap-4 h-[calc(100vh-60px)] px-4';
@@ -678,45 +678,8 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 </div>
             )}
 
-            {isMobileLandscape && (
-                <div className="col-span-2 bg-gray-800 px-2 py-1 border-b border-gray-700 shadow-sm flex items-center gap-1 flex-wrap z-10">
-                    <h4 className="font-bold text-[9px] uppercase text-gray-400 whitespace-nowrap">Atributos y acciones</h4>
-                    <div className="flex gap-0.5 items-center flex-wrap">
-                        {attributeLabels
-                            .filter(({ key }) => isSencillo ? (key !== 'tvgId' && key !== 'tvgName') : true)
-                            .map(({ key, label }) => (
-                            <button
-                                key={key}
-                                onClick={() => toggleAttributeToCopy(key)}
-                                className={`text-[7px] py-0.5 px-1 rounded flex items-center justify-center gap-0.5 transition-colors whitespace-nowrap ${attributesToCopy.has(key) ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-                            >
-                                {attributesToCopy.has(key) ? <CheckSquare size={8} /> : <Copy size={8} />} {label}
-                            </button>
-                        ))}
-                    </div>
-                    <div className="flex gap-0.5 ml-auto">
-                        {!isSencillo && (
-                            <button
-                                onClick={handleAddSelectedFromReparacion}
-                                disabled={selectedReparacionChannels.size === 0}
-                                className="text-[7px] py-0.5 px-1 bg-green-600 hover:bg-green-700 text-white rounded disabled:opacity-50 whitespace-nowrap"
-                            >
-                                + Añadir
-                            </button>
-                        )}
-                        <button
-                            onClick={undo}
-                            disabled={history.length === 0}
-                            className="text-[7px] py-0.5 px-1 bg-yellow-600 hover:bg-yellow-700 text-white rounded disabled:opacity-50"
-                        >
-                            <RotateCcw size={8} />
-                        </button>
-                    </div>
-                </div>
-            )}
-
             {/* --- PANEL IZQUIERDO (Lista Principal) --- */}
-            <div className={`bg-gray-800 flex flex-col min-h-0 ${isMobileLandscape ? 'col-span-1 h-full border-r border-gray-700 p-1' : `p-4 lg:col-span-5 ${isMobile ? 'h-[400px] mb-4 rounded-lg border border-gray-700' : 'h-full'}`}`}>
+            <div className={`bg-gray-800 flex flex-col min-h-0 ${isMobileLandscape ? 'col-span-5 h-full border-r border-gray-700 p-1' : `p-4 lg:col-span-5 ${isMobile ? 'h-[400px] mb-4 rounded-lg border border-gray-700' : 'h-full'}`}`}>
                 
                 {/* Header Lista Principal */}
                 <div className={`flex justify-between items-center ${isMobileLandscape ? 'pb-1 mb-1 border-b border-gray-700' : 'pb-2 mb-3 border-b border-gray-700'} shrink-0`}>
@@ -907,6 +870,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     onVerifyClick={() => verifyChannel(ch.id, ch.url)}
                                     onPlayClick={shouldShowPlayButton ? () => openInVLC(ch.url) : undefined}
                                     isSencillo={isSencillo}
+                                    compact={isMobileLandscape}
                                     visibleFields={isPro ? mainVisibleFields : undefined}
                                     style={{
                                         position: 'absolute',
@@ -923,50 +887,50 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
             </div>
 
             {/* --- PANEL CENTRAL: Acciones (SOLO DESKTOP) --- */}
-            {!isMobile && (
-            <div className="lg:col-span-1 flex flex-col items-center justify-start gap-3 bg-gray-800 p-3 rounded-lg border border-gray-700">
+            {(!isMobile || isMobileLandscape) && (
+            <div className={`${isMobileLandscape ? 'col-span-1 p-1 gap-1.5 border-x border-gray-700' : 'lg:col-span-1 p-3 gap-3 rounded-lg border border-gray-700'} flex flex-col items-center justify-start bg-gray-800`}>
                  <div className="text-center w-full">
-                    <h4 className="font-bold text-xs uppercase text-gray-400 mb-2">Atributos</h4>
-                    <ArrowLeftCircle size={24} className="text-blue-500 mb-3 mx-auto" />
-                    <div className="space-y-1.5">
+                    <h4 className={`font-bold uppercase text-gray-400 ${isMobileLandscape ? 'text-[10px] mb-1' : 'text-xs mb-2'}`}>Atributos</h4>
+                    <ArrowLeftCircle size={isMobileLandscape ? 16 : 24} className={`text-blue-500 mx-auto ${isMobileLandscape ? 'mb-1.5' : 'mb-3'}`} />
+                    <div className={isMobileLandscape ? 'space-y-1' : 'space-y-1.5'}>
                         {attributeLabels
                             .filter(({ key }) => isSencillo ? (key !== 'tvgId' && key !== 'tvgName') : true)
                             .map(({ key, label }) => (
                             <button
                                 key={key}
                                 onClick={() => toggleAttributeToCopy(key)}
-                                className={`w-full text-[10px] py-1.5 px-1 rounded flex items-center justify-center gap-1 transition-colors ${attributesToCopy.has(key) ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                                className={`w-full rounded flex items-center justify-center gap-1 transition-colors ${isMobileLandscape ? 'text-[9px] py-1 px-0.5' : 'text-[10px] py-1.5 px-1'} ${attributesToCopy.has(key) ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
                             >
-                                {attributesToCopy.has(key) ? <CheckSquare size={12} /> : <Copy size={12} />} {label}
+                                {attributesToCopy.has(key) ? <CheckSquare size={isMobileLandscape ? 10 : 12} /> : <Copy size={isMobileLandscape ? 10 : 12} />} {label}
                             </button>
                         ))}
                     </div>
                 </div>
                 {!isSencillo && (
-                    <div className="w-full mt-2">
+                    <div className={`w-full ${isMobileLandscape ? 'mt-1' : 'mt-2'}`}>
                         <button
                             onClick={handleAddSelectedFromReparacion}
                             disabled={selectedReparacionChannels.size === 0}
-                            className="w-full text-xs py-2 bg-green-600 hover:bg-green-700 text-white rounded shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            className={`w-full bg-green-600 hover:bg-green-700 text-white rounded shadow-sm disabled:opacity-50 disabled:cursor-not-allowed ${isMobileLandscape ? 'text-[10px] py-1.5' : 'text-xs py-2'}`}
                         >
                             + Añadir
                         </button>
                     </div>
                 )}
-                <div className="w-full mt-2">
+                <div className={`w-full ${isMobileLandscape ? 'mt-1' : 'mt-2'}`}>
                     <button
                         onClick={undo}
                         disabled={history.length === 0}
-                        className="w-full text-xs py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded flex items-center justify-center gap-1 disabled:opacity-50"
+                        className={`w-full bg-yellow-600 hover:bg-yellow-700 text-white rounded flex items-center justify-center gap-1 disabled:opacity-50 ${isMobileLandscape ? 'text-[10px] py-1.5' : 'text-xs py-2'}`}
                     >
-                        <RotateCcw size={12} /> Deshacer
+                        <RotateCcw size={isMobileLandscape ? 10 : 12} /> Deshacer
                     </button>
                 </div>
             </div>
             )}
 
             {/* --- PANEL DERECHO (Lista Reparadora) --- */}
-            <div className={`bg-gray-800 flex flex-col min-h-0 ${isMobileLandscape ? 'col-span-1 h-full border-l border-gray-700 p-1' : `p-4 lg:col-span-5 ${isMobile ? 'h-[400px] rounded-lg border border-gray-700' : 'h-full'}`}`}>
+            <div className={`bg-gray-800 flex flex-col min-h-0 ${isMobileLandscape ? 'col-span-5 h-full border-l border-gray-700 p-1' : `p-4 lg:col-span-5 ${isMobile ? 'h-[400px] rounded-lg border border-gray-700' : 'h-full'}`}`}>
                 
                 {/* Header Lista Reparadora */}
                 <div className={`flex justify-between items-center ${isMobileLandscape ? 'pb-1 mb-1 border-b border-gray-700' : 'pb-2 mb-3 border-b border-gray-700'} flex-wrap shrink-0`}>
@@ -1189,6 +1153,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     resolution={channelInfo.resolution}
                                     onVerifyClick={() => verifyChannel(ch.id, ch.url)}
                                     onPlayClick={shouldShowPlayButton ? () => openInVLC(ch.url) : undefined}
+                                    compact={isMobileLandscape}
                                     visibleFields={isPro ? reparacionVisibleFields : undefined}
                                     style={{
                                         position: 'absolute',

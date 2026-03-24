@@ -19,6 +19,7 @@ interface ReparacionChannelItemProps {
     style?: React.CSSProperties;
     isSencillo?: boolean;
     animateMarqueeWhenSelected?: boolean;
+    compact?: boolean;
     visibleFields?: {
         logo: boolean;
         name: boolean;
@@ -104,6 +105,7 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
     style,
     isSencillo = false,
     animateMarqueeWhenSelected = true,
+    compact = false,
     visibleFields,
     className = "", // Destructure className
 }) => {
@@ -138,13 +140,13 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
     const statusIndicator = () => {
         switch (verificationStatus) {
             case 'ok':
-                return <span className="text-green-500 text-xs">✓ OK</span>;
+                return <span className={compact ? 'text-green-500 text-[10px]' : 'text-green-500 text-xs'}>✓ OK</span>;
             case 'failed':
-                return <span className="text-red-500 text-xs">✗ Offline</span>;
+                return <span className={compact ? 'text-red-500 text-[10px]' : 'text-red-500 text-xs'}>✗ Offline</span>;
             case 'verifying':
-                return <span className="text-yellow-500 text-xs animate-pulse">⟳ Verifying...</span>;
+                return <span className={compact ? 'text-yellow-500 text-[10px] animate-pulse' : 'text-yellow-500 text-xs animate-pulse'}>⟳ Verifying...</span>;
             default:
-                return <span className="text-gray-500 text-xs">○ Pending</span>;
+                return <span className={compact ? 'text-gray-500 text-[10px]' : 'text-gray-500 text-xs'}>○ Pending</span>;
         }
     };
 
@@ -163,14 +165,17 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
         const tooltipText = quality === 'unknown' 
             ? 'No se pudo detectar la resolución.'
             : `Calidad: ${quality}`;
+        const badgeClass = compact
+            ? `${qualityColors[quality]} px-1 py-0.5 rounded text-[9px] font-bold leading-tight cursor-help`
+            : `${qualityColors[quality]} px-1.5 py-0.5 rounded text-[10px] font-bold leading-tight cursor-help`;
 
         return (
             <div 
-                className={`${qualityColors[quality]} px-1.5 py-0.5 rounded text-[10px] font-bold leading-tight cursor-help`}
+                className={badgeClass}
                 title={tooltipText}
             >
                 {qualityText}
-                {resolution && quality !== 'unknown' && <div className="text-[8px] opacity-90 leading-tight">{resolution}</div>}
+                {resolution && quality !== 'unknown' && <div className={compact ? 'text-[7px] opacity-90 leading-tight' : 'text-[8px] opacity-90 leading-tight'}>{resolution}</div>}
             </div>
         );
     };
@@ -179,32 +184,32 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
         <div
             style={style}
             onClick={onBodyClick}
-            className={`group/item flex items-center gap-2 p-2 rounded-lg border-2 ${
+            className={`group/item flex items-center ${compact ? 'gap-1.5 p-1.5 min-h-[52px]' : 'gap-2 p-2 min-h-[60px]'} rounded-lg border-2 ${
                 isSelected ? 'border-blue-500 bg-blue-900/50' : 'border-transparent'
-            } cursor-pointer hover:bg-gray-700 min-h-[60px] transition-colors relative ${className}`} // Add relative and className
+            } cursor-pointer hover:bg-gray-700 transition-colors relative ${className}`} // Add relative and className
         >
             {fields.logo && (
                 <img
-                    src={channel.tvgLogo || 'https://placehold.co/40x40/2d3748/e2e8f0?text=?'}
+                    src={channel.tvgLogo || (compact ? 'https://placehold.co/32x32/2d3748/e2e8f0?text=?' : 'https://placehold.co/40x40/2d3748/e2e8f0?text=?')}
                     alt="logo"
-                    className="w-10 h-10 object-contain rounded-md flex-shrink-0 bg-gray-900"
+                    className={`${compact ? 'w-8 h-8 rounded' : 'w-10 h-10 rounded-md'} object-contain flex-shrink-0 bg-gray-900`}
                     onError={(e) => {
-                        e.currentTarget.src = 'https://placehold.co/40x40/2d3748/e2e8f0?text=Error';
+                        e.currentTarget.src = compact ? 'https://placehold.co/32x32/2d3748/e2e8f0?text=Error' : 'https://placehold.co/40x40/2d3748/e2e8f0?text=Error';
                     }}
                 />
             )}
-            <div className="text-xs overflow-hidden flex-grow min-w-0 pr-2">
+            <div className={`${compact ? 'text-[11px] pr-1.5' : 'text-xs pr-2'} overflow-hidden flex-grow min-w-0`}>
                 {fields.name && (
                     <MarqueeText 
                         text={channel.name} 
-                        className={`font-bold text-sm ${nameColor} mb-0.5`} 
+                        className={`font-bold ${compact ? 'text-xs' : 'text-sm'} ${nameColor} mb-0.5`} 
                         isSelected={isSelected}
                         animateWhenSelected={animateMarqueeWhenSelected}
                     />
                 )}
                 
                 {!isSencillo && (fields.tvgId || fields.tvgName) && (
-                    <div className="flex gap-3 text-[11px] mb-0.5">
+                    <div className={`flex ${compact ? 'gap-2 text-[10px]' : 'gap-3 text-[11px]'} mb-0.5`}>
                         {fields.tvgId && (
                             <div className="flex-1 overflow-hidden flex gap-1">
                                  <span className="font-semibold text-gray-300 flex-shrink-0">ID:</span> 
@@ -221,21 +226,21 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
                 )}
                 {fields.url && (
                     <div className="flex gap-1 overflow-hidden">
-                        <span className="font-semibold text-gray-300 flex-shrink-0 text-[11px]">URL:</span> 
-                        <MarqueeText text={getDomainFromUrl(channel.url)} className="text-gray-400 text-[11px]" isSelected={isSelected} animateWhenSelected={animateMarqueeWhenSelected} />
+                        <span className={`font-semibold text-gray-300 flex-shrink-0 ${compact ? 'text-[10px]' : 'text-[11px]'}`}>URL:</span> 
+                        <MarqueeText text={getDomainFromUrl(channel.url)} className={compact ? 'text-gray-400 text-[10px]' : 'text-gray-400 text-[11px]'} isSelected={isSelected} animateWhenSelected={animateMarqueeWhenSelected} />
                     </div>
                 )}
             </div>
             
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className={`flex items-center ${compact ? 'gap-1' : 'gap-2'} flex-shrink-0`}>
                 {/* Quality Badge */}
-                <div className="w-12 flex justify-center">
+                <div className={compact ? 'w-10 flex justify-center' : 'w-12 flex justify-center'}>
                     {qualityBadge()}
                 </div>
                 
                 {/* Status */}
                 {fields.statusIndicator && (
-                    <div className="w-16 text-center">
+                    <div className={compact ? 'w-14 text-center' : 'w-16 text-center'}>
                         {statusIndicator()}
                     </div>
                 )}
@@ -247,10 +252,10 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
                             e.stopPropagation();
                             onPlayClick();
                         }}
-                        className="bg-green-600 hover:bg-green-700 text-white font-bold p-2 rounded-full transition-all whitespace-nowrap"
+                        className={`bg-green-600 hover:bg-green-700 text-white font-bold rounded-full transition-all whitespace-nowrap ${compact ? 'p-1.5' : 'p-2'}`}
                         title="Abrir en VLC"
                     >
-                        <Play size={16} fill="white" />
+                        <Play size={compact ? 14 : 16} fill="white" />
                     </button>
                 )}
                 
@@ -262,7 +267,7 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
                             if (onVerifyClick) onVerifyClick();
                         }}
                         disabled={verificationStatus === 'verifying'}
-                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-[10px] disabled:opacity-50 disabled:cursor-not-allowed transition-all whitespace-nowrap relative z-10"
+                        className={`bg-blue-500 hover:bg-blue-700 text-white font-bold rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all whitespace-nowrap relative z-10 ${compact ? 'py-0.5 px-1.5 text-[9px]' : 'py-1 px-2 text-[10px]'}`}
                     >
                         {verificationStatus === 'verifying' ? 'Verifying...' : 'Verify'}
                     </button>
@@ -293,7 +298,7 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
                             type="checkbox"
                             checked={isChecked}
                             readOnly
-                            className="form-checkbox h-4 w-4 md:h-5 md:w-5 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 pointer-events-none"
+                            className={`form-checkbox text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 pointer-events-none ${compact ? 'h-3.5 w-3.5 md:h-4 md:w-4' : 'h-4 w-4 md:h-5 md:w-5'}`}
                         />
                     </div>
                 )}
