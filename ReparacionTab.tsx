@@ -179,6 +179,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
 
     // Check if is mobile
     const [isMobile, setIsMobile] = useState(false);
+    const [isMobileLandscape, setIsMobileLandscape] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
     
     // Gestores globales de puntero para finalizar el arrastre
@@ -196,11 +197,21 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
     }, []);
 
     useEffect(() => {
-        const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+        const checkMobile = () => {
+            const mobile = window.innerWidth < 1024;
+            setIsMobile(mobile);
+            setIsMobileLandscape(mobile && window.innerWidth > window.innerHeight && window.innerWidth <= 900);
+        };
         checkMobile();
         window.addEventListener('resize', checkMobile);
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
+
+    const rootLayoutClass = isMobileLandscape
+        ? 'grid grid-cols-2 gap-3 h-[calc(100vh-120px)]'
+        : isMobile
+            ? 'grid grid-cols-1 gap-4 h-[calc(100vh-140px)] overflow-y-auto'
+            : 'grid grid-cols-1 lg:grid-cols-11 gap-4 h-[calc(100vh-140px)]';
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -624,10 +635,10 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
 
 
     return (
-        <div className={`grid grid-cols-1 lg:grid-cols-11 gap-4 h-[calc(100vh-140px)] ${isMobile ? 'overflow-y-auto block' : ''}`}>
+        <div className={rootLayoutClass}>
             
             {/* --- BLOQUE MOVIL: ATRIBUTOS ARRIBA --- */}
-            {isMobile && (
+            {isMobile && !isMobileLandscape && (
                 <div className="bg-gray-800 p-3 rounded-lg border border-gray-700 mb-4 sticky top-0 z-10 shadow-lg">
                     <div className="flex items-center justify-between mb-2">
                         <h4 className="font-bold text-xs uppercase text-gray-400">Atributos a copiar</h4>
@@ -666,13 +677,52 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 </div>
             )}
 
+            {isMobileLandscape && (
+                <div className="col-span-2 bg-gray-800 p-2 rounded-lg border border-gray-700 shadow-lg">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                        <h4 className="font-bold text-[10px] uppercase text-gray-400">Atributos y acciones</h4>
+                        <div className="flex gap-2">
+                            {!isSencillo && (
+                                <button
+                                    onClick={handleAddSelectedFromReparacion}
+                                    disabled={selectedReparacionChannels.size === 0}
+                                    className="text-[10px] py-1 px-2 bg-green-600 hover:bg-green-700 text-white rounded disabled:opacity-50"
+                                >
+                                    + Añadir
+                                </button>
+                            )}
+                            <button
+                                onClick={undo}
+                                disabled={history.length === 0}
+                                className="text-[10px] py-1 px-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded disabled:opacity-50"
+                            >
+                                <RotateCcw size={11} />
+                            </button>
+                        </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                        {attributeLabels
+                            .filter(({ key }) => isSencillo ? (key !== 'tvgId' && key !== 'tvgName') : true)
+                            .map(({ key, label }) => (
+                                <button
+                                    key={key}
+                                    onClick={() => toggleAttributeToCopy(key)}
+                                    className={`text-[10px] py-1 px-1.5 rounded flex items-center justify-center gap-1 transition-colors ${attributesToCopy.has(key) ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                                >
+                                    {attributesToCopy.has(key) ? <CheckSquare size={11} /> : <Copy size={11} />} {label}
+                                </button>
+                            ))}
+                    </div>
+                </div>
+            )}
+
             {/* --- PANEL IZQUIERDO (Lista Principal) --- */}
-            <div className={`lg:col-span-5 bg-gray-800 p-4 rounded-lg flex flex-col border border-gray-700 min-h-0 ${isMobile ? 'h-[400px] mb-4' : 'h-full'}`}>
+            <div className={`bg-gray-800 ${isMobileLandscape ? 'p-2' : 'p-4'} rounded-lg flex flex-col border border-gray-700 min-h-0 ${isMobileLandscape ? 'col-span-1 h-full' : 'lg:col-span-5'} ${isMobileLandscape ? '' : (isMobile ? 'h-[400px] mb-4' : 'h-full')}`}>
                 
                 {/* Header Lista Principal */}
                 <div className="flex justify-between items-center mb-3 pb-2 border-b border-gray-700 shrink-0">
                     <div className="flex items-center gap-2 overflow-hidden">
-                        <h3 className="font-bold text-lg truncate text-blue-400 flex items-center gap-2 min-w-0">
+                        <h3 className={`font-bold ${isMobileLandscape ? 'text-base' : 'text-lg'} truncate text-blue-400 flex items-center gap-2 min-w-0`}>
                             <img src="/Dropbox_Icon.svg" alt="Dropbox" className="w-5 h-5 flex-shrink-0" />
                             <span className="hidden sm:inline">Mi lista:</span>
                             <span className="sm:hidden" title="Mi lista">ML:</span>
@@ -925,13 +975,13 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
             )}
 
             {/* --- PANEL DERECHO (Lista Reparadora) --- */}
-            <div className={`lg:col-span-5 bg-gray-800 p-4 rounded-lg flex flex-col border border-gray-700 min-h-0 ${isMobile ? 'h-[400px]' : 'h-full'}`}>
+            <div className={`bg-gray-800 ${isMobileLandscape ? 'p-2' : 'p-4'} rounded-lg flex flex-col border border-gray-700 min-h-0 ${isMobileLandscape ? 'col-span-1 h-full' : 'lg:col-span-5'} ${isMobileLandscape ? '' : (isMobile ? 'h-[400px]' : 'h-full')}`}>
                 
                 {/* Header Lista Reparadora */}
                 <div className="mb-4">
                     <div className="flex justify-between items-start mb-2">
                         <div className="flex-grow flex items-center gap-2">
-                            <h3 className="font-bold text-lg text-purple-400 flex items-center gap-2">
+                            <h3 className={`font-bold ${isMobileLandscape ? 'text-base' : 'text-lg'} text-purple-400 flex items-center gap-2`}>
                                 <Database size={20} className="flex-shrink-0" />
                                 <span className="hidden sm:inline">Lista Reparadora:</span>
                                 <span className="sm:hidden" title="Lista Reparadora">LR:</span>
