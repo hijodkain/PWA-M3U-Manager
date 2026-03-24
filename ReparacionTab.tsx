@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Upload, Copy, CheckSquare, ArrowLeftCircle, RotateCcw, Trash2, Link, Check, Search, X, RefreshCw, SlidersHorizontal } from 'lucide-react';
+import { Upload, Copy, CheckSquare, ArrowLeftCircle, RotateCcw, Trash2, Link, Check, Search, X, RefreshCw, SlidersHorizontal, Filter } from 'lucide-react';
 import { useReparacion } from './useReparacion';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useChannels } from './useChannels';
@@ -53,6 +53,8 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
     const [isUpdatingReparacionList, setIsUpdatingReparacionList] = useState(false);
     const [showMainColumnsMenu, setShowMainColumnsMenu] = useState(false);
     const [showReparacionColumnsMenu, setShowReparacionColumnsMenu] = useState(false);
+    const [showMedicinaSearchControls, setShowMedicinaSearchControls] = useState(false);
+    const [selectedMedicinaLettersCount, setSelectedMedicinaLettersCount] = useState(0);
     const [mainVisibleFields, setMainVisibleFields] = useState<ColumnVisibilityConfig>(DEFAULT_COLUMN_VISIBILITY);
     const [reparacionVisibleFields, setReparacionVisibleFields] = useState<ColumnVisibilityConfig>(DEFAULT_COLUMN_VISIBILITY);
 
@@ -118,6 +120,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
     const reparacionListParentRef = useRef<HTMLDivElement>(null);
     const mainColumnsMenuRef = useRef<HTMLDivElement>(null);
     const reparacionColumnsMenuRef = useRef<HTMLDivElement>(null);
+    const medicinaSearchInputRef = useRef<HTMLInputElement>(null);
 
     // Initial Load of Medicina Lists
     useEffect(() => {
@@ -209,6 +212,17 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    useEffect(() => {
+        // Mantener el selector dentro del rango actual del texto buscado
+        setSelectedMedicinaLettersCount(prev => Math.min(prev, reparacionListSearch.length));
+    }, [reparacionListSearch]);
+
+    useEffect(() => {
+        if (!medicinaSearchInputRef.current) return;
+        medicinaSearchInputRef.current.focus();
+        medicinaSearchInputRef.current.setSelectionRange(0, selectedMedicinaLettersCount);
+    }, [selectedMedicinaLettersCount]);
     
     // --- Computed Values ---
     const isAllInGroupSelected = filteredReparacionChannels.length > 0 && filteredReparacionChannels.every(c => selectedReparacionChannels.has(c.id));
@@ -980,16 +994,97 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 {/* Filtros e Inputs de la lista reparadora */}
                 {(filteredReparacionChannels.length > 0 || !!reparacionListSearch || !!reparacionListName) && (
                     <div className="space-y-2 mb-2">
-                        {/* Buscador Reparación - Visible siempre en Pro, o Sencillo si hay necesidad */}
-                         <SmartSearchInput
-                            searchTerm={reparacionListSearch}
-                            onSearchChange={setReparacionListSearch}
-                            isSmartSearchEnabled={isSmartSearchEnabled}
-                            onToggleSmartSearch={toggleSmartSearch}
-                            placeholder="Buscar en medicina..."
-                            showResults={false} // Simple input here vs suggestions
-                            className="bg-gray-900"
-                        />
+                        {/* Buscador de medicina con estilo EPG */}
+                        <div className="space-y-2">
+                            <div className="flex gap-2 items-start">
+                                <div className="relative flex-1 min-w-0">
+                                    <input
+                                        ref={medicinaSearchInputRef}
+                                        type="text"
+                                        value={reparacionListSearch}
+                                        onChange={(e) => setReparacionListSearch(e.target.value)}
+                                        placeholder="Buscar en medicina..."
+                                        className="w-full bg-gray-900 text-white text-xs rounded-lg px-2 py-1.5 pl-7 pr-8 border border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                                    />
+                                    <Search className="absolute left-2 top-1.5 h-4 w-4 text-gray-500" />
+                                    <button
+                                        onClick={toggleSmartSearch}
+                                        className={`absolute right-1.5 top-1.5 h-4 w-4 rounded-full border transition-colors ${isSmartSearchEnabled ? 'border-green-400 bg-green-500/20' : 'border-gray-500 bg-transparent'}`}
+                                        title={isSmartSearchEnabled ? 'Búsqueda inteligente activa' : 'Búsqueda inteligente inactiva'}
+                                    />
+                                </div>
+
+                                <button
+                                    onClick={() => setShowMedicinaSearchControls(!showMedicinaSearchControls)}
+                                    className={`px-2.5 py-1.5 rounded-lg border transition-all flex-shrink-0 flex items-center justify-center h-8 w-8 ${
+                                        showMedicinaSearchControls
+                                            ? 'bg-gray-700/60 border-gray-600/60 text-gray-400 hover:bg-gray-700'
+                                            : 'bg-red-900/40 border-red-600/60 text-red-400 hover:bg-red-900/60'
+                                    }`}
+                                    title={showMedicinaSearchControls ? 'Ocultar controles de búsqueda' : 'Mostrar controles de búsqueda'}
+                                >
+                                    <Filter className="h-4 w-4" />
+                                </button>
+                            </div>
+
+                            {showMedicinaSearchControls && (
+                                <div className="flex items-center gap-2 px-1 flex-wrap">
+                                    <span className="text-[10px] text-green-400 flex-1">
+                                        {isSmartSearchEnabled ? 'Búsqueda inteligente activa' : 'Búsqueda inteligente inactiva'}
+                                    </span>
+
+                                    <button
+                                        onClick={() => {
+                                            if (selectedMedicinaLettersCount > 0) {
+                                                setSelectedMedicinaLettersCount(selectedMedicinaLettersCount - 1);
+                                            }
+                                        }}
+                                        disabled={selectedMedicinaLettersCount === 0}
+                                        className="text-xs font-bold px-2 py-1 rounded bg-red-900/40 border border-red-600/60 text-red-400 hover:bg-red-900/60 hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                        title="Deseleccionar última letra"
+                                    >
+                                        −
+                                    </button>
+
+                                    <button
+                                        onClick={() => {
+                                            if (selectedMedicinaLettersCount < reparacionListSearch.length) {
+                                                setSelectedMedicinaLettersCount(selectedMedicinaLettersCount + 1);
+                                            }
+                                        }}
+                                        disabled={selectedMedicinaLettersCount >= reparacionListSearch.length || reparacionListSearch.length === 0}
+                                        className="text-xs font-bold px-2 py-1 rounded bg-green-900/40 border border-green-600/60 text-green-400 hover:bg-green-900/60 hover:text-green-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                        title="Seleccionar siguiente letra"
+                                    >
+                                        +
+                                    </button>
+
+                                    <button
+                                        onClick={() => {
+                                            const selectedText = reparacionListSearch.substring(0, selectedMedicinaLettersCount);
+                                            if (selectedText.trim()) {
+                                                const newPrefix = selectedText;
+                                                const currentPrefixes = settingsHook.channelPrefixes || [];
+
+                                                if (!currentPrefixes.includes(newPrefix)) {
+                                                    const updatedPrefixes = [newPrefix, ...currentPrefixes];
+                                                    settingsHook.updateChannelPrefixes(updatedPrefixes);
+                                                    alert(`Prefijo "${newPrefix}" añadido a la búsqueda inteligente`);
+                                                    setSelectedMedicinaLettersCount(0);
+                                                } else {
+                                                    alert(`El prefijo "${newPrefix}" ya existe`);
+                                                }
+                                            }
+                                        }}
+                                        disabled={selectedMedicinaLettersCount === 0}
+                                        className="text-xs font-bold px-3 py-1 rounded bg-blue-900/40 border border-blue-600/60 text-blue-400 hover:bg-blue-900/60 hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all whitespace-nowrap"
+                                        title="Añadir texto seleccionado como prefijo"
+                                    >
+                                        Añadir prefijo
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                          
                          <div className="flex gap-2 items-center">
                             <select
