@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Upload, Copy, CheckSquare, ArrowLeftCircle, RotateCcw, Trash2, Link, Check, Search, X, RefreshCw, SlidersHorizontal, Filter } from 'lucide-react';
+import { Upload, Copy, CheckSquare, ArrowLeftCircle, RotateCcw, Trash2, Link, Check, Search, X, RefreshCw, SlidersHorizontal, Filter, Database } from 'lucide-react';
 import { useReparacion } from './useReparacion';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useChannels } from './useChannels';
@@ -26,6 +26,8 @@ type ColumnVisibilityConfig = {
     url: boolean;
     verifyButton: boolean;
     playButton: boolean;
+    statusIndicator: boolean;
+    selectionCheckbox: boolean;
 };
 
 const DEFAULT_COLUMN_VISIBILITY: ColumnVisibilityConfig = {
@@ -36,6 +38,8 @@ const DEFAULT_COLUMN_VISIBILITY: ColumnVisibilityConfig = {
     url: true,
     verifyButton: true,
     playButton: true,
+    statusIndicator: true,
+    selectionCheckbox: true,
 };
 
 const REPARACION_MAIN_VISIBLE_FIELDS_KEY = 'reparacion_main_visible_fields';
@@ -236,7 +240,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         { key: 'tvgName', label: 'tvg-name' },
     ];
 
-    const visibilityOptions: Array<{ key: keyof ColumnVisibilityConfig; label: string }> = [
+    const mainVisibilityOptions: Array<{ key: keyof ColumnVisibilityConfig; label: string }> = [
         { key: 'logo', label: 'Logo' },
         { key: 'name', label: 'Nombre del canal' },
         { key: 'tvgId', label: 'ID' },
@@ -244,6 +248,12 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         { key: 'url', label: 'URL' },
         { key: 'verifyButton', label: 'Botón Verify' },
         { key: 'playButton', label: 'Botón VLC' },
+        { key: 'statusIndicator', label: 'Texto estado (Pending/OK)' },
+    ];
+
+    const reparacionVisibilityOptions: Array<{ key: keyof ColumnVisibilityConfig; label: string }> = [
+        ...mainVisibilityOptions,
+        { key: 'selectionCheckbox', label: 'Selector para añadir (+)' },
     ];
 
     const toggleVisibilityField = (
@@ -662,8 +672,11 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 {/* Header Lista Principal */}
                 <div className="flex justify-between items-center mb-3 pb-2 border-b border-gray-700 shrink-0">
                     <div className="flex items-center gap-2 overflow-hidden">
-                        <h3 className="font-bold text-lg truncate text-white">
-                            {channels.length > 0 ? `Mi lista: ${fileName}` : 'Lista Principal'}
+                        <h3 className="font-bold text-lg truncate text-blue-400 flex items-center gap-2 min-w-0">
+                            <img src="/Dropbox_Icon.svg" alt="Dropbox" className="w-5 h-5 flex-shrink-0" />
+                            <span className="hidden sm:inline">Mi lista:</span>
+                            <span className="sm:hidden" title="Mi lista">ML:</span>
+                            <span className="truncate text-white">{channels.length > 0 ? fileName : 'Lista Principal'}</span>
                         </h3>
                         {channels.length > 0 && (
                              <button onClick={handleClearMainListClick} className="text-red-500 hover:text-red-400 p-1 hover:bg-gray-700 rounded transition-colors">
@@ -686,7 +699,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     <div className="absolute right-0 mt-2 w-64 bg-gray-900/95 border border-gray-600 rounded-lg shadow-xl p-3 z-40 backdrop-blur-sm">
                                         <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Mostrar en lista principal</p>
                                         <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
-                                            {visibilityOptions.map(option => (
+                                            {mainVisibilityOptions.map(option => (
                                                 <label key={`main-${option.key}`} className="flex items-center justify-between gap-2 rounded-lg border border-gray-700 bg-gray-800/70 hover:bg-gray-700/70 px-2 py-1.5 text-xs text-gray-200 cursor-pointer transition-colors">
                                                     <span>{option.label}</span>
                                                     <input
@@ -910,8 +923,10 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 <div className="mb-4">
                     <div className="flex justify-between items-start mb-2">
                         <div className="flex-grow flex items-center gap-2">
-                            <h3 className="font-bold text-lg text-gray-300">
-                                {isSencillo ? 'Lista Reparadora: ' : 'Lista reparadora: '}
+                            <h3 className="font-bold text-lg text-purple-400 flex items-center gap-2">
+                                <Database size={20} className="flex-shrink-0" />
+                                <span className="hidden sm:inline">Lista Reparadora:</span>
+                                <span className="sm:hidden" title="Lista Reparadora">LR:</span>
                             </h3>
                             {reparacionListName && (
                                 <div className="flex items-center gap-1.5 ml-2 bg-gray-700/50 px-2 py-1 rounded-md max-w-full">
@@ -940,7 +955,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                         <div className="absolute right-0 mt-2 w-64 bg-gray-900/95 border border-gray-600 rounded-lg shadow-xl p-3 z-40 backdrop-blur-sm">
                                             <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Mostrar en lista reparadora</p>
                                             <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
-                                                {visibilityOptions.map(option => (
+                                                {reparacionVisibilityOptions.map(option => (
                                                     <label key={`reparacion-${option.key}`} className="flex items-center justify-between gap-2 rounded-lg border border-gray-700 bg-gray-800/70 hover:bg-gray-700/70 px-2 py-1.5 text-xs text-gray-200 cursor-pointer transition-colors">
                                                         <span>{option.label}</span>
                                                         <input

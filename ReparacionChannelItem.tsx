@@ -26,6 +26,8 @@ interface ReparacionChannelItemProps {
         url: boolean;
         verifyButton: boolean;
         playButton: boolean;
+        statusIndicator: boolean;
+        selectionCheckbox: boolean;
     };
     className?: string; // Add className prop
 }
@@ -111,6 +113,8 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
         url: true,
         verifyButton: true,
         playButton: true,
+        statusIndicator: true,
+        selectionCheckbox: true,
     };
 
     const getDomainFromUrl = (url: string) => {
@@ -227,9 +231,11 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
                 </div>
                 
                 {/* Status */}
-                <div className="w-16 text-center">
-                    {statusIndicator()}
-                </div>
+                {fields.statusIndicator && (
+                    <div className="w-16 text-center">
+                        {statusIndicator()}
+                    </div>
+                )}
                 
                 {/* Play Button */}
                 {fields.playButton && onPlayClick && (
@@ -260,7 +266,7 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
                 )}
                 
                 {/* Checkbox */}
-                {showCheckbox && (
+                {showCheckbox && fields.selectionCheckbox && (
                     <div 
                         className="flex justify-center items-center p-1 md:p-2 cursor-pointer touch-none"
                         onMouseEnter={() => {
