@@ -46,6 +46,7 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
     const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
     const [filterGroup, setFilterGroup] = useState<string>('Todos los canales');
     const [mainDomainFilter, setMainDomainFilter] = useState<string>('Todos los dominios');
+    const [statusFilter, setStatusFilter] = useState<string>('Todos');
     const [lastSelectedId, setLastSelectedId] = useState<string | null>(null);
     const selectAllCheckboxRef = useRef<HTMLInputElement>(null);
     const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -377,6 +378,23 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
             const matchesGroup = filterGroup === 'Todos los canales' || channel.groupTitle === filterGroup;
             if (!matchesGroup) return false;
 
+            const matchesStatus = (() => {
+                switch (statusFilter) {
+                    case 'Operativos':
+                        return channel.status === 'ok';
+                    case 'Fallidos':
+                        return channel.status === 'failed';
+                    case 'Verificando':
+                        return channel.status === 'verifying';
+                    case 'Pendientes':
+                        return !channel.status || channel.status === 'pending';
+                    default:
+                        return true;
+                }
+            })();
+
+            if (!matchesStatus) return false;
+
             if (mainDomainFilter === 'Todos los dominios') return true;
 
             try {
@@ -385,7 +403,7 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
                 return mainDomainFilter === '-- Sin dominio válido';
             }
         }),
-        [channels, filterGroup, mainDomainFilter]
+        [channels, filterGroup, mainDomainFilter, statusFilter]
     );
 
     const activeChannel = useMemo(() => channels.find((c) => c.id === activeId), [activeId, channels]);
@@ -532,6 +550,8 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
         setFilterGroup,
         mainDomainFilter,
         setMainDomainFilter,
+        statusFilter,
+        setStatusFilter,
         uniqueDomains,
         lastSelectedId,
         selectAllCheckboxRef,

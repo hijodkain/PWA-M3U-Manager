@@ -71,6 +71,8 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         setFilterGroup,
         mainDomainFilter,
         setMainDomainFilter,
+        statusFilter,
+        setStatusFilter,
         uniqueDomains,
         selectAllCheckboxRef,
         tableContainerRef,
@@ -558,7 +560,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                     id="group-filter"
                                     value={filterGroup}
                                     onChange={(e) => setFilterGroup(e.target.value)}
-                                    className="bg-gray-700 border border-gray-600 rounded px-3 py-1 text-sm text-white focus:ring-blue-500 focus:border-blue-500"
+                                    className="bg-gray-900 border border-gray-600 rounded-lg px-3 py-1.5 text-sm text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 truncate"
                                 >
                                     {uniqueGroups.map((group) => (
                                         <option key={group} value={group}>
@@ -575,7 +577,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                         id="domain-filter"
                                         value={mainDomainFilter}
                                         onChange={(e) => setMainDomainFilter(e.target.value)}
-                                        className="bg-gray-700 border border-gray-600 rounded px-3 py-1 text-sm text-white focus:ring-blue-500 focus:border-blue-500 max-w-[220px]"
+                                        className="bg-gray-900 border border-gray-600 rounded-lg px-3 py-1.5 text-sm text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 max-w-[220px] truncate"
                                     >
                                         {uniqueDomains.map((domain) => (
                                             <option key={domain} value={domain}>
@@ -585,6 +587,22 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                     </select>
                                 </div>
                             )}
+
+                            <div className="flex items-center">
+                                <span className="text-xs text-gray-400 mr-2 uppercase tracking-wide font-semibold">Estado</span>
+                                <select
+                                    id="status-filter"
+                                    value={statusFilter}
+                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                    className="bg-gray-900 border border-gray-600 rounded-lg px-3 py-1.5 text-sm text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 truncate"
+                                >
+                                    <option value="Todos">Todos</option>
+                                    <option value="Operativos">Operativos</option>
+                                    <option value="Fallidos">Fallidos</option>
+                                    <option value="Verificando">Verificando</option>
+                                    <option value="Pendientes">Pendientes</option>
+                                </select>
+                            </div>
 
                             {!isSencillo && (history.length > 0 || redoHistory.length > 0) && (
                                 <div className="flex items-center gap-1 bg-gray-700/50 rounded p-1 border border-gray-600">
@@ -818,7 +836,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                 <div className="text-center py-16 px-4 bg-gray-800 rounded-lg mt-6">
                     <h3 className="text-lg font-medium text-white">No hay canales en este grupo</h3>
                     <p className="mt-1 text-sm text-gray-400">
-                        Selecciona "All" en el filtro de grupos para ver todos los canales.
+                        Ajusta los filtros de grupo, dominio o estado para ver más canales.
                     </p>
                 </div>
             )}
