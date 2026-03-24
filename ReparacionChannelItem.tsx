@@ -18,6 +18,15 @@ interface ReparacionChannelItemProps {
     onPlayClick?: () => void;
     style?: React.CSSProperties;
     isSencillo?: boolean;
+    visibleFields?: {
+        logo: boolean;
+        name: boolean;
+        tvgId: boolean;
+        tvgName: boolean;
+        url: boolean;
+        verifyButton: boolean;
+        playButton: boolean;
+    };
     className?: string; // Add className prop
 }
 
@@ -91,8 +100,19 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
     onPlayClick,
     style,
     isSencillo = false,
+    visibleFields,
     className = "", // Destructure className
 }) => {
+    const fields = visibleFields ?? {
+        logo: true,
+        name: true,
+        tvgId: true,
+        tvgName: true,
+        url: true,
+        verifyButton: true,
+        playButton: true,
+    };
+
     const getDomainFromUrl = (url: string) => {
         if (!url) return '---';
         if (typeof window === 'undefined') {
@@ -157,37 +177,47 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
                 isSelected ? 'border-blue-500 bg-blue-900/50' : 'border-transparent'
             } cursor-pointer hover:bg-gray-700 min-h-[60px] transition-colors relative ${className}`} // Add relative and className
         >
-            <img
-                src={channel.tvgLogo || 'https://placehold.co/40x40/2d3748/e2e8f0?text=?'}
-                alt="logo"
-                className="w-10 h-10 object-contain rounded-md flex-shrink-0 bg-gray-900"
-                onError={(e) => {
-                    e.currentTarget.src = 'https://placehold.co/40x40/2d3748/e2e8f0?text=Error';
-                }}
-            />
-            <div className="text-xs overflow-hidden flex-grow min-w-0 pr-2">
-                <MarqueeText 
-                    text={channel.name} 
-                    className={`font-bold text-sm ${nameColor} mb-0.5`} 
-                    isSelected={isSelected} 
+            {fields.logo && (
+                <img
+                    src={channel.tvgLogo || 'https://placehold.co/40x40/2d3748/e2e8f0?text=?'}
+                    alt="logo"
+                    className="w-10 h-10 object-contain rounded-md flex-shrink-0 bg-gray-900"
+                    onError={(e) => {
+                        e.currentTarget.src = 'https://placehold.co/40x40/2d3748/e2e8f0?text=Error';
+                    }}
                 />
+            )}
+            <div className="text-xs overflow-hidden flex-grow min-w-0 pr-2">
+                {fields.name && (
+                    <MarqueeText 
+                        text={channel.name} 
+                        className={`font-bold text-sm ${nameColor} mb-0.5`} 
+                        isSelected={isSelected} 
+                    />
+                )}
                 
-                {!isSencillo && (
+                {!isSencillo && (fields.tvgId || fields.tvgName) && (
                     <div className="flex gap-3 text-[11px] mb-0.5">
-                        <div className="flex-1 overflow-hidden flex gap-1">
-                             <span className="font-semibold text-gray-300 flex-shrink-0">ID:</span> 
-                             <MarqueeText text={channel.tvgId || '---'} className="text-gray-400" isSelected={isSelected} />
-                        </div>
-                        <div className="flex-1 overflow-hidden flex gap-1">
-                            <span className="font-semibold text-gray-300 flex-shrink-0">Name:</span> 
-                            <MarqueeText text={channel.tvgName || '---'} className="text-gray-400" isSelected={isSelected} />
-                        </div>
+                        {fields.tvgId && (
+                            <div className="flex-1 overflow-hidden flex gap-1">
+                                 <span className="font-semibold text-gray-300 flex-shrink-0">ID:</span> 
+                                 <MarqueeText text={channel.tvgId || '---'} className="text-gray-400" isSelected={isSelected} />
+                            </div>
+                        )}
+                        {fields.tvgName && (
+                            <div className="flex-1 overflow-hidden flex gap-1">
+                                <span className="font-semibold text-gray-300 flex-shrink-0">Name:</span> 
+                                <MarqueeText text={channel.tvgName || '---'} className="text-gray-400" isSelected={isSelected} />
+                            </div>
+                        )}
                     </div>
                 )}
-                <div className="flex gap-1 overflow-hidden">
-                    <span className="font-semibold text-gray-300 flex-shrink-0 text-[11px]">URL:</span> 
-                    <MarqueeText text={getDomainFromUrl(channel.url)} className="text-gray-400 text-[11px]" isSelected={isSelected} />
-                </div>
+                {fields.url && (
+                    <div className="flex gap-1 overflow-hidden">
+                        <span className="font-semibold text-gray-300 flex-shrink-0 text-[11px]">URL:</span> 
+                        <MarqueeText text={getDomainFromUrl(channel.url)} className="text-gray-400 text-[11px]" isSelected={isSelected} />
+                    </div>
+                )}
             </div>
             
             <div className="flex items-center gap-2 flex-shrink-0">
@@ -202,7 +232,7 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
                 </div>
                 
                 {/* Play Button */}
-                {onPlayClick && (
+                {fields.playButton && onPlayClick && (
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
@@ -216,16 +246,18 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
                 )}
                 
                 {/* Verify Button */}
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        if (onVerifyClick) onVerifyClick();
-                    }}
-                    disabled={verificationStatus === 'verifying'}
-                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-[10px] disabled:opacity-50 disabled:cursor-not-allowed transition-all whitespace-nowrap relative z-10"
-                >
-                    {verificationStatus === 'verifying' ? 'Verifying...' : 'Verify'}
-                </button>
+                {fields.verifyButton && (
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (onVerifyClick) onVerifyClick();
+                        }}
+                        disabled={verificationStatus === 'verifying'}
+                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-[10px] disabled:opacity-50 disabled:cursor-not-allowed transition-all whitespace-nowrap relative z-10"
+                    >
+                        {verificationStatus === 'verifying' ? 'Verifying...' : 'Verify'}
+                    </button>
+                )}
                 
                 {/* Checkbox */}
                 {showCheckbox && (
