@@ -834,6 +834,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                         } else {
                                             setDestinationChannelId(ch.id);
                                             setReparacionListSearch(normalizeChannelName(ch.name));
+                                            reparacionListParentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
                                         }
                                     }}
                                     isSelected={destinationChannelId === ch.id}
