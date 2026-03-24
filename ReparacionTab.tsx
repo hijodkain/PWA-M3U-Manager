@@ -181,6 +181,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
     const [isMobile, setIsMobile] = useState(false);
     const [isMobileLandscape, setIsMobileLandscape] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
+    const [viewportWidth, setViewportWidth] = useState<number>(typeof window !== 'undefined' ? window.innerWidth : 1280);
     
     // Gestores globales de puntero para finalizar el arrastre
     const handleGlobalDragEnd = () => setIsDragging(false);
@@ -202,11 +203,24 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
             setIsMobileLandscape(window.innerWidth > window.innerHeight);
             // Mobile cuando ancho < 1024
             setIsMobile(window.innerWidth < 1024);
+            setViewportWidth(window.innerWidth);
         };
         checkMobile();
         window.addEventListener('resize', checkMobile);
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
+
+    const uiDensity: 'normal' | 'compact' | 'tight' = viewportWidth >= 1500
+        ? 'normal'
+        : viewportWidth >= 1100
+            ? 'compact'
+            : 'tight';
+
+    const landscapePanelPaddingClass = uiDensity === 'normal' ? 'p-3' : uiDensity === 'compact' ? 'p-2' : 'p-1';
+    const controlTextClass = uiDensity === 'normal' ? 'text-xs' : uiDensity === 'compact' ? 'text-[11px]' : 'text-[10px]';
+    const controlPyClass = uiDensity === 'normal' ? 'py-1.5' : uiDensity === 'compact' ? 'py-1' : 'py-0.5';
+    const controlPxClass = uiDensity === 'normal' ? 'px-3' : 'px-2';
+    const tinyIconSize = uiDensity === 'normal' ? 14 : uiDensity === 'compact' ? 12 : 10;
 
     const rootLayoutClass = isMobileLandscape
         ? 'grid grid-cols-11 gap-1 h-screen px-1'
@@ -679,7 +693,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
             )}
 
             {/* --- PANEL IZQUIERDO (Lista Principal) --- */}
-            <div className={`bg-gray-800 flex flex-col min-h-0 ${isMobileLandscape ? 'col-span-5 h-full border-r border-gray-700 p-1' : `p-4 lg:col-span-5 ${isMobile ? 'h-[400px] mb-4 rounded-lg border border-gray-700' : 'h-full'}`}`}>
+            <div className={`bg-gray-800 flex flex-col min-h-0 ${isMobileLandscape ? `col-span-5 h-full border-r border-gray-700 ${landscapePanelPaddingClass}` : `p-4 lg:col-span-5 ${isMobile ? 'h-[400px] mb-4 rounded-lg border border-gray-700' : 'h-full'}`}`}>
                 
                 {/* Header Lista Principal */}
                 <div className={`flex justify-between items-center ${isMobileLandscape ? 'pb-1 mb-1 border-b border-gray-700' : 'pb-2 mb-3 border-b border-gray-700'} shrink-0`}>
@@ -709,7 +723,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     className={`p-1 rounded transition-colors ${showMainColumnsMenu ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-700'}`}
                                     title="Elegir columnas visibles en lista principal"
                                 >
-                                    <SlidersHorizontal size={isMobileLandscape ? 14 : 18} />
+                                    <SlidersHorizontal size={isMobileLandscape ? (uiDensity === 'normal' ? 18 : uiDensity === 'compact' ? 16 : 14) : 18} />
                                 </button>
                                 {showMainColumnsMenu && (
                                     <div className="absolute right-0 mt-2 w-64 bg-gray-900/95 border border-gray-600 rounded-lg shadow-xl p-3 z-40 backdrop-blur-sm">
@@ -736,7 +750,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                 onClick={() => setShowMainSearch(!showMainSearch)}
                                 className={`p-1 rounded transition-colors ${showMainSearch ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-700'}`}
                             >
-                                <Search size={isMobileLandscape ? 14 : 18} />
+                                <Search size={isMobileLandscape ? (uiDensity === 'normal' ? 18 : uiDensity === 'compact' ? 16 : 14) : 18} />
                             </button>
                         )}
                     </div>
@@ -768,7 +782,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                             placeholder="Buscar canal..."
                             showResults={true}
                             resultCount={filteredMainChannels.length}
-                            compact={true}
+                            density={uiDensity}
                         />
                     </div>
                 )}
@@ -779,7 +793,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                     <select
                         value={mainListFilter}
                         onChange={(e) => setMainListFilter(e.target.value)}
-                        className={`bg-gray-900 border border-gray-600 rounded-lg px-2 py-1 text-[11px] text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 truncate flex-1 min-w-[100px]`}
+                        className={`bg-gray-900 border border-gray-600 rounded-lg ${controlPxClass} ${controlPyClass} ${controlTextClass} text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 truncate flex-1 min-w-[100px]`}
                     >
                         <option value="Todos los canales">Todos los grupos</option>
                         {mainListUniqueGroups.map((g) => {
@@ -792,16 +806,16 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                     {mainListFilter !== 'Todos los canales' && (
                         <button
                             onClick={handleQuickVerify}
-                            className="text-[10px] px-2 py-1 rounded-md flex items-center justify-center gap-1 transition-colors bg-blue-600 hover:bg-blue-700 shadow-sm text-white whitespace-nowrap"
+                            className={`${controlTextClass} ${controlPxClass} ${controlPyClass} rounded-md flex items-center justify-center gap-1 transition-colors bg-blue-600 hover:bg-blue-700 shadow-sm text-white whitespace-nowrap`}
                             title="Verificación rápida de grupo"
                         >
-                            <Check size={12} /> Verif.
+                            <Check size={tinyIconSize} /> Verif.
                         </button>
                     )}
                     <select
                         value={mainStatusFilter}
                         onChange={(e) => setMainStatusFilter(e.target.value)}
-                        className={`bg-gray-900 border border-gray-600 rounded-lg px-2 py-1 text-[11px] font-bold focus:ring-1 focus:ring-blue-500 focus:border-blue-500 truncate flex-1 min-w-[80px] ${mainStatusFilter !== 'Todos' ? 'text-yellow-400 border-yellow-500/50 bg-yellow-900/40' : 'text-white'}`}
+                        className={`bg-gray-900 border border-gray-600 rounded-lg ${controlPxClass} ${controlPyClass} ${controlTextClass} font-bold focus:ring-1 focus:ring-blue-500 focus:border-blue-500 truncate flex-1 min-w-[80px] ${mainStatusFilter !== 'Todos' ? 'text-yellow-400 border-yellow-500/50 bg-yellow-900/40' : 'text-white'}`}
                         title="Filtrar por estado de verificación"
                     >
                         <option value="Todos" style={{ color: 'white' }}>Todos</option>
@@ -815,7 +829,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 {!isSencillo && channels.length > 0 && (
                 <div className={`${isMobileLandscape ? 'mb-1 gap-1' : 'mb-2 gap-2'} flex flex-wrap items-center`}>
                     <select
-                        className="flex-1 min-w-[100px] bg-gray-900 text-[11px] border border-gray-600 rounded-lg px-2 py-1 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 truncate"
+                        className={`flex-1 min-w-[100px] bg-gray-900 ${controlTextClass} border border-gray-600 rounded-lg ${controlPxClass} ${controlPyClass} text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 truncate`}
                         value={mainDomainFilter}
                         onChange={(e) => setMainDomainFilter(e.target.value)}
                     >
@@ -824,7 +838,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                         ))}
                     </select>
                     <select
-                        className="flex-1 min-w-[100px] bg-gray-900 text-[11px] border border-gray-600 rounded-lg px-2 py-1 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 truncate"
+                        className={`flex-1 min-w-[100px] bg-gray-900 ${controlTextClass} border border-gray-600 rounded-lg ${controlPxClass} ${controlPyClass} text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 truncate`}
                         value={bulkActionType}
                         onChange={(e) => setBulkActionType(e.target.value)}
                     >
@@ -834,10 +848,10 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                     </select>
                     <button
                         onClick={() => executeBulkAction(bulkActionType, filteredMainChannels)}
-                        className="text-[10px] px-2 py-1 rounded-md border border-red-900/50 text-red-500 hover:bg-red-900/20 flex items-center justify-center gap-1 whitespace-nowrap"
+                        className={`${controlTextClass} ${controlPxClass} ${controlPyClass} rounded-md border border-red-900/50 text-red-500 hover:bg-red-900/20 flex items-center justify-center gap-1 whitespace-nowrap`}
                         title="Aplicar acción"
                     >
-                        <Trash2 size={12} />
+                        <Trash2 size={tinyIconSize} />
                     </button>
                 </div>
                 )}
@@ -871,7 +885,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     onVerifyClick={() => verifyChannel(ch.id, ch.url)}
                                     onPlayClick={shouldShowPlayButton ? () => openInVLC(ch.url) : undefined}
                                     isSencillo={isSencillo}
-                                    compact={isMobileLandscape}
+                                    density={uiDensity}
                                     visibleFields={isPro ? mainVisibleFields : undefined}
                                     style={{
                                         position: 'absolute',
@@ -889,10 +903,10 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
 
             {/* --- PANEL CENTRAL: Acciones (SOLO DESKTOP) --- */}
             {(!isMobile || isMobileLandscape) && (
-            <div className={`${isMobileLandscape ? 'col-span-1 p-1 gap-1.5 border-x border-gray-700' : 'lg:col-span-1 p-3 gap-3 rounded-lg border border-gray-700'} flex flex-col items-center justify-start bg-gray-800`}>
+            <div className={`${isMobileLandscape ? `col-span-1 ${landscapePanelPaddingClass} gap-1.5 border-x border-gray-700` : 'lg:col-span-1 p-3 gap-3 rounded-lg border border-gray-700'} flex flex-col items-center justify-start bg-gray-800`}>
                  <div className="text-center w-full">
-                    <h4 className={`font-bold uppercase text-gray-400 ${isMobileLandscape ? 'text-[10px] mb-1' : 'text-xs mb-2'}`}>Atributos</h4>
-                    <ArrowLeftCircle size={isMobileLandscape ? 16 : 24} className={`text-blue-500 mx-auto ${isMobileLandscape ? 'mb-1.5' : 'mb-3'}`} />
+                    <h4 className={`font-bold uppercase text-gray-400 ${isMobileLandscape ? (uiDensity === 'normal' ? 'text-xs mb-2' : uiDensity === 'compact' ? 'text-[11px] mb-1.5' : 'text-[10px] mb-1') : 'text-xs mb-2'}`}>Atributos</h4>
+                    <ArrowLeftCircle size={isMobileLandscape ? (uiDensity === 'normal' ? 22 : uiDensity === 'compact' ? 18 : 16) : 24} className={`text-blue-500 mx-auto ${isMobileLandscape ? 'mb-1.5' : 'mb-3'}`} />
                     <div className={isMobileLandscape ? 'space-y-1' : 'space-y-1.5'}>
                         {attributeLabels
                             .filter(({ key }) => isSencillo ? (key !== 'tvgId' && key !== 'tvgName') : true)
@@ -900,9 +914,9 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                             <button
                                 key={key}
                                 onClick={() => toggleAttributeToCopy(key)}
-                                className={`w-full rounded flex items-center justify-center gap-1 transition-colors ${isMobileLandscape ? 'text-[9px] py-1 px-0.5' : 'text-[10px] py-1.5 px-1'} ${attributesToCopy.has(key) ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                                className={`w-full rounded flex items-center justify-center gap-1 transition-colors ${isMobileLandscape ? `${controlTextClass} ${controlPyClass} px-1` : 'text-[10px] py-1.5 px-1'} ${attributesToCopy.has(key) ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
                             >
-                                {attributesToCopy.has(key) ? <CheckSquare size={isMobileLandscape ? 10 : 12} /> : <Copy size={isMobileLandscape ? 10 : 12} />} {label}
+                                {attributesToCopy.has(key) ? <CheckSquare size={isMobileLandscape ? tinyIconSize : 12} /> : <Copy size={isMobileLandscape ? tinyIconSize : 12} />} {label}
                             </button>
                         ))}
                     </div>
@@ -912,7 +926,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                         <button
                             onClick={handleAddSelectedFromReparacion}
                             disabled={selectedReparacionChannels.size === 0}
-                            className={`w-full bg-green-600 hover:bg-green-700 text-white rounded shadow-sm disabled:opacity-50 disabled:cursor-not-allowed ${isMobileLandscape ? 'text-[10px] py-1.5' : 'text-xs py-2'}`}
+                            className={`w-full bg-green-600 hover:bg-green-700 text-white rounded shadow-sm disabled:opacity-50 disabled:cursor-not-allowed ${isMobileLandscape ? `${controlTextClass} ${controlPyClass}` : 'text-xs py-2'}`}
                         >
                             + Añadir
                         </button>
@@ -922,16 +936,16 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                     <button
                         onClick={undo}
                         disabled={history.length === 0}
-                        className={`w-full bg-yellow-600 hover:bg-yellow-700 text-white rounded flex items-center justify-center gap-1 disabled:opacity-50 ${isMobileLandscape ? 'text-[10px] py-1.5' : 'text-xs py-2'}`}
+                        className={`w-full bg-yellow-600 hover:bg-yellow-700 text-white rounded flex items-center justify-center gap-1 disabled:opacity-50 ${isMobileLandscape ? `${controlTextClass} ${controlPyClass}` : 'text-xs py-2'}`}
                     >
-                        <RotateCcw size={isMobileLandscape ? 10 : 12} /> Deshacer
+                        <RotateCcw size={isMobileLandscape ? tinyIconSize : 12} /> Deshacer
                     </button>
                 </div>
             </div>
             )}
 
             {/* --- PANEL DERECHO (Lista Reparadora) --- */}
-            <div className={`bg-gray-800 flex flex-col min-h-0 ${isMobileLandscape ? 'col-span-5 h-full border-l border-gray-700 p-1' : `p-4 lg:col-span-5 ${isMobile ? 'h-[400px] rounded-lg border border-gray-700' : 'h-full'}`}`}>
+            <div className={`bg-gray-800 flex flex-col min-h-0 ${isMobileLandscape ? `col-span-5 h-full border-l border-gray-700 ${landscapePanelPaddingClass}` : `p-4 lg:col-span-5 ${isMobile ? 'h-[400px] rounded-lg border border-gray-700' : 'h-full'}`}`}>
                 
                 {/* Header Lista Reparadora */}
                 <div className={`flex justify-between items-center ${isMobileLandscape ? 'pb-1 mb-1 border-b border-gray-700' : 'pb-2 mb-3 border-b border-gray-700'} flex-wrap shrink-0`}>
@@ -1001,23 +1015,23 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
 
                 {/* Caja de carga por URL/archivo cuando no hay lista reparadora cargada */}
                 {!reparacionListName && (
-                    <div className="bg-gray-700/30 p-3 rounded border border-gray-700 flex flex-wrap gap-2 items-center mb-2">
+                    <div className={`bg-gray-700/30 rounded border border-gray-700 flex flex-wrap gap-2 items-center mb-2 ${uiDensity === 'normal' ? 'p-3' : uiDensity === 'compact' ? 'p-2.5' : 'p-2'}`}>
                         <input
                             type="text"
                             placeholder="URL..."
                             value={reparacionUrl}
                             onChange={(e) => setReparacionUrl(e.target.value)}
-                            className="flex-1 min-w-[150px] bg-gray-900 border border-gray-600 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
+                            className={`flex-1 min-w-[150px] bg-gray-900 border border-gray-600 rounded ${controlPxClass} ${controlPyClass} ${uiDensity === 'normal' ? 'text-sm' : controlTextClass} text-white focus:border-blue-500`}
                         />
                         <button
                             onClick={() => onUrlLoad()}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm font-medium"
+                            className={`bg-blue-600 hover:bg-blue-700 text-white ${controlPxClass} ${controlPyClass} rounded ${uiDensity === 'normal' ? 'text-sm' : controlTextClass} font-medium`}
                         >
                             Cargar
                         </button>
                         <div className="w-px h-6 bg-gray-600 mx-1" />
-                        <label className="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded text-sm flex items-center gap-1">
-                            <Upload size={14} /> Subir
+                        <label className={`cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white ${controlPxClass} ${controlPyClass} rounded ${uiDensity === 'normal' ? 'text-sm' : controlTextClass} flex items-center gap-1`}>
+                            <Upload size={uiDensity === 'normal' ? 14 : tinyIconSize} /> Subir
                             <input id="rep-file" type="file" className="hidden" onChange={onFileUpload} accept=".m3u,.m3u8" />
                         </label>
                     </div>
@@ -1036,26 +1050,26 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                         value={reparacionListSearch}
                                         onChange={(e) => setReparacionListSearch(e.target.value)}
                                         placeholder="Buscar en medicina..."
-                                        className="w-full bg-gray-900 text-white text-[11px] rounded-lg px-2 py-1 pl-6 pr-7 border border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                                        className={`w-full bg-gray-900 text-white rounded-lg border border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 ${controlTextClass} ${controlPyClass} pl-6 pr-7 ${controlPxClass}`}
                                     />
-                                    <Search className="absolute left-1.5 top-1.5 h-3.5 w-3.5 text-gray-500" />
+                                    <Search className={`absolute left-1.5 ${uiDensity === 'normal' ? 'top-2 h-4 w-4' : uiDensity === 'compact' ? 'top-1.5 h-3.5 w-3.5' : 'top-1 h-3 w-3'} text-gray-500`} />
                                     <button
                                         onClick={toggleSmartSearch}
-                                        className={`absolute right-1.5 top-1.5 h-3.5 w-3.5 rounded-full border transition-colors ${isSmartSearchEnabled ? 'border-green-400 bg-green-500/20' : 'border-gray-500 bg-transparent'}`}
+                                        className={`absolute right-1.5 ${uiDensity === 'normal' ? 'top-2 h-4 w-4' : uiDensity === 'compact' ? 'top-1.5 h-3.5 w-3.5' : 'top-1 h-3 w-3'} rounded-full border transition-colors ${isSmartSearchEnabled ? 'border-green-400 bg-green-500/20' : 'border-gray-500 bg-transparent'}`}
                                         title={isSmartSearchEnabled ? 'Búsqueda inteligente activa' : 'Búsqueda inteligente inactiva'}
                                     />
                                 </div>
 
                                 <button
                                     onClick={() => setShowMedicinaSearchControls(!showMedicinaSearchControls)}
-                                    className={`px-2 py-1 rounded-lg border transition-all flex-shrink-0 flex items-center justify-center h-7 w-7 ${
+                                    className={`rounded-lg border transition-all flex-shrink-0 flex items-center justify-center ${uiDensity === 'normal' ? 'h-8 w-8 px-2.5 py-1.5' : uiDensity === 'compact' ? 'h-7 w-7 px-2 py-1' : 'h-6 w-6 px-1.5 py-0.5'} ${
                                         showMedicinaSearchControls
                                             ? 'bg-gray-700/60 border-gray-600/60 text-gray-400 hover:bg-gray-700'
                                             : 'bg-red-900/40 border-red-600/60 text-red-400 hover:bg-red-900/60'
                                     }`}
                                     title={showMedicinaSearchControls ? 'Ocultar controles de búsqueda' : 'Mostrar controles de búsqueda'}
                                 >
-                                    <Filter className="h-4 w-4" />
+                                    <Filter className={uiDensity === 'normal' ? 'h-4 w-4' : uiDensity === 'compact' ? 'h-3.5 w-3.5' : 'h-3 w-3'} />
                                 </button>
                             </div>
 
@@ -1122,7 +1136,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                             <select
                                 value={reparacionListFilter}
                                 onChange={(e) => setReparacionListFilter(e.target.value)}
-                                className="flex-1 bg-gray-900 border border-gray-600 rounded-lg px-2 py-1 text-[11px] text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                className={`flex-1 bg-gray-900 border border-gray-600 rounded-lg ${controlPxClass} ${controlPyClass} ${controlTextClass} text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500`}
                             >
                                 <option value="Todos los canales">Todos los Grupos</option>
                                 {reparacionListUniqueGroups.map(g => (
@@ -1130,7 +1144,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                 ))}
                             </select>
                             
-                            <button onClick={() => toggleSelectAllReparacionGroup()} className="px-2 py-1 bg-gray-600 hover:bg-gray-500 rounded-md text-[10px] text-white whitespace-nowrap">
+                            <button onClick={() => toggleSelectAllReparacionGroup()} className={`${controlPxClass} ${controlPyClass} bg-gray-600 hover:bg-gray-500 rounded-md ${controlTextClass} text-white whitespace-nowrap`}>
                                 {isAllInGroupSelected ? 'Deseleccionar Grupo' : 'Seleccionar Grupo'}
                             </button>
                         </div>
@@ -1178,7 +1192,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     resolution={channelInfo.resolution}
                                     onVerifyClick={() => verifyChannel(ch.id, ch.url)}
                                     onPlayClick={shouldShowPlayButton ? () => openInVLC(ch.url) : undefined}
-                                    compact={isMobileLandscape}
+                                    density={uiDensity}
                                     visibleFields={isPro ? reparacionVisibleFields : undefined}
                                     style={{
                                         position: 'absolute',
