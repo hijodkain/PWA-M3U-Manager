@@ -198,10 +198,10 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
 
     useEffect(() => {
         const checkMobile = () => {
-            const mobile = window.innerWidth < 1024;
-            setIsMobile(mobile);
-            // Landscape: cuando el ancho es mayor que alto (sin límite de 900px)
-            setIsMobileLandscape(window.innerWidth > window.innerHeight && window.innerWidth < 1024);
+            // Landscape cuando ancho > alto (horizontal orientation)
+            setIsMobileLandscape(window.innerWidth > window.innerHeight);
+            // Mobile cuando ancho < 1024
+            setIsMobile(window.innerWidth < 1024);
         };
         checkMobile();
         window.addEventListener('resize', checkMobile);
@@ -209,10 +209,10 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
     }, []);
 
     const rootLayoutClass = isMobileLandscape
-        ? 'grid grid-cols-2 gap-1 h-[calc(100vh-60px)]'
+        ? 'grid grid-cols-2 gap-0 h-screen'
         : isMobile
-            ? 'grid grid-cols-1 gap-4 h-[calc(100vh-140px)] overflow-y-auto px-2'
-            : 'grid grid-cols-1 lg:grid-cols-11 gap-4 h-[calc(100vh-140px)] px-4';
+            ? 'grid grid-cols-1 gap-0 h-screen overflow-y-auto'
+            : 'grid grid-cols-1 lg:grid-cols-11 gap-4 h-[calc(100vh-60px)] px-4';
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -679,27 +679,27 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
             )}
 
             {isMobileLandscape && (
-                <div className="col-span-2 bg-gray-800 px-2 py-1.5 border-b border-gray-700 shadow-lg flex items-center gap-2 flex-wrap z-10">
-                    <h4 className="font-bold text-[10px] uppercase text-gray-400 whitespace-nowrap">Atributos y acciones</h4>
-                    <div className="flex gap-1 items-center flex-wrap">
+                <div className="col-span-2 bg-gray-800 px-2 py-1 border-b border-gray-700 shadow-sm flex items-center gap-1 flex-wrap z-10">
+                    <h4 className="font-bold text-[9px] uppercase text-gray-400 whitespace-nowrap">Atributos y acciones</h4>
+                    <div className="flex gap-0.5 items-center flex-wrap">
                         {attributeLabels
                             .filter(({ key }) => isSencillo ? (key !== 'tvgId' && key !== 'tvgName') : true)
                             .map(({ key, label }) => (
                             <button
                                 key={key}
                                 onClick={() => toggleAttributeToCopy(key)}
-                                className={`text-[8px] py-1 px-1.5 rounded flex items-center justify-center gap-1 transition-colors whitespace-nowrap ${attributesToCopy.has(key) ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                                className={`text-[7px] py-0.5 px-1 rounded flex items-center justify-center gap-0.5 transition-colors whitespace-nowrap ${attributesToCopy.has(key) ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
                             >
-                                {attributesToCopy.has(key) ? <CheckSquare size={10} /> : <Copy size={10} />} {label}
+                                {attributesToCopy.has(key) ? <CheckSquare size={8} /> : <Copy size={8} />} {label}
                             </button>
                         ))}
                     </div>
-                    <div className="flex gap-1 ml-auto">
+                    <div className="flex gap-0.5 ml-auto">
                         {!isSencillo && (
                             <button
                                 onClick={handleAddSelectedFromReparacion}
                                 disabled={selectedReparacionChannels.size === 0}
-                                className="text-[8px] py-1 px-1.5 bg-green-600 hover:bg-green-700 text-white rounded disabled:opacity-50 whitespace-nowrap"
+                                className="text-[7px] py-0.5 px-1 bg-green-600 hover:bg-green-700 text-white rounded disabled:opacity-50 whitespace-nowrap"
                             >
                                 + Añadir
                             </button>
@@ -707,15 +707,16 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                         <button
                             onClick={undo}
                             disabled={history.length === 0}
-                            className="text-[8px] py-1 px-1.5 bg-yellow-600 hover:bg-yellow-700 text-white rounded disabled:opacity-50"
+                            className="text-[7px] py-0.5 px-1 bg-yellow-600 hover:bg-yellow-700 text-white rounded disabled:opacity-50"
                         >
-                            <RotateCcw size={10} />
+                            <RotateCcw size={8} />
                         </button>
+                    </div>
                 </div>
             )}
 
             {/* --- PANEL IZQUIERDO (Lista Principal) --- */}
-            <div className={`bg-gray-800 ${isMobileLandscape ? 'p-1' : 'p-4'} flex flex-col min-h-0 ${isMobileLandscape ? 'col-span-1 h-full border-r border-gray-700' : `lg:col-span-5 ${isMobile ? 'h-[400px] mb-4 rounded-lg border border-gray-700' : 'h-full'}`}`}>
+            <div className={`bg-gray-800 flex flex-col min-h-0 ${isMobileLandscape ? 'col-span-1 h-full border-r border-gray-700 p-1' : `p-4 lg:col-span-5 ${isMobile ? 'h-[400px] mb-4 rounded-lg border border-gray-700' : 'h-full'}`}`}>
                 
                 {/* Header Lista Principal */}
                 <div className={`flex justify-between items-center ${isMobileLandscape ? 'pb-1 mb-1 border-b border-gray-700' : 'pb-2 mb-3 border-b border-gray-700'} shrink-0`}>
@@ -965,7 +966,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
             )}
 
             {/* --- PANEL DERECHO (Lista Reparadora) --- */}
-            <div className={`bg-gray-800 ${isMobileLandscape ? 'p-1' : 'p-4'} flex flex-col min-h-0 ${isMobileLandscape ? 'col-span-1 h-full border-l border-gray-700' : `lg:col-span-5 ${isMobile ? 'h-[400px] rounded-lg border border-gray-700' : 'h-full'}`}`}>
+            <div className={`bg-gray-800 flex flex-col min-h-0 ${isMobileLandscape ? 'col-span-1 h-full border-l border-gray-700 p-1' : `p-4 lg:col-span-5 ${isMobile ? 'h-[400px] rounded-lg border border-gray-700' : 'h-full'}`}`}>
                 
                 {/* Header Lista Reparadora */}
                 <div className={`flex justify-between items-center ${isMobileLandscape ? 'pb-1 mb-1 border-b border-gray-700' : 'pb-2 mb-3 border-b border-gray-700'} flex-wrap shrink-0`}>
