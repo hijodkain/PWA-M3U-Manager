@@ -1140,6 +1140,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     key={ch.id}
                                     channel={ch}
                                     isSelected={isChSelected}
+                                    animateMarqueeWhenSelected={false}
                                     isChecked={isChSelected}
                                     showCheckbox={true}
                                     onSelectClick={(e) => toggleReparacionSelection(ch.id, virtualItem.index, e.shiftKey, e.metaKey, e.ctrlKey)}

@@ -18,6 +18,7 @@ interface ReparacionChannelItemProps {
     onPlayClick?: () => void;
     style?: React.CSSProperties;
     isSencillo?: boolean;
+    animateMarqueeWhenSelected?: boolean;
     visibleFields?: {
         logo: boolean;
         name: boolean;
@@ -32,7 +33,7 @@ interface ReparacionChannelItemProps {
     className?: string; // Add className prop
 }
 
-const MarqueeText: React.FC<{ text: string; className?: string; isSelected?: boolean }> = ({ text, className = "", isSelected = false }) => {
+const MarqueeText: React.FC<{ text: string; className?: string; isSelected?: boolean; animateWhenSelected?: boolean }> = ({ text, className = "", isSelected = false, animateWhenSelected = true }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const textRef = useRef<HTMLDivElement>(null);
     const [isOverflowing, setIsOverflowing] = useState(false);
@@ -72,9 +73,9 @@ const MarqueeText: React.FC<{ text: string; className?: string; isSelected?: boo
              `}</style>
              
             {isOverflowing ? (
-                 <div 
+                      <div 
                     ref={textRef as any}
-                    className={`inline-flex transition-transform ${isSelected ? 'animate-marquee' : 'group-hover/item:animate-marquee'}`}
+                          className={`inline-flex transition-transform ${(isSelected && animateWhenSelected) ? 'animate-marquee' : 'group-hover/item:animate-marquee'}`}
                  >
                     <span className="pr-8">{text}</span>
                     <span>{text}</span>
@@ -102,6 +103,7 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
     onPlayClick,
     style,
     isSencillo = false,
+    animateMarqueeWhenSelected = true,
     visibleFields,
     className = "", // Destructure className
 }) => {
@@ -196,7 +198,8 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
                     <MarqueeText 
                         text={channel.name} 
                         className={`font-bold text-sm ${nameColor} mb-0.5`} 
-                        isSelected={isSelected} 
+                        isSelected={isSelected}
+                        animateWhenSelected={animateMarqueeWhenSelected}
                     />
                 )}
                 
@@ -205,13 +208,13 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
                         {fields.tvgId && (
                             <div className="flex-1 overflow-hidden flex gap-1">
                                  <span className="font-semibold text-gray-300 flex-shrink-0">ID:</span> 
-                                 <MarqueeText text={channel.tvgId || '---'} className="text-gray-400" isSelected={isSelected} />
+                                 <MarqueeText text={channel.tvgId || '---'} className="text-gray-400" isSelected={isSelected} animateWhenSelected={animateMarqueeWhenSelected} />
                             </div>
                         )}
                         {fields.tvgName && (
                             <div className="flex-1 overflow-hidden flex gap-1">
                                 <span className="font-semibold text-gray-300 flex-shrink-0">Name:</span> 
-                                <MarqueeText text={channel.tvgName || '---'} className="text-gray-400" isSelected={isSelected} />
+                                <MarqueeText text={channel.tvgName || '---'} className="text-gray-400" isSelected={isSelected} animateWhenSelected={animateMarqueeWhenSelected} />
                             </div>
                         )}
                     </div>
@@ -219,7 +222,7 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
                 {fields.url && (
                     <div className="flex gap-1 overflow-hidden">
                         <span className="font-semibold text-gray-300 flex-shrink-0 text-[11px]">URL:</span> 
-                        <MarqueeText text={getDomainFromUrl(channel.url)} className="text-gray-400 text-[11px]" isSelected={isSelected} />
+                        <MarqueeText text={getDomainFromUrl(channel.url)} className="text-gray-400 text-[11px]" isSelected={isSelected} animateWhenSelected={animateMarqueeWhenSelected} />
                     </div>
                 )}
             </div>
