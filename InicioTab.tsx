@@ -788,7 +788,10 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
             title={tooltip}
         >
             {icon}
-             {/* Tooltip on right */}
+            {/* Tooltip visible a la derecha */}
+            <span className="absolute left-full ml-3 px-2 py-1 bg-gray-700 border border-gray-600 text-white text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 pointer-events-none shadow-lg">
+                {tooltip}
+            </span>
         </button>
     );
 

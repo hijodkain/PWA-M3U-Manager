@@ -1,22 +1,47 @@
-import React from 'react';
-import { HelpCircle, BookOpen, Key, Tv, Wand, ListMusic, Save, Settings, Download, Upload, Cloud, Edit3, Type } from 'lucide-react';
+import React, { useState } from 'react';
+import { HelpCircle, BookOpen, Key, Tv, Wand, ListMusic, Save, Settings, Download, Upload, Cloud, Edit3, Type, ChevronDown, ChevronUp } from 'lucide-react';
 
 const HelpTab: React.FC = () => {
-    const Section: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode }> = ({ title, icon, children }) => (
-        <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
-            <h2 className="text-xl font-bold mb-4 text-white flex items-center">
-                {icon}
-                <span className="ml-3">{title}</span>
-            </h2>
-            <div className="prose prose-invert prose-sm max-w-none text-gray-300">
-                {children}
+    const [openSections, setOpenSections] = useState<Set<number>>(new Set([0]));
+
+    const toggleSection = (idx: number) => {
+        setOpenSections(prev => {
+            const next = new Set(prev);
+            if (next.has(idx)) {
+                next.delete(idx);
+            } else {
+                next.add(idx);
+            }
+            return next;
+        });
+    };
+
+    const Section: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode; idx: number }> = ({ title, icon, children, idx }) => {
+        const isOpen = openSections.has(idx);
+        return (
+            <div className="bg-gray-800 rounded-lg shadow-lg overflow-hidden border border-gray-700">
+                <button
+                    onClick={() => toggleSection(idx)}
+                    className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-gray-700/50 transition-colors focus:outline-none"
+                >
+                    <h2 className="text-lg font-bold text-white flex items-center">
+                        {icon}
+                        <span className="ml-3">{title}</span>
+                    </h2>
+                    {isOpen ? <ChevronUp size={20} className="text-gray-400 flex-shrink-0" /> : <ChevronDown size={20} className="text-gray-400 flex-shrink-0" />}
+                </button>
+                {isOpen && (
+                    <div className="px-6 pb-6 pt-2 prose prose-invert prose-sm max-w-none text-gray-300 border-t border-gray-700">
+                        {children}
+                    </div>
+                )}
             </div>
-        </div>
-    );
+        );
+    };
 
     return (
         <div className="space-y-6 pb-20">
-            <Section title="Gestiona tus Listas IPTV sin Riesgos" icon={<HelpCircle className="text-blue-400" />}>
+            <Section idx={0} title="Gestiona tus Listas IPTV sin Riesgos" icon={<HelpCircle className="text-blue-400" />}>
                 <p>
                     Bienvenido al Gestor de Listas M3U. Esta aplicación te permite gestionar tus listas de canales de forma <strong>segura, sencilla y potente</strong>.
                 </p>
@@ -31,7 +56,7 @@ const HelpTab: React.FC = () => {
                 </p>
             </Section>
 
-            <Section title="Reparación Inteligente de Canales" icon={<Wand className="text-purple-400" />}>
+            <Section idx={1} title="Reparación Inteligente de Canales" icon={<Wand className="text-purple-400" />}>
                 <p>
                     ¿Tienes canales caídos en tu lista principal? Arréglalos fácilmente usando listas "medicina":
                 </p>
@@ -51,7 +76,7 @@ const HelpTab: React.FC = () => {
                 </div>
             </Section>
 
-            <Section title="Guía EPG: Tutorial de Asignación Automática" icon={<Tv className="text-green-400" />}>
+            <Section idx={2} title="Guía EPG: Tutorial de Asignación Automática" icon={<Tv className="text-green-400" />}>
                 <p>
                     Si quieres que tu reproductor muestre la programación de cada canal, en la pestaña <strong>EPG</strong> puedes vincular tu lista M3U con una <strong>fuente EPG</strong>. La app compara tus canales con los <strong>channel id</strong> de la guía y rellena automáticamente <strong>tvg-id</strong> o <strong>tvg-name</strong> según el modo que elijas.
                 </p>
@@ -137,7 +162,7 @@ const HelpTab: React.FC = () => {
                 </p>
             </Section>
 
-            <Section title="Cómo Conectar con Dropbox (Gratis y Seguro)" icon={<Cloud className="text-blue-500" />}>
+            <Section idx={3} title="Cómo Conectar con Dropbox (Gratis y Seguro)" icon={<Cloud className="text-blue-500" />}>
                 <p>
                     Te recomendamos usar una cuenta de Dropbox gratuita (2GB es más que suficiente para miles de listas).
                 </p>
@@ -153,7 +178,7 @@ const HelpTab: React.FC = () => {
                 </ol>
             </Section>
 
-            <Section title="Edición y Ordenación Avanzada" icon={<Edit3 className="text-orange-400" />}>
+            <Section idx={4} title="Edición y Ordenación Avanzada" icon={<Edit3 className="text-orange-400" />}>
                 <ul className="space-y-3">
                     <li>
                         <strong className="text-white flex items-center gap-2"><ListMusic size={16}/> Reordenar Canales:</strong>
@@ -170,7 +195,7 @@ const HelpTab: React.FC = () => {
                 </ul>
             </Section>
 
-             <Section title="Compartir es Vivir" icon={<Upload className="text-pink-400" />}>
+             <Section idx={5} title="Compartir es Vivir" icon={<Upload className="text-pink-400" />}>
                 <p>
                     Una vez subida tu lista a Dropbox desde la pestaña Guardar/Inicio:
                 </p>

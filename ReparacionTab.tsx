@@ -731,6 +731,16 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                 <Search size={18} />
                             </button>
                         )}
+                        {channels.length > 0 && (
+                            <button
+                                onClick={undo}
+                                disabled={history.length === 0}
+                                className="p-1.5 rounded transition-colors text-gray-400 hover:text-yellow-400 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                                title={`Deshacer último cambio (${history.length})`}
+                            >
+                                <RotateCcw size={18} />
+                            </button>
+                        )}
                     </div>
                 </div>
 

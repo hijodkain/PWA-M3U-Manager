@@ -314,6 +314,13 @@ export default function PWAM3UManager() {
             >
                 {renderTabContent()}
             </div>
+
+            {/* Footer */}
+            {activeTab !== 'asignar-epg' && (
+                <footer className="text-center py-3 text-gray-600 text-xs border-t border-gray-800 mt-auto">
+                    Made with <span className="text-red-500">♥</span> by Juanca_JB
+                </footer>
+            )}
         </div>
     );
 }
