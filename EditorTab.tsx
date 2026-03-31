@@ -62,6 +62,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
     const [showNameSearch, setShowNameSearch] = useState(false);
     const [urlSortMode, setUrlSortMode] = useState<'none' | 'alpha' | 'domain-cycle'>('none');
     const [domainCycleStep, setDomainCycleStep] = useState(0);
+    const [tableSortMode, setTableSortMode] = useState<'none' | 'tvgId' | 'tvgName' | 'status' | 'tvgLogo'>('none');
     const columnsDropdownRef = useRef<HTMLDivElement>(null);
     const nameSearchRef = useRef<HTMLInputElement>(null);
     
@@ -148,6 +149,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
     useEffect(() => {
         setUrlSortMode('none');
         setDomainCycleStep(0);
+        setTableSortMode('none');
     }, [filterGroup, mainDomainFilter, statusFilter, nameSearch]);
 
     const isColumnVisible = (key: ColumnKey) => {
@@ -220,6 +222,36 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         }
     };
 
+    const qualityRank = (quality?: Channel['quality']) => {
+        switch (quality) {
+            case '4K': return 0;
+            case 'FHD': return 1;
+            case 'HD': return 2;
+            case 'SD': return 3;
+            default: return 4;
+        }
+    };
+
+    const statusRank = (channel: Channel) => {
+        if (channel.status === 'failed') return 0;
+
+        if (channel.status === 'ok') {
+            const hasKnownQuality = channel.quality && channel.quality !== 'unknown';
+            const hasResolution = !!channel.resolution;
+
+            if (!hasKnownQuality && !hasResolution) {
+                // Verificados sin resolución obtenida
+                return 1;
+            }
+
+            // Verificados con resolución (4K, FHD, HD, SD)
+            return 2 + qualityRank(channel.quality);
+        }
+
+        // No verificados (pending / verifying / undefined)
+        return 10;
+    };
+
     // Filtrado local por nombre (lupa de búsqueda)
     const nameFilteredChannels = useMemo(() => {
         if (!nameSearch.trim()) return filteredChannels;
@@ -245,25 +277,66 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         return order;
     }, [alphaUrlChannels]);
 
+    const sortedByHeaderChannels = useMemo(() => {
+        if (tableSortMode === 'none') return nameFilteredChannels;
+
+        const copy = [...nameFilteredChannels];
+
+        if (tableSortMode === 'tvgId') {
+            return copy.sort((a, b) => {
+                const aEmpty = !a.tvgId?.trim();
+                const bEmpty = !b.tvgId?.trim();
+                if (aEmpty !== bEmpty) return aEmpty ? -1 : 1;
+                const byText = (a.tvgId || '').localeCompare(b.tvgId || '', 'es', { sensitivity: 'base' });
+                return byText !== 0 ? byText : a.order - b.order;
+            });
+        }
+
+        if (tableSortMode === 'tvgName') {
+            return copy.sort((a, b) => {
+                const aEmpty = !a.tvgName?.trim();
+                const bEmpty = !b.tvgName?.trim();
+                if (aEmpty !== bEmpty) return aEmpty ? -1 : 1;
+                const byText = (a.tvgName || '').localeCompare(b.tvgName || '', 'es', { sensitivity: 'base' });
+                return byText !== 0 ? byText : a.order - b.order;
+            });
+        }
+
+        if (tableSortMode === 'tvgLogo') {
+            return copy.sort((a, b) => {
+                const aEmpty = !a.tvgLogo?.trim();
+                const bEmpty = !b.tvgLogo?.trim();
+                if (aEmpty !== bEmpty) return aEmpty ? -1 : 1;
+                return a.order - b.order;
+            });
+        }
+
+        return copy.sort((a, b) => {
+            const byRank = statusRank(a) - statusRank(b);
+            if (byRank !== 0) return byRank;
+            return a.order - b.order;
+        });
+    }, [nameFilteredChannels, tableSortMode]);
+
     const displayChannels = useMemo(() => {
-        if (urlSortMode === 'none') {
-            return nameFilteredChannels;
+        if (urlSortMode !== 'none') {
+            if (urlSortMode === 'alpha') {
+                return alphaUrlChannels;
+            }
+
+            if (domainOrder.length === 0) {
+                return alphaUrlChannels;
+            }
+
+            const movedDomains = new Set(domainOrder.slice(0, Math.min(domainCycleStep, domainOrder.length)));
+            return [
+                ...alphaUrlChannels.filter((ch) => !movedDomains.has(getChannelDomain(ch.url))),
+                ...alphaUrlChannels.filter((ch) => movedDomains.has(getChannelDomain(ch.url))),
+            ];
         }
 
-        if (urlSortMode === 'alpha') {
-            return alphaUrlChannels;
-        }
-
-        if (domainOrder.length === 0) {
-            return alphaUrlChannels;
-        }
-
-        const movedDomains = new Set(domainOrder.slice(0, Math.min(domainCycleStep, domainOrder.length)));
-        return [
-            ...alphaUrlChannels.filter((ch) => !movedDomains.has(getChannelDomain(ch.url))),
-            ...alphaUrlChannels.filter((ch) => movedDomains.has(getChannelDomain(ch.url))),
-        ];
-    }, [urlSortMode, nameFilteredChannels, alphaUrlChannels, domainOrder, domainCycleStep]);
+        return sortedByHeaderChannels;
+    }, [urlSortMode, alphaUrlChannels, domainOrder, domainCycleStep, sortedByHeaderChannels]);
 
     // Mapa canal -> orden relativo dentro del grupo filtrado
     const relativeOrderMap = useMemo(() => {
@@ -279,6 +352,8 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
     };
 
     const handleUrlHeaderClick = () => {
+        setTableSortMode('none');
+
         if (urlSortMode === 'none') {
             setUrlSortMode('alpha');
             setDomainCycleStep(0);
@@ -302,6 +377,12 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         } else {
             setDomainCycleStep(nextStep);
         }
+    };
+
+    const handleHeaderSortToggle = (mode: 'tvgId' | 'tvgName' | 'status' | 'tvgLogo') => {
+        setUrlSortMode('none');
+        setDomainCycleStep(0);
+        setTableSortMode((prev) => (prev === mode ? 'none' : mode));
     };
 
     const rowVirtualizer = useVirtualizer({
@@ -887,22 +968,58 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                         </ResizableHeader>
                         {isColumnVisible('status') && (
                             <ResizableHeader width={columnWidths.status} onResize={(w) => handleResize('status', w)} align="center">
-                                Estado
+                                <button
+                                    onClick={() => handleHeaderSortToggle('status')}
+                                    className="w-full h-full cursor-pointer select-none text-center hover:text-blue-300"
+                                    title={tableSortMode === 'status' ? 'Volver al orden original' : 'Ordenar por estado y calidad'}
+                                >
+                                    Estado
+                                    {tableSortMode === 'status' && (
+                                        <span className="ml-1 text-[9px] text-blue-400 font-bold">(ON)</span>
+                                    )}
+                                </button>
                             </ResizableHeader>
                         )}
                         {isColumnVisible('tvgId') && (
                             <ResizableHeader width={columnWidths.tvgId} onResize={(w) => handleResize('tvgId', w)} align="left">
-                                tvg-id
+                                <button
+                                    onClick={() => handleHeaderSortToggle('tvgId')}
+                                    className="w-full h-full cursor-pointer select-none text-left hover:text-blue-300"
+                                    title={tableSortMode === 'tvgId' ? 'Volver al orden original' : 'Vacíos primero y luego A-Z'}
+                                >
+                                    tvg-id
+                                    {tableSortMode === 'tvgId' && (
+                                        <span className="ml-1 text-[9px] text-blue-400 font-bold">(A-Z)</span>
+                                    )}
+                                </button>
                             </ResizableHeader>
                         )}
                         {isColumnVisible('tvgName') && (
                             <ResizableHeader width={columnWidths.tvgName} onResize={(w) => handleResize('tvgName', w)} align="left">
-                                tvg-name
+                                <button
+                                    onClick={() => handleHeaderSortToggle('tvgName')}
+                                    className="w-full h-full cursor-pointer select-none text-left hover:text-blue-300"
+                                    title={tableSortMode === 'tvgName' ? 'Volver al orden original' : 'Vacíos primero y luego A-Z'}
+                                >
+                                    tvg-name
+                                    {tableSortMode === 'tvgName' && (
+                                        <span className="ml-1 text-[9px] text-blue-400 font-bold">(A-Z)</span>
+                                    )}
+                                </button>
                             </ResizableHeader>
                         )}
                         {isColumnVisible('tvgLogo') && (
                             <ResizableHeader width={columnWidths.tvgLogo} onResize={(w) => handleResize('tvgLogo', w)} align="center">
-                                Logo
+                                <button
+                                    onClick={() => handleHeaderSortToggle('tvgLogo')}
+                                    className="w-full h-full cursor-pointer select-none text-center hover:text-blue-300"
+                                    title={tableSortMode === 'tvgLogo' ? 'Volver al orden original' : 'Sin logo primero'}
+                                >
+                                    Logo
+                                    {tableSortMode === 'tvgLogo' && (
+                                        <span className="ml-1 text-[9px] text-blue-400 font-bold">(sin logo)</span>
+                                    )}
+                                </button>
                             </ResizableHeader>
                         )}
                         {isColumnVisible('groupTitle') && (
