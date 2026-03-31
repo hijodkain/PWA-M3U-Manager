@@ -2,7 +2,7 @@ import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, TouchSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { Upload, Download, Plus, Trash2, GripVertical, ShieldCheck, ShieldX, ShieldQuestion, Undo2, Redo2, HelpCircle, SlidersHorizontal } from 'lucide-react';
+import { Upload, Download, Plus, Trash2, GripVertical, ShieldCheck, ShieldX, ShieldQuestion, Undo2, Redo2, HelpCircle, SlidersHorizontal, Search, X as XIcon } from 'lucide-react';
 import { useChannels } from './useChannels';
 import { useSettings } from './useSettings';
 import { useAppMode } from './AppModeContext';
@@ -57,7 +57,13 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
     const [suffixInput, setSuffixInput] = useState('');
     const [showColumnsDropdown, setShowColumnsDropdown] = useState(false);
     const [visibleColumns, setVisibleColumns] = useState<Record<ColumnKey, boolean>>(DEFAULT_VISIBLE_COLUMNS);
+    const [showRelativeOrder, setShowRelativeOrder] = useState(false);
+    const [nameSearch, setNameSearch] = useState('');
+    const [showNameSearch, setShowNameSearch] = useState(false);
+    const [urlSortMode, setUrlSortMode] = useState<'none' | 'alpha' | 'domain-cycle'>('none');
+    const [domainCycleStep, setDomainCycleStep] = useState(0);
     const columnsDropdownRef = useRef<HTMLDivElement>(null);
+    const nameSearchRef = useRef<HTMLInputElement>(null);
     
     const {
         channels,
@@ -133,6 +139,17 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    // Resetear orden relativo cuando cambia el filtro de grupo
+    useEffect(() => {
+        setShowRelativeOrder(false);
+    }, [filterGroup]);
+
+    // Al cambiar filtros o búsqueda, volver al orden base.
+    useEffect(() => {
+        setUrlSortMode('none');
+        setDomainCycleStep(0);
+    }, [filterGroup, mainDomainFilter, statusFilter, nameSearch]);
+
     const isColumnVisible = (key: ColumnKey) => {
         if (isSencillo && (key === 'status' || key === 'tvgId' || key === 'tvgName' || key === 'url')) {
             return false;
@@ -195,8 +212,100 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
 
     const tableWidth = Math.max(totalTableWidth, containerWidth);
 
+    const getChannelDomain = (rawUrl: string) => {
+        try {
+            return new URL(rawUrl).hostname.toLowerCase();
+        } catch {
+            return '__sin_dominio__';
+        }
+    };
+
+    // Filtrado local por nombre (lupa de búsqueda)
+    const nameFilteredChannels = useMemo(() => {
+        if (!nameSearch.trim()) return filteredChannels;
+        const q = nameSearch.toLowerCase();
+        return filteredChannels.filter(ch => ch.name.toLowerCase().includes(q));
+    }, [filteredChannels, nameSearch]);
+
+    const alphaUrlChannels = useMemo(
+        () => [...nameFilteredChannels].sort((a, b) => a.url.localeCompare(b.url, 'es', { sensitivity: 'base' })),
+        [nameFilteredChannels]
+    );
+
+    const domainOrder = useMemo(() => {
+        const seen = new Set<string>();
+        const order: string[] = [];
+        alphaUrlChannels.forEach((ch) => {
+            const domain = getChannelDomain(ch.url);
+            if (!seen.has(domain)) {
+                seen.add(domain);
+                order.push(domain);
+            }
+        });
+        return order;
+    }, [alphaUrlChannels]);
+
+    const displayChannels = useMemo(() => {
+        if (urlSortMode === 'none') {
+            return nameFilteredChannels;
+        }
+
+        if (urlSortMode === 'alpha') {
+            return alphaUrlChannels;
+        }
+
+        if (domainOrder.length === 0) {
+            return alphaUrlChannels;
+        }
+
+        const movedDomains = new Set(domainOrder.slice(0, Math.min(domainCycleStep, domainOrder.length)));
+        return [
+            ...alphaUrlChannels.filter((ch) => !movedDomains.has(getChannelDomain(ch.url))),
+            ...alphaUrlChannels.filter((ch) => movedDomains.has(getChannelDomain(ch.url))),
+        ];
+    }, [urlSortMode, nameFilteredChannels, alphaUrlChannels, domainOrder, domainCycleStep]);
+
+    // Mapa canal -> orden relativo dentro del grupo filtrado
+    const relativeOrderMap = useMemo(() => {
+        const map = new Map<string, number>();
+        displayChannels.forEach((ch, idx) => map.set(ch.id, idx + 1));
+        return map;
+    }, [displayChannels]);
+
+    const handleOrderHeaderClick = () => {
+        if (filterGroup && filterGroup !== 'Todos los canales') {
+            setShowRelativeOrder(prev => !prev);
+        }
+    };
+
+    const handleUrlHeaderClick = () => {
+        if (urlSortMode === 'none') {
+            setUrlSortMode('alpha');
+            setDomainCycleStep(0);
+            return;
+        }
+
+        if (urlSortMode === 'alpha') {
+            if (domainOrder.length === 0) {
+                setUrlSortMode('none');
+                return;
+            }
+            setUrlSortMode('domain-cycle');
+            setDomainCycleStep(1);
+            return;
+        }
+
+        const nextStep = domainCycleStep + 1;
+        if (nextStep > domainOrder.length) {
+            setUrlSortMode('none');
+            setDomainCycleStep(0);
+        } else {
+            setDomainCycleStep(nextStep);
+        }
+    };
+
     const rowVirtualizer = useVirtualizer({
-        count: filteredChannels.length,
+        count: displayChannels.length,
         getScrollElement: () => parentRef.current,
         estimateSize: () => 45, // Estimación de la altura de cada fila en píxeles
         overscan: 10, // Renderiza 10 items extra fuera de la vista para un scroll más suave
@@ -206,7 +315,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
     const totalSize = rowVirtualizer.getTotalSize();
 
     // Esto es necesario para que el DragOverlay funcione correctamente con la virtualización
-    const activeChannelIndex = activeId ? filteredChannels.findIndex(c => c.id === activeId) : -1;
+    const activeChannelIndex = activeId ? displayChannels.findIndex(c => c.id === activeId) : -1;
 
     const StatusIndicator: React.FC<{ status: Channel['status'] }> = ({ status }) => {
         switch (status) {
@@ -627,7 +736,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                             )}
 
                              <span className={`text-sm ${selectedChannels.length > 0 ? 'text-yellow-400 font-semibold' : 'text-gray-500'}`}>
-                                {selectedChannels.length} / {filteredChannels.length} <span className="text-xs font-normal text-gray-500">seleccionados</span>
+                                {selectedChannels.length} / {displayChannels.length} <span className="text-xs font-normal text-gray-500">seleccionados</span>
                                 {(channelsHook.originalFileName || channelsHook.fileName) && (
                                      <span className="ml-2 pl-2 border-l border-gray-600 text-gray-400 font-normal italic">
                                         {channelsHook.originalFileName || channelsHook.fileName}
@@ -695,6 +804,18 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                 </button>
                             )}
 
+                            <button
+                                onClick={() => {
+                                    const next = !showNameSearch;
+                                    setShowNameSearch(next);
+                                    if (!next) setNameSearch('');
+                                    else setTimeout(() => nameSearchRef.current?.focus(), 50);
+                                }}
+                                className={`p-2 rounded-full transition-colors ${showNameSearch ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-blue-400 hover:bg-gray-700'}`}
+                                title="Buscar canal por nombre"
+                            >
+                                <Search size={20} />
+                            </button>
                              <button
                                 onClick={() => setShowTutorialModal(true)}
                                 className="text-gray-400 hover:text-blue-400 p-2 rounded-full hover:bg-gray-700 transition-colors"
@@ -704,6 +825,31 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                             </button>
                         </div>
                     </div>
+
+                    {/* Barra de búsqueda por nombre (Cambio #5) */}
+                    {showNameSearch && (
+                        <div className="flex items-center gap-2 pt-2 border-t border-gray-700">
+                            <Search size={15} className="text-blue-400 flex-shrink-0" />
+                            <input
+                                ref={nameSearchRef}
+                                type="text"
+                                placeholder="Buscar por nombre de canal..."
+                                value={nameSearch}
+                                onChange={(e) => setNameSearch(e.target.value)}
+                                className="flex-1 bg-gray-900 border border-gray-600 rounded-lg px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                            />
+                            {nameSearch && (
+                                <span className="text-xs text-blue-300 whitespace-nowrap">{displayChannels.length} resultado{displayChannels.length !== 1 ? 's' : ''}</span>
+                            )}
+                            <button
+                                onClick={() => { setNameSearch(''); setShowNameSearch(false); }}
+                                className="text-gray-500 hover:text-white p-1 rounded transition-colors"
+                                title="Cerrar búsqueda"
+                            >
+                                <XIcon size={16} />
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -728,7 +874,16 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                             />
                         </div>
                         <ResizableHeader width={columnWidths.order} onResize={(w) => handleResize('order', w)} align="center">
-                            Orden
+                            <button
+                                onClick={handleOrderHeaderClick}
+                                className={`w-full h-full cursor-pointer select-none flex items-center justify-center gap-1 ${filterGroup && filterGroup !== 'Todos los canales' ? 'hover:text-blue-300' : ''}`}
+                                title={filterGroup && filterGroup !== 'Todos los canales' ? (showRelativeOrder ? 'Mostrar posición general' : 'Mostrar posición en el grupo') : ''}
+                            >
+                                Orden
+                                {filterGroup && filterGroup !== 'Todos los canales' && showRelativeOrder && (
+                                    <span className="text-[9px] text-blue-400 font-bold ml-0.5">(grupo)</span>
+                                )}
+                            </button>
                         </ResizableHeader>
                         {isColumnVisible('status') && (
                             <ResizableHeader width={columnWidths.status} onResize={(w) => handleResize('status', w)} align="center">
@@ -762,13 +917,31 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                         )}
                         {isColumnVisible('url') && (
                             <ResizableHeader width={columnWidths.url} onResize={(w) => handleResize('url', w)} align="left">
-                                URL del Stream
+                                <button
+                                    onClick={handleUrlHeaderClick}
+                                    className="w-full h-full text-left cursor-pointer select-none hover:text-blue-300"
+                                    title={
+                                        urlSortMode === 'none'
+                                            ? 'Orden original'
+                                            : urlSortMode === 'alpha'
+                                                ? 'Orden alfabético por URL'
+                                                : `Rotación por dominio (${domainCycleStep}/${domainOrder.length})`
+                                    }
+                                >
+                                    URL del Stream
+                                    {urlSortMode === 'alpha' && (
+                                        <span className="ml-1 text-[9px] text-blue-400 font-bold">(A-Z)</span>
+                                    )}
+                                    {urlSortMode === 'domain-cycle' && (
+                                        <span className="ml-1 text-[9px] text-blue-400 font-bold">(dom {domainCycleStep}/{domainOrder.length})</span>
+                                    )}
+                                </button>
                             </ResizableHeader>
                         )}
                     </div>
 
                     {/* VIRTUALIZED BODY GRID */}
-                    <SortableContext items={filteredChannels.map(c => c.id)} strategy={verticalListSortingStrategy}>
+                    <SortableContext items={displayChannels.map(c => c.id)} strategy={verticalListSortingStrategy}>
                         <div 
                             style={{ 
                                 height: `${totalSize}px`, 
@@ -777,7 +950,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                             }}
                         >
                             {virtualItems.map((virtualItem) => {
-                                const channel = filteredChannels[virtualItem.index];
+                                const channel = displayChannels[virtualItem.index];
                                 if (!channel) return null;
 
                                 return (
@@ -794,6 +967,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                         }
                                         gridTemplateColumns={gridTemplateColumns}
                                         visibleColumns={visibleColumns}
+                                        relativeOrder={showRelativeOrder && filterGroup && filterGroup !== 'Todos los canales' ? relativeOrderMap.get(channel.id) : undefined}
                                         measureRef={rowVirtualizer.measureElement}
                                         suggestions={{ groupTitle: uniqueGroups }}
                                         style={{

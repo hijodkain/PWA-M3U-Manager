@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import { Upload, Download, Copy, Zap, ArrowLeftCircle, Settings as SettingsIcon, X, Tv, Image, List, Plus, Search, Filter } from 'lucide-react';
+import { Upload, Download, Copy, Zap, ArrowLeftCircle, Settings as SettingsIcon, X, Tv, Image, List, Plus, Search, Filter, RotateCcw } from 'lucide-react';
 import { useAsignarEpg } from './useAsignarEpg';
 import { useChannels } from './useChannels';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -55,7 +55,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
     } = epgHook;
     
     const { searchChannels: epgSearchChannels, normalizeChannelName: epgNormalizeChannelName } = smartSearch;
-    const { channels } = channelsHook;
+    const { channels, undo, history } = channelsHook;
     const { savedEpgUrls } = settingsHook;
     const [mainListSearch, setMainListSearch] = useState('');
     const [selectedGroup, setSelectedGroup] = useState('all');
@@ -297,6 +297,15 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                         title="Asignar EPG automáticamente a todos los canales visibles por similitud de nombre"
                     >
                         <Zap size={14} />
+                    </button>
+
+                    <button
+                        onClick={undo}
+                        disabled={history.length === 0}
+                        className={`flex ${buttonHeightClass} items-center justify-center rounded-lg border border-yellow-600/70 bg-yellow-700/60 text-yellow-100 transition-all hover:border-yellow-500 hover:bg-yellow-600 disabled:opacity-30 disabled:cursor-not-allowed`}
+                        title={`Deshacer último cambio (${history.length})`}
+                    >
+                        <RotateCcw size={14} />
                     </button>
 
                     {onNavigateToSettings && (

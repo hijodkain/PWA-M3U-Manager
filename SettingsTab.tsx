@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ExternalLink, PlusCircle, Trash2, Filter, List, Cloud, Zap, Plus } from 'lucide-react';
+import { ExternalLink, PlusCircle, Trash2, Filter, List, Cloud, Zap, Plus, Copy } from 'lucide-react';
 import { useSettings } from './useSettings';
 import { getStorageItem, removeStorageItem, setStorageItem } from './utils/storage';
 
@@ -52,7 +52,8 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
 
     const SUGGESTED_EPGS = [
         { name: 'David_DobleM', url: 'https://raw.githubusercontent.com/davidmuma/EPG_dobleM/master/guiaiptv.xml' },
-        { name: 'Open-EPG.org', url: 'https://www.open-epg.com/generate/A5KxjtxpeF.xml' }
+        { name: 'Open-EPG.org', url: 'https://www.open-epg.com/generate/A5KxjtxpeF.xml' },
+        { name: 'IPTV-EPG', url: 'https://iptv-epg.org/files/epg-es.xml' },
     ];
     const visibleSuggestions = SUGGESTED_EPGS.filter(s => !savedEpgUrls.some(saved => saved.url === s.url));
 
@@ -333,12 +334,22 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
                                                 <td className="px-6 py-4 text-white font-medium">{epg.name}</td>
                                                 <td className="px-6 py-4 text-gray-400 text-sm truncate max-w-xs">{epg.url}</td>
                                                 <td className="px-6 py-4 text-right">
-                                                    <button
-                                                        onClick={() => deleteSavedEpgUrl(epg.url)}
-                                                        className="text-gray-500 hover:text-red-400 transition-colors"
-                                                    >
-                                                        <Trash2 size={18} />
-                                                    </button>
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        <button
+                                                            onClick={() => { navigator.clipboard.writeText(epg.url).then(() => {}).catch(() => {}); }}
+                                                            className="text-gray-500 hover:text-blue-400 transition-colors"
+                                                            title="Copiar URL al portapapeles"
+                                                        >
+                                                            <Copy size={16} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => deleteSavedEpgUrl(epg.url)}
+                                                            className="text-gray-500 hover:text-red-400 transition-colors"
+                                                            title="Eliminar fuente"
+                                                        >
+                                                            <Trash2 size={18} />
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))

@@ -21,6 +21,7 @@ interface SortableChannelRowProps {
     isOverlay?: boolean;
     gridTemplateColumns: string;
     visibleColumns: Record<ColumnKey, boolean>;
+    relativeOrder?: number;
     suggestions?: {
         groupTitle?: string[];
         // Add more suggestion types later if needed
@@ -39,6 +40,7 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
     isOverlay,
     gridTemplateColumns,
     visibleColumns,
+    relativeOrder,
     suggestions,
 }) => {
     const { isSencillo } = useAppMode();
@@ -142,7 +144,11 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
 
             {/* Order */}
             <div className="px-2 py-2 text-center text-sm text-gray-300">
-                <EditableCell value={channel.order.toString()} onSave={(val) => onOrderChange(channel.id, val)} />
+                {relativeOrder !== undefined ? (
+                    <span className="text-xs text-blue-300 font-medium" title={`Posición real: ${channel.order}`}>{relativeOrder}</span>
+                ) : (
+                    <EditableCell value={channel.order.toString()} onSave={(val) => onOrderChange(channel.id, val)} />
+                )}
             </div>
 
             {/* Status (Pro only) */}
