@@ -794,16 +794,16 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                             />
                         </div>
                         <ResizableHeader width={columnWidths.order} onResize={(w) => handleResize('order', w)} align="center">
-                            <span
+                            <button
                                 onClick={handleOrderHeaderClick}
-                                className={`cursor-pointer select-none flex items-center gap-1 ${filterGroup && filterGroup !== 'Todos los canales' ? 'hover:text-blue-300' : ''}`}
+                                className={`w-full h-full cursor-pointer select-none flex items-center justify-center gap-1 ${filterGroup && filterGroup !== 'Todos los canales' ? 'hover:text-blue-300' : ''}`}
                                 title={filterGroup && filterGroup !== 'Todos los canales' ? (showRelativeOrder ? 'Mostrar posición general' : 'Mostrar posición en el grupo') : ''}
                             >
                                 Orden
                                 {filterGroup && filterGroup !== 'Todos los canales' && showRelativeOrder && (
                                     <span className="text-[9px] text-blue-400 font-bold ml-0.5">(grupo)</span>
                                 )}
-                            </span>
+                            </button>
                         </ResizableHeader>
                         {isColumnVisible('status') && (
                             <ResizableHeader width={columnWidths.status} onResize={(w) => handleResize('status', w)} align="center">

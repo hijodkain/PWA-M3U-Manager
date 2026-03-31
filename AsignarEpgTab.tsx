@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import { Upload, Download, Copy, Zap, ArrowLeftCircle, Settings as SettingsIcon, X, Tv, Image, List, Plus, Search, Filter } from 'lucide-react';
+import { Upload, Download, Copy, Zap, ArrowLeftCircle, Settings as SettingsIcon, X, Tv, Image, List, Plus, Search, Filter, RotateCcw } from 'lucide-react';
 import { useAsignarEpg } from './useAsignarEpg';
 import { useChannels } from './useChannels';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -55,7 +55,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
     } = epgHook;
     
     const { searchChannels: epgSearchChannels, normalizeChannelName: epgNormalizeChannelName } = smartSearch;
-    const { channels } = channelsHook;
+    const { channels, undo, history } = channelsHook;
     const { savedEpgUrls } = settingsHook;
     const [mainListSearch, setMainListSearch] = useState('');
     const [selectedGroup, setSelectedGroup] = useState('all');
@@ -329,6 +329,14 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                     </div>
 
                     <div className="flex items-center gap-1 flex-shrink-0 min-w-0 overflow-x-auto no-scrollbar">
+                        <button
+                            onClick={undo}
+                            disabled={history.length === 0}
+                            className="p-1 rounded text-gray-400 hover:text-yellow-400 hover:bg-gray-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            title={`Deshacer último cambio (${history.length})`}
+                        >
+                            <RotateCcw className="h-3.5 w-3.5" />
+                        </button>
                         <span className="text-[10px] font-mono text-gray-500">{filteredEpgChannels.length} EPG</span>
                     </div>
                 </div>
