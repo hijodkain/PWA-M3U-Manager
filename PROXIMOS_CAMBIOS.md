@@ -17,7 +17,7 @@ NO  reallizar ningun cambio hasta que te lo pida.
 ### *** EDITOR ***
 1. en estado cambia los iconos dependiendo de si esta pendiente, ?, ok, o se conoce la resolucion. 
 2. Añade una funcionalidad para que al pulsar sobre la cabecera de la columna Estado se ordenen los canales por estado, y si lo pulso de nuevo pasará a encabezar los no verificados. No afectes a la posicion real de los canales en la tabla. 
-3. Al pulsar sobre la cabecera de URL del stream se ordenan los canales por URL, sin afectar a la posicion real de los canales, solo será visual. La URL se ordena por orden alfabetico. 
+3. ~~Al pulsar sobre la cabecera de URL del stream se ordenan los canales por URL, sin afectar a la posicion real de los canales, solo será visual. La URL se ordena por orden alfabetico.~~ 
 #### Modo PRO
 
 1.- poner los desplegables del mismo estilo que los de las tablas de la pestaña EPG. 
@@ -46,7 +46,7 @@ NO  reallizar ningun cambio hasta que te lo pida.
 
 
 ### *** ASIGNAR EPG ***
-Añadir un boton de deshacer el ultimo cambio realizado. 
+~~Añadir un boton de deshacer el ultimo cambio realizado.~~ 
 #### Modo PRO
 
 #### Modo LITE
