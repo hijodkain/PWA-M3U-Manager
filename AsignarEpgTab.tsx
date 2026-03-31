@@ -299,6 +299,15 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                         <Zap size={14} />
                     </button>
 
+                    <button
+                        onClick={undo}
+                        disabled={history.length === 0}
+                        className={`flex ${buttonHeightClass} items-center justify-center rounded-lg border border-yellow-600/70 bg-yellow-700/60 text-yellow-100 transition-all hover:border-yellow-500 hover:bg-yellow-600 disabled:opacity-30 disabled:cursor-not-allowed`}
+                        title={`Deshacer último cambio (${history.length})`}
+                    >
+                        <RotateCcw size={14} />
+                    </button>
+
                     {onNavigateToSettings && (
                         <button
                             onClick={() => {
@@ -329,14 +338,6 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                     </div>
 
                     <div className="flex items-center gap-1 flex-shrink-0 min-w-0 overflow-x-auto no-scrollbar">
-                        <button
-                            onClick={undo}
-                            disabled={history.length === 0}
-                            className="p-1 rounded text-gray-400 hover:text-yellow-400 hover:bg-gray-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                            title={`Deshacer último cambio (${history.length})`}
-                        >
-                            <RotateCcw className="h-3.5 w-3.5" />
-                        </button>
                         <span className="text-[10px] font-mono text-gray-500">{filteredEpgChannels.length} EPG</span>
                     </div>
                 </div>

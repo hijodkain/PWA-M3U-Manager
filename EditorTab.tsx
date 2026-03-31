@@ -60,6 +60,8 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
     const [showRelativeOrder, setShowRelativeOrder] = useState(false);
     const [nameSearch, setNameSearch] = useState('');
     const [showNameSearch, setShowNameSearch] = useState(false);
+    const [urlSortMode, setUrlSortMode] = useState<'none' | 'alpha' | 'domain-cycle'>('none');
+    const [domainCycleStep, setDomainCycleStep] = useState(0);
     const columnsDropdownRef = useRef<HTMLDivElement>(null);
     const nameSearchRef = useRef<HTMLInputElement>(null);
     
@@ -142,6 +144,12 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         setShowRelativeOrder(false);
     }, [filterGroup]);
 
+    // Al cambiar filtros o búsqueda, volver al orden base.
+    useEffect(() => {
+        setUrlSortMode('none');
+        setDomainCycleStep(0);
+    }, [filterGroup, mainDomainFilter, statusFilter, nameSearch]);
+
     const isColumnVisible = (key: ColumnKey) => {
         if (isSencillo && (key === 'status' || key === 'tvgId' || key === 'tvgName' || key === 'url')) {
             return false;
@@ -204,12 +212,58 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
 
     const tableWidth = Math.max(totalTableWidth, containerWidth);
 
+    const getChannelDomain = (rawUrl: string) => {
+        try {
+            return new URL(rawUrl).hostname.toLowerCase();
+        } catch {
+            return '__sin_dominio__';
+        }
+    };
+
     // Filtrado local por nombre (lupa de búsqueda)
-    const displayChannels = useMemo(() => {
+    const nameFilteredChannels = useMemo(() => {
         if (!nameSearch.trim()) return filteredChannels;
         const q = nameSearch.toLowerCase();
         return filteredChannels.filter(ch => ch.name.toLowerCase().includes(q));
     }, [filteredChannels, nameSearch]);
+
+    const alphaUrlChannels = useMemo(
+        () => [...nameFilteredChannels].sort((a, b) => a.url.localeCompare(b.url, 'es', { sensitivity: 'base' })),
+        [nameFilteredChannels]
+    );
+
+    const domainOrder = useMemo(() => {
+        const seen = new Set<string>();
+        const order: string[] = [];
+        alphaUrlChannels.forEach((ch) => {
+            const domain = getChannelDomain(ch.url);
+            if (!seen.has(domain)) {
+                seen.add(domain);
+                order.push(domain);
+            }
+        });
+        return order;
+    }, [alphaUrlChannels]);
+
+    const displayChannels = useMemo(() => {
+        if (urlSortMode === 'none') {
+            return nameFilteredChannels;
+        }
+
+        if (urlSortMode === 'alpha') {
+            return alphaUrlChannels;
+        }
+
+        if (domainOrder.length === 0) {
+            return alphaUrlChannels;
+        }
+
+        const movedDomains = new Set(domainOrder.slice(0, Math.min(domainCycleStep, domainOrder.length)));
+        return [
+            ...alphaUrlChannels.filter((ch) => !movedDomains.has(getChannelDomain(ch.url))),
+            ...alphaUrlChannels.filter((ch) => movedDomains.has(getChannelDomain(ch.url))),
+        ];
+    }, [urlSortMode, nameFilteredChannels, alphaUrlChannels, domainOrder, domainCycleStep]);
 
     // Mapa canal -> orden relativo dentro del grupo filtrado
     const relativeOrderMap = useMemo(() => {
@@ -221,6 +275,32 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
     const handleOrderHeaderClick = () => {
         if (filterGroup && filterGroup !== 'Todos los canales') {
             setShowRelativeOrder(prev => !prev);
+        }
+    };
+
+    const handleUrlHeaderClick = () => {
+        if (urlSortMode === 'none') {
+            setUrlSortMode('alpha');
+            setDomainCycleStep(0);
+            return;
+        }
+
+        if (urlSortMode === 'alpha') {
+            if (domainOrder.length === 0) {
+                setUrlSortMode('none');
+                return;
+            }
+            setUrlSortMode('domain-cycle');
+            setDomainCycleStep(1);
+            return;
+        }
+
+        const nextStep = domainCycleStep + 1;
+        if (nextStep > domainOrder.length) {
+            setUrlSortMode('none');
+            setDomainCycleStep(0);
+        } else {
+            setDomainCycleStep(nextStep);
         }
     };
 
@@ -837,7 +917,25 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                         )}
                         {isColumnVisible('url') && (
                             <ResizableHeader width={columnWidths.url} onResize={(w) => handleResize('url', w)} align="left">
-                                URL del Stream
+                                <button
+                                    onClick={handleUrlHeaderClick}
+                                    className="w-full h-full text-left cursor-pointer select-none hover:text-blue-300"
+                                    title={
+                                        urlSortMode === 'none'
+                                            ? 'Orden original'
+                                            : urlSortMode === 'alpha'
+                                                ? 'Orden alfabético por URL'
+                                                : `Rotación por dominio (${domainCycleStep}/${domainOrder.length})`
+                                    }
+                                >
+                                    URL del Stream
+                                    {urlSortMode === 'alpha' && (
+                                        <span className="ml-1 text-[9px] text-blue-400 font-bold">(A-Z)</span>
+                                    )}
+                                    {urlSortMode === 'domain-cycle' && (
+                                        <span className="ml-1 text-[9px] text-blue-400 font-bold">(dom {domainCycleStep}/{domainOrder.length})</span>
+                                    )}
+                                </button>
                             </ResizableHeader>
                         )}
                     </div>
