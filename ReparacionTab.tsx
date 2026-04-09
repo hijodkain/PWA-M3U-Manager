@@ -782,13 +782,13 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 {/* Filtros y Verificación */}
                 <div className="space-y-2 mb-2">
                     {/* Fila: Filtro Grupo + Toggle Unverified + Verificación Rápida */}
-                    <div className="flex gap-2 w-full">
+                    <div className="flex gap-1.5 w-full">
                         <select
                             value={mainListFilter}
                             onChange={(e) => setMainListFilter(e.target.value)}
-                            className={`bg-gray-900 border border-gray-600 rounded-lg px-3 py-1.5 text-white text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 truncate ${mainListFilter !== 'Todos los canales' ? 'w-1/3' : 'w-2/3'}`}
+                            className={`bg-gray-900 border border-gray-600 rounded px-1.5 py-1 text-xs text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 truncate min-w-0 ${mainListFilter !== 'Todos los canales' ? 'w-1/3' : 'w-2/3'}`}
                         >
-                            <option value="Todos los canales">Todos los canales</option>
+                            <option value="Todos los canales">Todos los grupos</option>
                             {mainListUniqueGroups.map((g) => {
                                 if (g === 'Todos los canales') return null;
                                 const failedCount = failedChannelsByGroup[g] || 0;
@@ -802,16 +802,16 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                         {mainListFilter !== 'Todos los canales' && (
                             <button
                                 onClick={handleQuickVerify}
-                                className="w-1/3 text-xs py-1.5 px-1 rounded-md flex items-center justify-center gap-1 transition-colors bg-blue-600 hover:bg-blue-700 shadow-sm"
+                                className="w-1/3 text-xs py-1 px-1 rounded flex items-center justify-center gap-1 transition-colors bg-blue-600 hover:bg-blue-700 shadow-sm shrink-0"
                                 title="Verificación rápida de grupo"
                             >
-                                <Check size={14} /> <span className="hidden xl:inline">Verif. Rápida</span><span className="xl:hidden">Verif.</span>
+                                <Check size={12} /> <span className="hidden xl:inline">Verif. Rápida</span><span className="xl:hidden">Verif.</span>
                             </button>
                         )}
                         <select
                             value={mainStatusFilter}
                             onChange={(e) => setMainStatusFilter(e.target.value)}
-                            className={`bg-gray-900 border border-gray-600 rounded-lg px-2 py-1.5 text-xs font-bold focus:ring-1 focus:ring-blue-500 focus:border-blue-500 truncate ${mainListFilter !== 'Todos los canales' ? 'w-1/3' : 'w-1/3'} ${mainStatusFilter !== 'Todos' ? 'text-yellow-400 border-yellow-500/50 bg-yellow-900/40' : 'text-gray-400'} ${mainStatusFilter === 'Todos' ? 'text-white' : ''}`}
+                            className={`bg-gray-900 border border-gray-600 rounded px-1.5 py-1 text-xs font-bold focus:ring-1 focus:ring-blue-500 focus:border-blue-500 truncate min-w-0 w-1/3 ${mainStatusFilter !== 'Todos' ? 'text-yellow-400 border-yellow-500/50 bg-yellow-900/40' : 'text-gray-400'} ${mainStatusFilter === 'Todos' ? 'text-white' : ''}`}
                             title="Filtrar por estado de verificación"
                         >
                             <option value="Todos" style={{ color: 'white' }}>Todos</option>
@@ -1130,11 +1130,11 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                             )}
                         </div>
                          
-                         <div className="flex gap-2 items-center">
+                         <div className="flex gap-1.5 items-center w-full overflow-hidden">
                             <select
                                 value={reparacionListFilter}
                                 onChange={(e) => setReparacionListFilter(e.target.value)}
-                                className="flex-1 bg-gray-900 border border-gray-600 rounded-lg px-2 py-1.5 text-xs text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                className="min-w-0 flex-1 bg-gray-900 border border-gray-600 rounded px-1.5 py-1 text-xs text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                             >
                                 <option value="Todos los canales">Todos los Grupos</option>
                                 {reparacionListUniqueGroups.map(g => (
@@ -1142,8 +1142,8 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                 ))}
                             </select>
                             
-                            <button onClick={() => toggleSelectAllReparacionGroup()} className="px-2 py-1.5 bg-gray-600 hover:bg-gray-500 rounded text-xs text-white whitespace-nowrap">
-                                {isAllInGroupSelected ? 'Deseleccionar Grupo' : 'Seleccionar Grupo'}
+                            <button onClick={() => toggleSelectAllReparacionGroup()} className="shrink-0 px-2 py-1 bg-gray-600 hover:bg-gray-500 rounded text-[10px] text-white leading-tight">
+                                {isAllInGroupSelected ? 'Deselect.' : 'Select. Grupo'}
                             </button>
                         </div>
                     </div>
