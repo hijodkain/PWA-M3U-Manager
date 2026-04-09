@@ -188,7 +188,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
         const buttonHeightClass = isShortViewport ? 'h-8' : 'h-9';
 
         return (
-            <div className="no-scrollbar flex h-full min-h-0 flex-col items-center gap-1.5 overflow-y-auto border-x border-gray-700 bg-gray-900/90 px-1.5 py-2">
+            <div className="no-scrollbar flex h-full min-h-0 flex-col items-center gap-1.5 overflow-y-auto rounded-lg border border-gray-700 bg-gray-800 px-1.5 py-2">
                 {!isSencillo && (
                     <div className="flex w-full flex-col items-stretch gap-1">
                         <span className="text-center text-[8px] font-semibold uppercase tracking-wider text-gray-500">Validar por</span>
@@ -328,7 +328,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
     return (
         <div className="flex min-h-0 h-full flex-col overflow-hidden">
             {/* Header: Load EPG Source & Tools */}
-            <div className={`bg-gray-800 shadow-lg z-20 flex-shrink-0 md:h-auto md:min-h-0 md:overflow-visible ${isShortViewport ? 'px-1.5 py-1' : 'px-2 py-1.5'}`}>
+            <div className={`bg-gray-800 rounded-lg border border-gray-700 shadow-lg z-20 flex-shrink-0 md:h-auto md:min-h-0 md:overflow-visible mb-2 ${isShortViewport ? 'px-1.5 py-1' : 'px-2 py-1.5'}`}>
                 <div className={`flex items-center justify-between gap-1.5 ${isShortViewport ? 'min-h-6' : 'min-h-8'}`}>
                     <div className="flex items-center gap-1 truncate min-w-0">
                         <h2 className={`font-bold text-white flex items-center truncate min-w-0 ${isShortViewport ? 'text-sm' : 'text-base'}`}>
@@ -344,10 +344,10 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
             </div>
 
             {/* Paneles de listas con columna central de acciones */}
-            <div className="flex-1 min-h-0 grid bg-gray-900 grid-cols-[minmax(0,1fr)_3.75rem_minmax(0,1fr)] sm:grid-cols-[minmax(0,1fr)_4.5rem_minmax(0,1fr)]">
+            <div className="flex-1 min-h-0 grid bg-gray-900 gap-2 grid-cols-[minmax(0,1fr)_3.75rem_minmax(0,1fr)] sm:grid-cols-[minmax(0,1fr)_4.5rem_minmax(0,1fr)]">
 
                 {/* PANEL IZQUIERDO: Lista principal */}
-                <div className="flex flex-col min-h-0 bg-gray-800/50 h-full">
+                <div className="flex flex-col min-h-0 bg-gray-800 rounded-lg border border-gray-700 h-full overflow-hidden">
                     
                     {/* Filter Main List */}
                     <div className="px-2 pt-1.5 pb-1.5 bg-gray-800 border-b border-gray-700 flex-shrink-0 flex flex-col gap-1.5 relative z-20 shadow-sm">
@@ -492,7 +492,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                 <CenterActionColumn />
 
                 {/* PANEL DERECHO: Fuente EPG */}
-                 <div className="flex flex-col min-h-0 bg-gray-800 h-full">
+                <div className="flex flex-col min-h-0 bg-gray-800 rounded-lg border border-gray-700 h-full overflow-hidden">
                     
                     {/* EPG Tools Header */}
                      <div className="px-2 pt-1.5 pb-1.5 bg-gray-800 border-b border-gray-700 flex flex-col gap-1.5 flex-shrink-0 relative z-20 shadow-sm">
