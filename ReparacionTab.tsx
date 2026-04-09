@@ -179,6 +179,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
 
     // Check if is mobile
     const [isMobile, setIsMobile] = useState(false);
+    const [isLandscape, setIsLandscape] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
     
     // Gestores globales de puntero para finalizar el arrastre
@@ -196,7 +197,10 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
     }, []);
 
     useEffect(() => {
-        const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 1024);
+            setIsLandscape(window.innerWidth > window.innerHeight);
+        };
         checkMobile();
         window.addEventListener('resize', checkMobile);
         return () => window.removeEventListener('resize', checkMobile);
@@ -229,6 +233,9 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
     }, [selectedMedicinaLettersCount]);
     
     // --- Computed Values ---
+    // En modo LITE + móvil + landscape: mostrar 3 columnas compactas como en PC
+    const isLiteAndLandscape = isSencillo && isMobile && isLandscape;
+
     const isAllInGroupSelected = filteredReparacionChannels.length > 0 && filteredReparacionChannels.every(c => selectedReparacionChannels.has(c.id));
 
     const attributeLabels: { key: AttributeKey; label: string }[] = [
@@ -624,10 +631,14 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
 
 
     return (
-        <div className={`grid grid-cols-1 lg:grid-cols-11 gap-4 h-[calc(100vh-140px)] ${isMobile ? 'overflow-y-auto block' : ''}`}>
+        <div className={`grid gap-2 ${
+            isLiteAndLandscape
+                ? 'grid-cols-11 h-[calc(100vh-80px)]'
+                : `grid-cols-1 lg:grid-cols-11 gap-4 h-[calc(100vh-140px)] ${isMobile ? 'overflow-y-auto block' : ''}`
+        }`}>
             
-            {/* --- BLOQUE MOVIL: ATRIBUTOS ARRIBA --- */}
-            {isMobile && (
+            {/* --- BLOQUE MOVIL: ATRIBUTOS ARRIBA (oculto en landscape lite) --- */}
+            {isMobile && !isLiteAndLandscape && (
                 <div className="bg-gray-800 p-3 rounded-lg border border-gray-700 mb-4 sticky top-0 z-10 shadow-lg">
                     <div className="flex items-center justify-between mb-2">
                         <h4 className="font-bold text-xs uppercase text-gray-400">Atributos a copiar</h4>
@@ -667,29 +678,33 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
             )}
 
             {/* --- PANEL IZQUIERDO (Lista Principal) --- */}
-            <div className={`lg:col-span-5 bg-gray-800 p-4 rounded-lg flex flex-col border border-gray-700 min-h-0 ${isMobile ? 'h-[400px] mb-4' : 'h-full'}`}>
+            <div className={`lg:col-span-5 bg-gray-800 rounded-lg flex flex-col border border-gray-700 min-h-0 ${
+                isLiteAndLandscape
+                    ? 'col-span-5 p-2 h-full'
+                    : `p-4 ${isMobile ? 'h-[400px] mb-4' : 'h-full'}`
+            }`}>
                 
                 {/* Header Lista Principal */}
-                <div className="flex justify-between items-center mb-3 pb-2 border-b border-gray-700 shrink-0">
-                    <div className="flex items-center gap-2 overflow-hidden">
-                        <h3 className="font-bold text-lg truncate text-blue-400 flex items-center gap-2 min-w-0">
-                            <img src="/Dropbox_Icon.svg" alt="Dropbox" className="w-5 h-5 flex-shrink-0" />
-                            <span className="hidden sm:inline">Mi lista:</span>
-                            <span className="sm:hidden" title="Mi lista">ML:</span>
+                <div className={`flex justify-between items-center ${isLiteAndLandscape ? 'mb-1 pb-1' : 'mb-3 pb-2'} border-b border-gray-700 shrink-0`}>
+                    <div className="flex items-center gap-1.5 overflow-hidden">
+                        <h3 className={`font-bold truncate text-blue-400 flex items-center gap-1.5 min-w-0 ${isLiteAndLandscape ? 'text-sm' : 'text-lg'}`}>
+                            <img src="/Dropbox_Icon.svg" alt="Dropbox" className={`flex-shrink-0 ${isLiteAndLandscape ? 'w-4 h-4' : 'w-5 h-5'}`} />
+                            <span className={isLiteAndLandscape ? 'hidden' : 'hidden sm:inline'}>Mi lista:</span>
+                            <span className={isLiteAndLandscape ? 'inline' : 'sm:hidden'} title="Mi lista">ML:</span>
                         </h3>
                         {channels.length > 0 ? (
-                            <div className="flex items-center gap-1.5 ml-2 bg-gray-700/50 px-2 py-1 rounded-md max-w-full">
-                                <span className="text-sm font-bold text-gray-200 truncate">{fileName}</span>
+                            <div className="flex items-center gap-1 ml-1 bg-gray-700/50 px-1.5 py-0.5 rounded-md max-w-full">
+                                <span className={`font-bold text-gray-200 truncate ${isLiteAndLandscape ? 'text-xs' : 'text-sm'}`}>{fileName}</span>
                                 <button
                                     onClick={handleClearMainListClick}
                                     className="text-red-400 hover:text-red-300 p-0.5 hover:bg-gray-600 rounded transition-colors flex-shrink-0"
                                     title="Cerrar lista principal"
                                 >
-                                    <X size={16} />
+                                    <X size={isLiteAndLandscape ? 12 : 16} />
                                 </button>
                             </div>
                         ) : (
-                            <span className="text-sm font-bold text-gray-400 truncate">Lista Principal</span>
+                            <span className={`font-bold text-gray-400 truncate ${isLiteAndLandscape ? 'text-xs' : 'text-sm'}`}>Lista Principal</span>
                         )}
                     </div>
                     {/* Botón Lupa (Search Toggle) */}
@@ -866,6 +881,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     onVerifyClick={() => verifyChannel(ch.id, ch.url)}
                                     onPlayClick={shouldShowPlayButton ? () => openInVLC(ch.url) : undefined}
                                     isSencillo={isSencillo}
+                                    isCompact={isLiteAndLandscape}
                                     visibleFields={isPro ? mainVisibleFields : undefined}
                                     style={{
                                         position: 'absolute',
@@ -881,22 +897,22 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 </div>
             </div>
 
-            {/* --- PANEL CENTRAL: Acciones (SOLO DESKTOP) --- */}
-            {!isMobile && (
-            <div className="lg:col-span-1 flex flex-col items-center justify-start gap-3 bg-gray-800 p-3 rounded-lg border border-gray-700">
+            {/* --- PANEL CENTRAL: Acciones (SOLO DESKTOP o landscape lite) --- */}
+            {(!isMobile || isLiteAndLandscape) && (
+            <div className={`lg:col-span-1 flex flex-col items-center justify-start bg-gray-800 rounded-lg border border-gray-700 ${isLiteAndLandscape ? 'col-span-1 p-1.5 gap-1.5 overflow-y-auto' : 'p-3 gap-3'}`}>
                  <div className="text-center w-full">
-                    <h4 className="font-bold text-xs uppercase text-gray-400 mb-2">Atributos</h4>
-                    <ArrowLeftCircle size={24} className="text-blue-500 mb-3 mx-auto" />
-                    <div className="space-y-1.5">
+                    {!isLiteAndLandscape && <h4 className="font-bold text-xs uppercase text-gray-400 mb-2">Atributos</h4>}
+                    <ArrowLeftCircle size={isLiteAndLandscape ? 16 : 24} className="text-blue-500 mb-1.5 mx-auto" />
+                    <div className={isLiteAndLandscape ? 'space-y-1' : 'space-y-1.5'}>
                         {attributeLabels
                             .filter(({ key }) => isSencillo ? (key !== 'tvgId' && key !== 'tvgName') : true)
                             .map(({ key, label }) => (
                             <button
                                 key={key}
                                 onClick={() => toggleAttributeToCopy(key)}
-                                className={`w-full text-[10px] py-1.5 px-1 rounded flex items-center justify-center gap-1 transition-colors ${attributesToCopy.has(key) ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                                className={`w-full ${isLiteAndLandscape ? 'text-[9px] py-1 px-0.5' : 'text-[10px] py-1.5 px-1'} rounded flex items-center justify-center gap-1 transition-colors ${attributesToCopy.has(key) ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
                             >
-                                {attributesToCopy.has(key) ? <CheckSquare size={12} /> : <Copy size={12} />} {label}
+                                {attributesToCopy.has(key) ? <CheckSquare size={10} /> : <Copy size={10} />} {label}
                             </button>
                         ))}
                     </div>
@@ -912,39 +928,43 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                         </button>
                     </div>
                 )}
-                <div className="w-full mt-2">
+                <div className="w-full mt-1">
                     <button
                         onClick={undo}
                         disabled={history.length === 0}
-                        className="w-full text-xs py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded flex items-center justify-center gap-1 disabled:opacity-50"
+                        className={`w-full bg-yellow-600 hover:bg-yellow-700 text-white rounded flex items-center justify-center gap-1 disabled:opacity-50 ${isLiteAndLandscape ? 'text-[9px] py-1' : 'text-xs py-2'}`}
                     >
-                        <RotateCcw size={12} /> Deshacer
+                        <RotateCcw size={isLiteAndLandscape ? 10 : 12} /> {!isLiteAndLandscape && 'Deshacer'}
                     </button>
                 </div>
             </div>
             )}
 
             {/* --- PANEL DERECHO (Lista Reparadora) --- */}
-            <div className={`lg:col-span-5 bg-gray-800 p-4 rounded-lg flex flex-col border border-gray-700 min-h-0 ${isMobile ? 'h-[400px]' : 'h-full'}`}>
+            <div className={`lg:col-span-5 bg-gray-800 rounded-lg flex flex-col border border-gray-700 min-h-0 ${
+                isLiteAndLandscape
+                    ? 'col-span-5 p-2 h-full'
+                    : `p-4 ${isMobile ? 'h-[400px]' : 'h-full'}`
+            }`}>
                 
                 {/* Header Lista Reparadora */}
-                <div className="mb-4">
-                    <div className="flex justify-between items-start mb-2">
-                        <div className="flex-grow flex items-center gap-2">
-                            <h3 className="font-bold text-lg text-purple-400 flex items-center gap-2">
-                                <Database size={20} className="flex-shrink-0" />
-                                <span className="hidden sm:inline">Lista Reparadora:</span>
-                                <span className="sm:hidden" title="Lista Reparadora">LR:</span>
+                <div className={isLiteAndLandscape ? 'mb-1' : 'mb-4'}>
+                    <div className={`flex justify-between items-start ${isLiteAndLandscape ? 'mb-1' : 'mb-2'}`}>
+                        <div className="flex-grow flex items-center gap-1.5">
+                            <h3 className={`font-bold text-purple-400 flex items-center ${isLiteAndLandscape ? 'gap-1 text-sm' : 'gap-2 text-lg'}`}>
+                                <Database size={isLiteAndLandscape ? 14 : 20} className="flex-shrink-0" />
+                                <span className={isLiteAndLandscape ? 'hidden' : 'hidden sm:inline'}>Lista Reparadora:</span>
+                                <span className={isLiteAndLandscape ? 'inline' : 'sm:hidden'} title="Lista Reparadora">LR:</span>
                             </h3>
                             {reparacionListName && (
-                                <div className="flex items-center gap-1.5 ml-2 bg-gray-700/50 px-2 py-1 rounded-md max-w-full">
-                                    <span className="text-sm font-bold text-gray-200 truncate">{reparacionListName}</span>
+                                <div className="flex items-center gap-1 ml-1 bg-gray-700/50 px-1.5 py-0.5 rounded-md max-w-full">
+                                    <span className={`font-bold text-gray-200 truncate ${isLiteAndLandscape ? 'text-xs' : 'text-sm'}`}>{reparacionListName}</span>
                                     <button
                                         onClick={clearReparacion}
                                         className="text-red-400 hover:text-red-300 p-0.5 hover:bg-gray-600 rounded transition-colors flex-shrink-0"
                                         title="Eliminar y descargar lista actual"
                                     >
-                                        <X size={16} />
+                                        <X size={isLiteAndLandscape ? 12 : 16} />
                                     </button>
                                 </div>
                             )}
@@ -1165,6 +1185,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                         }
                                     } : undefined}
                                     isSencillo={isSencillo}
+                                    isCompact={isLiteAndLandscape}
                                     verificationStatus={channelInfo.status}
                                     quality={channelInfo.quality}
                                     resolution={channelInfo.resolution}

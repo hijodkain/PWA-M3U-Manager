@@ -18,6 +18,7 @@ interface ReparacionChannelItemProps {
     onPlayClick?: () => void;
     style?: React.CSSProperties;
     isSencillo?: boolean;
+    isCompact?: boolean;
     animateMarqueeWhenSelected?: boolean;
     visibleFields?: {
         logo: boolean;
@@ -103,6 +104,7 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
     onPlayClick,
     style,
     isSencillo = false,
+    isCompact = false,
     animateMarqueeWhenSelected = true,
     visibleFields,
     className = "", // Destructure className
@@ -179,25 +181,25 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
         <div
             style={style}
             onClick={onBodyClick}
-            className={`group/item flex items-center gap-2 p-2 rounded-lg border-2 ${
+            className={`group/item flex items-center gap-1.5 ${isCompact ? 'p-1.5' : 'p-2'} rounded-lg border-2 ${
                 isSelected ? 'border-blue-500 bg-blue-900/50' : 'border-transparent'
-            } cursor-pointer hover:bg-gray-700 min-h-[60px] transition-colors relative ${className}`} // Add relative and className
+            } cursor-pointer hover:bg-gray-700 ${isCompact ? 'min-h-[46px]' : 'min-h-[60px]'} transition-colors relative ${className}`}
         >
             {fields.logo && (
                 <img
                     src={channel.tvgLogo || 'https://placehold.co/40x40/2d3748/e2e8f0?text=?'}
                     alt="logo"
-                    className="w-10 h-10 object-contain rounded-md flex-shrink-0 bg-gray-900"
+                    className={`${isCompact ? 'w-7 h-7' : 'w-10 h-10'} object-contain rounded-md flex-shrink-0 bg-gray-900`}
                     onError={(e) => {
                         e.currentTarget.src = 'https://placehold.co/40x40/2d3748/e2e8f0?text=Error';
                     }}
                 />
             )}
-            <div className="text-xs overflow-hidden flex-grow min-w-0 pr-2">
+            <div className="text-xs overflow-hidden flex-grow min-w-0 pr-1">
                 {fields.name && (
                     <MarqueeText 
                         text={channel.name} 
-                        className={`font-bold text-sm ${nameColor} mb-0.5`} 
+                        className={`font-bold ${isCompact ? 'text-xs' : 'text-sm'} ${nameColor} mb-0`} 
                         isSelected={isSelected}
                         animateWhenSelected={animateMarqueeWhenSelected}
                     />
@@ -219,29 +221,36 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
                         )}
                     </div>
                 )}
-                {fields.url && (
+                {fields.url && !isCompact && (
                     <div className="flex gap-1 overflow-hidden">
                         <span className="font-semibold text-gray-300 flex-shrink-0 text-[11px]">URL:</span> 
                         <MarqueeText text={getDomainFromUrl(channel.url)} className="text-gray-400 text-[11px]" isSelected={isSelected} animateWhenSelected={animateMarqueeWhenSelected} />
                     </div>
                 )}
+                {fields.url && isCompact && (
+                    <div className="flex gap-1 overflow-hidden">
+                        <MarqueeText text={getDomainFromUrl(channel.url)} className="text-gray-500 text-[9px]" isSelected={isSelected} animateWhenSelected={animateMarqueeWhenSelected} />
+                    </div>
+                )}
             </div>
             
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className={`flex items-center ${isCompact ? 'gap-1' : 'gap-2'} flex-shrink-0`}>
                 {/* Quality Badge */}
-                <div className="w-12 flex justify-center">
-                    {qualityBadge()}
-                </div>
+                {!isCompact && (
+                    <div className="w-12 flex justify-center">
+                        {qualityBadge()}
+                    </div>
+                )}
                 
                 {/* Status */}
                 {fields.statusIndicator && (
-                    <div className="w-16 text-center">
+                    <div className={`${isCompact ? 'w-10' : 'w-16'} text-center`}>
                         {statusIndicator()}
                     </div>
                 )}
                 
                 {/* Play Button */}
-                {fields.playButton && onPlayClick && (
+                {fields.playButton && onPlayClick && !isCompact && (
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
@@ -262,9 +271,9 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
                             if (onVerifyClick) onVerifyClick();
                         }}
                         disabled={verificationStatus === 'verifying'}
-                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-[10px] disabled:opacity-50 disabled:cursor-not-allowed transition-all whitespace-nowrap relative z-10"
+                        className={`bg-blue-500 hover:bg-blue-700 text-white font-bold ${isCompact ? 'py-0.5 px-1.5 text-[9px]' : 'py-1 px-2 text-[10px]'} rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all whitespace-nowrap relative z-10`}
                     >
-                        {verificationStatus === 'verifying' ? 'Verifying...' : 'Verify'}
+                        {verificationStatus === 'verifying' ? '...' : 'Verify'}
                     </button>
                 )}
                 
