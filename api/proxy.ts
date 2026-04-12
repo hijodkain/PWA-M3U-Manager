@@ -1,4 +1,51 @@
 /**
+ * Detecta si un texto es un manifiesto HLS (stream de video) y NO una lista de canales M3U.
+ * Un manifiesto HLS siempre contiene #EXT-X-MEDIA-SEQUENCE o #EXT-X-TARGETDURATION.
+ * Una lista de canales IPTV contiene #EXTINF con atributos como tvg-id="..."
+ */
+function esManifiestoHLS(content) {
+    return content.includes('#EXT-X-MEDIA-SEQUENCE') ||
+           content.includes('#EXT-X-TARGETDURATION') ||
+           content.includes('#EXT-X-STREAM-INF');
+}
+
+/**
+ * Reescribe las URLs internas de un manifiesto HLS para que los segmentos
+ * y sub-playlists pasen también por este proxy.
+ * Solo se llama cuando se confirma que el contenido es un manifiesto HLS,
+ * nunca para listas de canales M3U.
+ */
+function rewriteHlsManifest(content, baseUrl) {
+    let base;
+    try { base = new URL(baseUrl); } catch { return content; }
+
+    return content.split('\n').map(line => {
+        const trimmed = line.trim();
+        if (!trimmed) return line;
+
+        // Reescribir URI="..." en directivas (#EXT-X-KEY, #EXT-X-MAP, etc.)
+        if (trimmed.startsWith('#') && trimmed.includes('URI=')) {
+            return line.replace(/URI="([^"]+)"/g, (_, uri) => {
+                try {
+                    const abs = new URL(uri, base).toString();
+                    return 'URI="/api/proxy?url=' + encodeURIComponent(abs) + '"';
+                } catch { return 'URI="' + uri + '"'; }
+            });
+        }
+
+        // Líneas de URL (segmentos .ts, sub-playlists .m3u8)
+        if (!trimmed.startsWith('#')) {
+            try {
+                const abs = new URL(trimmed, base).toString();
+                return '/api/proxy?url=' + encodeURIComponent(abs);
+            } catch { return line; }
+        }
+
+        return line;
+    }).join('\n');
+}
+
+/**
  * @param {import('@vercel/node').VercelRequest} req
  * @param {import('@vercel/node').VercelResponse} res
  */
@@ -61,7 +108,11 @@ const handler = async (req, res) => {
 
         if (isText) {
             const data = await response.text();
-            res.status(200).send(data);
+            // URL final tras redirects (necesaria para resolver URLs relativas en el manifiesto)
+            const finalUrl = response.url || fetchUrl;
+            // Solo reescribir si es un manifiesto HLS de stream, nunca listas de canales M3U
+            const rewritten = esManifiestoHLS(data) ? rewriteHlsManifest(data, finalUrl) : data;
+            res.status(200).send(rewritten);
         } else {
             const buffer = await response.arrayBuffer();
             res.status(200).send(Buffer.from(buffer));
