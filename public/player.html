@@ -68,23 +68,37 @@
     } else {
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
-      const player = new Clappr.Player({
+      // Detectar tipo de stream para elegir el motor correcto:
+      // - .mpd  → DASH vía DashShakaPlayback (Shaka Player)
+      // - .m3u8 / .m3u / sin extensión → HLS.js o HTML5 nativo de Clappr
+      // El error "no EXTM3U delimiter" ocurre cuando Shaka intenta parsear
+      // streams IPTV directos (MPEG-TS) como si fueran manifiestos HLS.
+      const urlPath = streamUrl.split('?')[0].toLowerCase();
+      const isDash = urlPath.endsWith('.mpd');
+
+      const playerConfig = {
         parentId: '#player-container',
-        plugins: [DashShakaPlayback],
+        plugins: isDash ? [DashShakaPlayback] : [],
         source: streamUrl,
-        shakaConfiguration: {
-          preferredAudioLanguage: 'es',
-          streaming: {
-            lowLatencyMode: true,
-            jumpLargeGaps: true
-          }
-        },
         autoPlay: true,
         width: '100vw',
         height: '100vh',
         mute: false,
         disableVideoTagContextMenu: true
-      });
+      };
+
+      // Solo añadir configuración Shaka cuando se use DashShakaPlayback
+      if (isDash) {
+        playerConfig.shakaConfiguration = {
+          preferredAudioLanguage: 'es',
+          streaming: {
+            lowLatencyMode: true,
+            jumpLargeGaps: true
+          }
+        };
+      }
+
+      const player = new Clappr.Player(playerConfig);
 
       // Eventos de reproducción: Fullscreen y Bloqueo de Pausa
       player.on(Clappr.Events.PLAYER_READY, function () {
