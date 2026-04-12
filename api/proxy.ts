@@ -3,6 +3,14 @@
  * @param {import('@vercel/node').VercelResponse} res
  */
 const handler = async (req, res) => {
+    // Responder al preflight OPTIONS del navegador
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    if (req.method === 'OPTIONS') {
+        return res.status(204).end();
+    }
+
     const { url } = req.query;
     console.log(`Proxying URL: ${url}`);
 
@@ -41,8 +49,6 @@ const handler = async (req, res) => {
         }
 
         const contentType = response.headers.get('content-type') || 'application/octet-stream';
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
         res.setHeader('Content-Type', contentType);
 
         // Distinguir entre texto (manifiestos M3U8/MPD) y binario (segmentos .ts, .aac…)

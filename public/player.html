@@ -197,6 +197,13 @@
       // - Para .mpd: cargar DashShakaPlayback dinámicamente y luego lanzar player
       // - Para HLS/IPTV: lanzar player directamente SIN cargar Shaka, para que
       //   Clappr use su HLS.js interno y no interfiera DashShakaPlayback
+      //
+      // Mixed Content: si el stream es http:// y la página corre en https://,
+      // el navegador bloquea la carga directa desde el iframe. En ese caso,
+      // arrancamos directamente con proxy (el servidor de Vercel no tiene esta
+      // restricción y puede hacer fetch de URLs http:// sin problemas).
+      const esMixedContent = streamUrl.startsWith('http://') && window.location.protocol === 'https:';
+
       if (isDash) {
         const script = document.createElement('script');
         script.src = 'https://cdn.jsdelivr.net/gh/clappr/dash-shaka-playback@latest/dist/dash-shaka-playback.min.js';
@@ -207,7 +214,8 @@
         };
         document.head.appendChild(script);
       } else {
-        crearPlayer(false);
+        // Si es mixed content, ir directo al proxy sin esperar el fallo
+        crearPlayer(esMixedContent);
       }
     }
   </script>
