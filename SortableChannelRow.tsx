@@ -26,6 +26,7 @@ interface SortableChannelRowProps {
         groupTitle?: string[];
         // Add more suggestion types later if needed
     };
+    onPlayWebClick?: (url: string) => void;
 }
 
 const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
@@ -42,6 +43,7 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
     visibleColumns,
     relativeOrder,
     suggestions,
+    onPlayWebClick,
 }) => {
     const { isSencillo } = useAppMode();
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -238,19 +240,23 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
                 </div>
             )}
 
-            {/* Probar: abrir stream en reproductor web */}
+            {/* Probar: abrir stream en reproductor web (modal inline) */}
             {isColumnVisible('play') && (
                 <div className="px-2 py-2 flex items-center justify-center">
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
                             if (channel.url) {
-                                window.open('/player.html?url=' + encodeURIComponent(channel.url), '_blank', 'noopener,noreferrer');
+                                if (onPlayWebClick) {
+                                    onPlayWebClick(channel.url);
+                                } else {
+                                    window.open('/player.html?url=' + encodeURIComponent(channel.url), '_blank', 'noopener,noreferrer');
+                                }
                             }
                         }}
                         disabled={!channel.url}
                         className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white p-1.5 rounded-full transition-colors"
-                        title="Probar stream en el navegador"
+                        title="Probar stream en el reproductor"
                     >
                         <Globe size={14} />
                     </button>

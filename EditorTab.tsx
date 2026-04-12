@@ -45,6 +45,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showTutorialModal, setShowTutorialModal] = useState(false);
+    const [webPlayerUrl, setWebPlayerUrl] = useState<string | null>(null);
     const [newChannelData, setNewChannelData] = useState({
         order: '',
         name: '',
@@ -1099,6 +1100,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                         relativeOrder={showRelativeOrder && filterGroup && filterGroup !== 'Todos los canales' ? relativeOrderMap.get(channel.id) : undefined}
                                         measureRef={rowVirtualizer.measureElement}
                                         suggestions={{ groupTitle: uniqueGroups }}
+                                        onPlayWebClick={(url) => setWebPlayerUrl(url)}
                                         style={{
                                             position: 'absolute',
                                             top: `${virtualItem.start}px`, // Use top instead of transform for virtualization
@@ -1149,6 +1151,33 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                     <p className="mt-1 text-sm text-gray-400">
                         Pega una URL o sube un archivo .m3u para empezar a gestionar tus canales.
                     </p>
+                </div>
+            )}
+
+            {/* Modal Reproductor Web */}
+            {webPlayerUrl && (
+                <div
+                    className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50"
+                    onClick={() => setWebPlayerUrl(null)}
+                >
+                    <div
+                        className="relative w-full max-w-4xl mx-4"
+                        style={{ aspectRatio: '16/9' }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <button
+                            onClick={() => setWebPlayerUrl(null)}
+                            className="absolute -top-9 right-0 text-white bg-gray-700 hover:bg-gray-600 rounded px-3 py-1 text-sm flex items-center gap-1 z-10"
+                        >
+                            ✕ Cerrar
+                        </button>
+                        <iframe
+                            src={'/player.html?url=' + encodeURIComponent(webPlayerUrl)}
+                            className="w-full h-full rounded-lg border border-gray-700"
+                            allow="autoplay; fullscreen"
+                            allowFullScreen
+                        />
+                    </div>
                 </div>
             )}
 
