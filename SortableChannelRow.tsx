@@ -1,12 +1,12 @@
 import React, { useRef, useEffect } from 'react';
 import { useSortable, defaultAnimateLayoutChanges } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical } from 'lucide-react';
+import { GripVertical, Globe } from 'lucide-react';
 import { useAppMode } from './AppModeContext';
 import EditableCell from './EditableCell';
 import { Channel } from './index';
 
-type ColumnKey = 'status' | 'tvgId' | 'tvgName' | 'tvgLogo' | 'groupTitle' | 'name' | 'url';
+type ColumnKey = 'status' | 'tvgId' | 'tvgName' | 'tvgLogo' | 'groupTitle' | 'name' | 'url' | 'play';
 
 interface SortableChannelRowProps {
     id: string;
@@ -235,6 +235,25 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
             {isColumnVisible('url') && (
                 <div className="px-2 py-2 text-sm text-gray-400 overflow-hidden">
                      <MarqueeCell value={channel.url} onSave={(val) => onUpdate(channel.id, 'url', val)} />
+                </div>
+            )}
+
+            {/* Probar: abrir stream en reproductor web */}
+            {isColumnVisible('play') && (
+                <div className="px-2 py-2 flex items-center justify-center">
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (channel.url) {
+                                window.open('/player.html?url=' + encodeURIComponent(channel.url), '_blank', 'noopener,noreferrer');
+                            }
+                        }}
+                        disabled={!channel.url}
+                        className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white p-1.5 rounded-full transition-colors"
+                        title="Probar stream en el navegador"
+                    >
+                        <Globe size={14} />
+                    </button>
                 </div>
             )}
         </div>

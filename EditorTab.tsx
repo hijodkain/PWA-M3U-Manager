@@ -16,7 +16,7 @@ interface EditorTabProps {
     settingsHook: ReturnType<typeof useSettings>;
 }
 
-type ColumnKey = 'status' | 'tvgId' | 'tvgName' | 'tvgLogo' | 'groupTitle' | 'name' | 'url';
+type ColumnKey = 'status' | 'tvgId' | 'tvgName' | 'tvgLogo' | 'groupTitle' | 'name' | 'url' | 'play';
 
 const ALL_EDITOR_COLUMNS: { key: ColumnKey; label: string; onlyPro?: boolean }[] = [
     { key: 'status', label: 'Estado', onlyPro: true },
@@ -26,6 +26,7 @@ const ALL_EDITOR_COLUMNS: { key: ColumnKey; label: string; onlyPro?: boolean }[]
     { key: 'groupTitle', label: 'Grupo' },
     { key: 'name', label: 'Nombre del canal' },
     { key: 'url', label: 'URL del stream', onlyPro: true },
+    { key: 'play', label: 'Probar' },
 ];
 
 const DEFAULT_VISIBLE_COLUMNS: Record<ColumnKey, boolean> = {
@@ -36,6 +37,7 @@ const DEFAULT_VISIBLE_COLUMNS: Record<ColumnKey, boolean> = {
     groupTitle: true,
     name: true,
     url: true,
+    play: true,
 };
 
 const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => {
@@ -193,6 +195,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         if (isColumnVisible('groupTitle')) width += columnWidths.groupTitle;
         if (isColumnVisible('name')) width += columnWidths.name;
         if (isColumnVisible('url')) width += columnWidths.url;
+        if (isColumnVisible('play')) width += columnWidths.play;
 
         return width;
     }, [columnWidths, visibleColumns, isSencillo]);
@@ -627,6 +630,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         if (isColumnVisible('groupTitle')) cols.push(`${columnWidths.groupTitle}px`);
         if (isColumnVisible('name')) cols.push(`${columnWidths.name}px`);
         if (isColumnVisible('url')) cols.push(`${columnWidths.url}px`);
+        if (isColumnVisible('play')) cols.push(`${columnWidths.play}px`);
         return cols.join(' ');
     }, [columnWidths, visibleColumns, isSencillo]);
 
@@ -1054,6 +1058,14 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                     )}
                                 </button>
                             </ResizableHeader>
+                        )}
+                        {isColumnVisible('play') && (
+                            <div
+                                className="px-2 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider"
+                                style={{ width: `${columnWidths.play}px` }}
+                            >
+                                Probar
+                            </div>
                         )}
                     </div>
 

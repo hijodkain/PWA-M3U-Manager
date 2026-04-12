@@ -10,6 +10,7 @@ const defaultWidths = {
     groupTitle: 180,
     name: 250,
     url: 300,
+    play: 60,
 };
 
 export const useColumnResizing = (initialWidths = defaultWidths) => {
