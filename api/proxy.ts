@@ -1,4 +1,42 @@
 /**
+ * Reescribe las URLs internas de un manifiesto M3U8/M3U para que
+ * los segmentos y sub-playlists se sirvan también a través de este proxy.
+ * Así HLS.js nunca ve URLs http:// directas (evita Mixed Content en iframe HTTPS).
+ *
+ * @param {string} content  Contenido del manifiesto
+ * @param {string} baseUrl  URL final del recurso (tras redirects), para resolver URLs relativas
+ */
+function rewriteM3U8(content, baseUrl) {
+    let base;
+    try { base = new URL(baseUrl); } catch { return content; }
+
+    return content.split('\n').map(line => {
+        const trimmed = line.trim();
+        if (!trimmed) return line;
+
+        // Reescribir URI="..." en directivas como #EXT-X-KEY, #EXT-X-MAP, etc.
+        if (trimmed.startsWith('#') && trimmed.includes('URI=')) {
+            return line.replace(/URI="([^"]+)"/g, (_, uri) => {
+                try {
+                    const abs = new URL(uri, base).toString();
+                    return 'URI="/api/proxy?url=' + encodeURIComponent(abs) + '"';
+                } catch { return 'URI="' + uri + '"'; }
+            });
+        }
+
+        // Líneas que son URLs (segmentos .ts, sub-playlists .m3u8, etc.)
+        if (!trimmed.startsWith('#')) {
+            try {
+                const abs = new URL(trimmed, base).toString();
+                return '/api/proxy?url=' + encodeURIComponent(abs);
+            } catch { return line; }
+        }
+
+        return line;
+    }).join('\n');
+}
+
+/**
  * @param {import('@vercel/node').VercelRequest} req
  * @param {import('@vercel/node').VercelResponse} res
  */
@@ -49,6 +87,8 @@ const handler = async (req, res) => {
         }
 
         const contentType = response.headers.get('content-type') || 'application/octet-stream';
+        // URL final tras seguir posibles redirects (importante para resolver URLs relativas en M3U8)
+        const finalUrl = response.url || fetchUrl;
         res.setHeader('Content-Type', contentType);
 
         // Distinguir entre texto (manifiestos M3U8/MPD) y binario (segmentos .ts, .aac…)
@@ -59,8 +99,17 @@ const handler = async (req, res) => {
                        contentType.includes('xml') ||
                        contentType.includes('json');
 
+        // Detectar manifiesto M3U8 para reescribir URLs internas
+        const finalUrlClean = finalUrl.split('?')[0].toLowerCase();
+        const srcUrlClean = fetchUrl.split('?')[0].toLowerCase();
+        const isM3U8 = contentType.includes('mpegurl') ||
+                       finalUrlClean.endsWith('.m3u8') || finalUrlClean.endsWith('.m3u') ||
+                       srcUrlClean.endsWith('.m3u8') || srcUrlClean.endsWith('.m3u');
+
         if (isText) {
-            const data = await response.text();
+            let data = await response.text();
+            // Reescribir URLs del manifiesto para que todo vaya por este proxy (evita Mixed Content)
+            if (isM3U8) data = rewriteM3U8(data, finalUrl);
             res.status(200).send(data);
         } else {
             const buffer = await response.arrayBuffer();
