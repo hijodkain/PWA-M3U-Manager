@@ -89,11 +89,7 @@
           // IMPORTANTE: no pasar DashShakaPlayback aquí para HLS aunque esté loaded,
           // porque se auto-registra globalmente y puede interceptar .m3u8.
           plugins: (isDash && typeof DashShakaPlayback !== 'undefined') ? [DashShakaPlayback] : [],
-          // Cuando usarProxy=true, el proxy actúa como fuente directa.
-          // El proxy reescribe las URLs internas del manifiesto para que los
-          // segmentos también se soliciten al proxy → HLS.js solo ve URLs HTTPS,
-          // sin Mixed Content. No se necesita xhrSetup.
-          source: usarProxy ? '/api/proxy?url=' + encodeURIComponent(streamUrl) : streamUrl,
+          source: streamUrl,
           autoPlay: true,
           width: '100vw',
           height: '100vh',
@@ -105,6 +101,19 @@
           cfg.shakaConfiguration = {
             preferredAudioLanguage: 'es',
             streaming: { lowLatencyMode: true, jumpLargeGaps: true }
+          };
+        }
+
+        // Si hay problemas CORS y se pide proxy, redirigir todas las peticiones HLS
+        if (!isDash && usarProxy) {
+          cfg.playback = {
+            hlsjsConfig: {
+              xhrSetup: function (xhr, url) {
+                if (url.startsWith('http://') || url.startsWith('https://')) {
+                  xhr.open('GET', '/api/proxy?url=' + encodeURIComponent(url), true);
+                }
+              }
+            }
           };
         }
 
