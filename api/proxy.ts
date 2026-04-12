@@ -39,8 +39,27 @@ const handler = async (req, res) => {
             // Forward the status code from the external server
             return res.status(response.status).send(response.statusText);
         }
-        const data = await response.text();
-        res.status(200).send(data);
+
+        const contentType = response.headers.get('content-type') || 'application/octet-stream';
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+        res.setHeader('Content-Type', contentType);
+
+        // Distinguir entre texto (manifiestos M3U8/MPD) y binario (segmentos .ts, .aac…)
+        // para no corromper el contenido al hacer text()
+        const isText = contentType.includes('text') ||
+                       contentType.includes('mpegurl') ||
+                       contentType.includes('dash+xml') ||
+                       contentType.includes('xml') ||
+                       contentType.includes('json');
+
+        if (isText) {
+            const data = await response.text();
+            res.status(200).send(data);
+        } else {
+            const buffer = await response.arrayBuffer();
+            res.status(200).send(Buffer.from(buffer));
+        }
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error(`Error fetching URL: ${errorMessage}`);

@@ -67,108 +67,143 @@
       errorDiv.innerHTML = '<strong>No se proporcionó URL de stream.</strong><br>Usa: <code>/player.html?url=https://tu-stream.m3u8</code>';
     } else {
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-
-      // Detectar tipo de stream para elegir el motor correcto:
-      // - .mpd  → DASH vía DashShakaPlayback (Shaka Player)
-      // - .m3u8 / .m3u / sin extensión → HLS.js o HTML5 nativo de Clappr
-      // El error "no EXTM3U delimiter" ocurre cuando Shaka intenta parsear
-      // streams IPTV directos (MPEG-TS) como si fueran manifiestos HLS.
       const urlPath = streamUrl.split('?')[0].toLowerCase();
       const isDash = urlPath.endsWith('.mpd');
 
-      const playerConfig = {
-        parentId: '#player-container',
-        plugins: isDash ? [DashShakaPlayback] : [],
-        source: streamUrl,
-        autoPlay: true,
-        width: '100vw',
-        height: '100vh',
-        mute: false,
-        disableVideoTagContextMenu: true
-      };
+      let playerInstance = null;
+      let yaReintento = false;
 
-      // Solo añadir configuración Shaka cuando se use DashShakaPlayback
-      if (isDash) {
-        playerConfig.shakaConfiguration = {
-          preferredAudioLanguage: 'es',
-          streaming: {
-            lowLatencyMode: true,
-            jumpLargeGaps: true
-          }
+      /**
+       * Construye y lanza el player.
+       * @param {boolean} usarProxy - Si true, todas las peticiones HLS se rutean
+       *   a través de /api/proxy para evitar bloqueos CORS.
+       */
+      function crearPlayer(usarProxy) {
+        // Destruir instancia anterior si existe
+        if (playerInstance) {
+          try { playerInstance.destroy(); } catch (e) {}
+          playerInstance = null;
+          document.getElementById('player-container').innerHTML = '';
+        }
+
+        const cfg = {
+          parentId: '#player-container',
+          plugins: isDash ? [DashShakaPlayback] : [],
+          source: streamUrl,
+          autoPlay: true,
+          width: '100vw',
+          height: '100vh',
+          mute: false,
+          disableVideoTagContextMenu: true
         };
-      }
 
-      const player = new Clappr.Player(playerConfig);
+        if (isDash) {
+          cfg.shakaConfiguration = {
+            preferredAudioLanguage: 'es',
+            streaming: { lowLatencyMode: true, jumpLargeGaps: true }
+          };
+        }
 
-      // Eventos de reproducción: Fullscreen y Bloqueo de Pausa
-      player.on(Clappr.Events.PLAYER_READY, function () {
-        const video = document.querySelector('#player-container video');
-        if (!video) return;
-
-        let lastTap = 0;
-
-        // Doble Tap -> Fullscreen
-        video.addEventListener('touchend', function (e) {
-          const now = new Date().getTime();
-          const timesince = now - lastTap;
-          if (timesince < 300 && timesince > 0) {
-            if (player.core.isFullscreen()) {
-              player.core.exitFullscreen();
-            } else {
-              player.core.toggleFullscreen();
+        // Para HLS: si usarProxy=true, interceptar TODAS las peticiones
+        // (manifiesto + segmentos .ts) y rutarlas por nuestro proxy propio,
+        // que añade las cabeceras CORS necesarias.
+        if (!isDash && usarProxy) {
+          cfg.playback = {
+            hlsjsConfig: {
+              xhrSetup: function (xhr, url) {
+                // Solo añadir el proxy si la URL no es ya relativa al propio origen
+                if (url.startsWith('http://') || url.startsWith('https://')) {
+                  xhr.open('GET', '/api/proxy?url=' + encodeURIComponent(url), true);
+                }
+              }
             }
+          };
+        }
+
+        playerInstance = new Clappr.Player(cfg);
+
+        // ── Gestos táctiles ──────────────────────────────────────────────
+        playerInstance.on(Clappr.Events.PLAYER_READY, function () {
+          const video = document.querySelector('#player-container video');
+          if (!video) return;
+
+          let lastTap = 0;
+          video.addEventListener('touchend', function (e) {
+            const now = Date.now();
+            const diff = now - lastTap;
+            if (diff < 300 && diff > 0) {
+              if (playerInstance.core.isFullscreen()) {
+                playerInstance.core.exitFullscreen();
+              } else {
+                playerInstance.core.toggleFullscreen();
+              }
+              e.preventDefault();
+            }
+            lastTap = now;
+          });
+
+          // Evita pausa involuntaria al tocar una vez
+          video.addEventListener('click', function (e) {
             e.preventDefault();
-          }
-          lastTap = now;
+            e.stopPropagation();
+          }, true);
         });
 
-        // Evita pausa y retroceso al tocar una vez
-        video.addEventListener('click', function (e) {
-          e.preventDefault();
-          e.stopPropagation();
-        }, true);
-      });
-
-      // Lógica de orientación en fullscreen
-      player.on('fullscreen', async function (isFullscreen) {
-        const contenedor = document.getElementById('player-container');
-        if (isFullscreen) {
-          if (!isIOS && screen.orientation?.lock) {
-            try { await screen.orientation.lock('landscape'); } catch (e) {}
-          } else if (isIOS) {
-            contenedor.classList.add('ios-landscape');
+        // ── Orientación en fullscreen ────────────────────────────────────
+        playerInstance.on('fullscreen', async function (isFullscreen) {
+          const contenedor = document.getElementById('player-container');
+          if (isFullscreen) {
+            if (!isIOS && screen.orientation?.lock) {
+              try { await screen.orientation.lock('landscape'); } catch (e) {}
+            } else if (isIOS) {
+              contenedor.classList.add('ios-landscape');
+            }
+          } else {
+            if (!isIOS && screen.orientation?.unlock) {
+              try { screen.orientation.unlock(); } catch (e) {}
+            }
+            if (isIOS) contenedor.classList.remove('ios-landscape');
           }
-        } else {
-          if (!isIOS && screen.orientation?.unlock) {
-            try { screen.orientation.unlock(); } catch (e) {}
-          }
-          if (isIOS) contenedor.classList.remove('ios-landscape');
-        }
-      });
+        });
 
-      // WakeLock: mantener pantalla encendida durante reproducción
-      let wakeLock = null;
-      async function activarWakeLock() {
-        if ('wakeLock' in navigator) {
-          try {
-            wakeLock = await navigator.wakeLock.request('screen');
-          } catch (err) {}
+        // ── WakeLock ─────────────────────────────────────────────────────
+        let wakeLock = null;
+        async function activarWakeLock() {
+          if ('wakeLock' in navigator) {
+            try { wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
+          }
         }
+        playerInstance.on('play', () => activarWakeLock());
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') activarWakeLock();
+        });
+
+        // ── Manejo de errores con reintento vía proxy ────────────────────
+        playerInstance.on(Clappr.Events.PLAYER_ERROR, function () {
+          if (!isDash && !yaReintento) {
+            // Primer fallo: reintentar automáticamente con proxy CORS
+            yaReintento = true;
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.style.display = 'block';
+            errorDiv.innerHTML = '⏳ Reintentando con proxy CORS…';
+            setTimeout(function () {
+              errorDiv.style.display = 'none';
+              crearPlayer(true);
+            }, 800);
+          } else {
+            // Segundo fallo (con proxy) o stream DASH: mostrar error definitivo
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.style.display = 'block';
+            errorDiv.innerHTML =
+              '<strong>No se pudo reproducir el stream.</strong><br>' +
+              'El servidor puede estar offline, geo-restringido o no ser compatible con la reproducción web.<br><br>' +
+              '<span style="font-size:0.85rem;color:#9ca3af;">URL: <a href="' + streamUrl + '" target="_blank" rel="noopener noreferrer">' + streamUrl + '</a></span>';
+          }
+        });
       }
-      player.on('play', () => activarWakeLock());
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') activarWakeLock();
-      });
 
-      // Mostrar error si el stream falla
-      player.on(Clappr.Events.PLAYER_ERROR, function (err) {
-        const errorDiv = document.getElementById('error-message');
-        errorDiv.style.display = 'block';
-        errorDiv.innerHTML =
-          '<strong>Error al reproducir el stream.</strong><br>' +
-          'El stream puede no estar disponible o tener restricciones CORS.<br><br>' +
-          '<span style="font-size:0.85rem;color:#9ca3af;">URL: <a href="' + streamUrl + '" target="_blank">' + streamUrl + '</a></span>';
-      });
+      // Lanzar con intento directo primero
+      crearPlayer(false);
     }
   </script>
 </body>
