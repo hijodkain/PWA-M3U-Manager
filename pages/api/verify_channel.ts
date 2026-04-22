@@ -53,10 +53,15 @@ async function analyzeM3U8MasterPlaylist(url: string): Promise<StreamInfo[]> {
         const response = await fetch(url, {
             method: 'GET',
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Range': 'bytes=0-65535',  // Añadir Range header para obtener muestra
                 'Accept': '*/*',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Connection': 'keep-alive',
+                'Range': 'bytes=0-65535',  // Añadir Range header para obtener muestra
             },
-            signal: AbortSignal.timeout(12000),
+            signal: AbortSignal.timeout(20000),  // Aumentar timeout a 20s
         });
 
         if (!response.ok) {
@@ -227,7 +232,7 @@ async function verifyChannel(url: string): Promise<VerificationResponse> {
 
         // 2. Para streams no-M3U8, intentar descargar una muestra
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        const timeoutId = setTimeout(() => controller.abort(), 20000);  // Aumentar timeout a 20s
 
         try {
             // Intentar GET con Range para obtener headers y una muestra
@@ -235,6 +240,7 @@ async function verifyChannel(url: string): Promise<VerificationResponse> {
                 method: 'GET',
                 headers: {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Range': 'bytes=0-65535',  // Añadir Range header para obtener muestra
                     'Accept': '*/*',
                     'Range': 'bytes=0-65536', // Primeros 64KB
                 },
@@ -244,7 +250,7 @@ async function verifyChannel(url: string): Promise<VerificationResponse> {
 
             clearTimeout(timeoutId);
 
-            if (response.status >= 200 && response.status < 400) {
+            if (response.status >= 200 if (response.status >= 200 && response.status < 400) {if (response.status >= 200 && response.status < 400) { response.status < 500) {  // Aceptar más códigos HTTP incluyendo redirecciones
                 const contentType = response.headers.get('content-type')?.toLowerCase() || '';
 
                 // Rechazar HTML/JSON/texto
@@ -288,9 +294,10 @@ async function verifyChannel(url: string): Promise<VerificationResponse> {
             method: 'HEAD',
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Range': 'bytes=0-65535',  // Añadir Range header para obtener muestra
                 'Accept': '*/*',
             },
-            signal: AbortSignal.timeout(8000),
+            signal: AbortSignal.timeout(15000)  // Aumentar timeout del HEAD fallback,
         });
 
         if (response2.status >= 200 && response2.status < 400) {
