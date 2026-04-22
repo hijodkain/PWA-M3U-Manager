@@ -12,7 +12,7 @@ from typing import Dict, Any
 
 # Timeout configurable desde variables de entorno
 import os
-TIMEOUT_SECONDS = int(os.environ.get('TIMEOUT_SECONDS', '10'))
+TIMEOUT_SECONDS = int(os.environ.get('TIMEOUT_SECONDS', '20'))  # Aumentado de 10 a 20 segundos
 
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
@@ -81,9 +81,13 @@ def verify_stream_simple(url: str) -> Dict[str, Any]:
         # Configurar headers para simular un cliente legítimo
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Range': 'bytes=0-65535',  # Añadir Range header para obtener muestra
             'Accept': '*/*',
             'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
             'Connection': 'keep-alive',
+            'Range': 'bytes=0-65535',  # Añadir Range header para obtener muestra
         }
         
         # Intentar primero con HEAD
@@ -95,7 +99,7 @@ def verify_stream_simple(url: str) -> Dict[str, Any]:
                 status_code = response.getcode()
                 
                 # Códigos de éxito
-                if status_code in [200, 201, 202, 204, 206]:
+                if status_code in [200, 201, 202, 204, 206, 301, 302, 307, 308]:
                     return {
                         'status': 'ok',
                         'message': f'Stream is online (HTTP {status_code})',
@@ -127,7 +131,7 @@ def verify_stream_simple(url: str) -> Dict[str, Any]:
                     # Leer solo un poco para confirmar
                     response.read(4096)
                     
-                    if status_code in [200, 201, 202, 204, 206, 403]:
+                    if status_code in [200, 201, 202, 204, 206, 301, 302, 307, 308, 403]:
                         return {
                             'status': 'ok',
                             'message': f'Stream is online (HTTP {status_code} via GET)',

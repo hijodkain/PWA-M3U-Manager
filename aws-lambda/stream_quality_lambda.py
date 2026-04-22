@@ -15,8 +15,8 @@ from typing import Dict, Any, Optional
 
 # Configuración
 FFPROBE_PATH = os.environ.get('FFPROBE_PATH', '/opt/bin/ffprobe')
-TIMEOUT_SECONDS = int(os.environ.get('TIMEOUT_SECONDS', '25'))
-FFPROBE_TIMEOUT = 15  # Timeout específico para FFprobe (más corto)
+TIMEOUT_SECONDS = int(os.environ.get('TIMEOUT_SECONDS', '30'))  # Aumentado para mejor compatibilidad
+FFPROBE_TIMEOUT = 20  # Timeout específico para FFprobe (aumentado)
 
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
@@ -138,6 +138,8 @@ def quick_online_check(url: str) -> Dict[str, Any]:
         
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Range': 'bytes=0-65535',  # Añadir Range header
             'Accept': '*/*',
         }
         
@@ -148,7 +150,7 @@ def quick_online_check(url: str) -> Dict[str, Any]:
             with urllib.request.urlopen(request, timeout=10, context=ssl_context) as response:
                 status_code = response.getcode()
                 
-                if status_code in [200, 201, 202, 204, 206, 403]:
+                if status_code in [200, 201, 202, 204, 206, 301, 302, 307, 308, 403]:
                     return {'is_online': True, 'message': f'Online (HTTP {status_code})'}
                 else:
                     return {'is_online': False, 'message': f'Unexpected status: {status_code}'}
@@ -162,7 +164,7 @@ def quick_online_check(url: str) -> Dict[str, Any]:
                     # Leer solo un poco para confirmar
                     response.read(4096)
                     
-                    if status_code in [200, 201, 202, 204, 206, 403]:
+                    if status_code in [200, 201, 202, 204, 206, 301, 302, 307, 308, 403]:
                         return {'is_online': True, 'message': f'Online (HTTP {status_code} via GET)'}
                     else:
                         return {'is_online': False, 'message': f'Unexpected status: {status_code}'}
