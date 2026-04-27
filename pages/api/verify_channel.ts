@@ -239,10 +239,12 @@ async function verifyChannel(url: string): Promise<VerificationResponse> {
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                'Range': 'bytes=0-65535',  // Añadir Range header para obtener muestra
-                    'Accept': '*/*',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                     'Range': 'bytes=0-65536', // Primeros 64KB
+                    'Accept': '*/*',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'Connection': 'keep-alive',
                 },
                 signal: controller.signal,
                 redirect: 'follow',
@@ -250,7 +252,8 @@ async function verifyChannel(url: string): Promise<VerificationResponse> {
 
             clearTimeout(timeoutId);
 
-            if (response.status >= 200 if (response.status >= 200 && response.status < 400) {if (response.status >= 200 && response.status < 400) { response.status < 500) {  // Aceptar más códigos HTTP incluyendo redirecciones
+            // Aceptar códigos HTTP 2xx y 3xx (incluye redirecciones)
+            if (response.status >= 200 && response.status < 400) {
                 const contentType = response.headers.get('content-type')?.toLowerCase() || '';
 
                 // Rechazar HTML/JSON/texto
@@ -293,11 +296,15 @@ async function verifyChannel(url: string): Promise<VerificationResponse> {
         const response2 = await fetch(url, {
             method: 'HEAD',
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                'Range': 'bytes=0-65535',  // Añadir Range header para obtener muestra
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Range': 'bytes=0-65535',
                 'Accept': '*/*',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Connection': 'keep-alive',
             },
-            signal: AbortSignal.timeout(15000)  // Aumentar timeout del HEAD fallback,
+            signal: AbortSignal.timeout(15000),
+        });
         });
 
         if (response2.status >= 200 && response2.status < 400) {
