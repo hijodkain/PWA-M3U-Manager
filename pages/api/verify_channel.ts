@@ -54,12 +54,11 @@ async function analyzeM3U8MasterPlaylist(url: string): Promise<StreamInfo[]> {
             method: 'GET',
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Range': 'bytes=0-65535',  // Añadir Range header para obtener muestra
+                'Range': 'bytes=0-65535',
                 'Accept': '*/*',
                 'Accept-Language': 'en-US,en;q=0.9',
                 'Accept-Encoding': 'gzip, deflate, br',
                 'Connection': 'keep-alive',
-                'Range': 'bytes=0-65535',  // Añadir Range header para obtener muestra
             },
             signal: AbortSignal.timeout(20000),  // Aumentar timeout a 20s
         });
