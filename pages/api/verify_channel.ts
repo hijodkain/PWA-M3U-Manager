@@ -305,7 +305,6 @@ async function verifyChannel(url: string): Promise<VerificationResponse> {
             },
             signal: AbortSignal.timeout(15000),
         });
-        });
 
         if (response2.status >= 200 && response2.status < 400) {
             const contentType = response2.headers.get('content-type')?.toLowerCase() || '';
