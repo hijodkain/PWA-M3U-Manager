@@ -15,9 +15,9 @@ interface VerificationResponse {
 
 /**
  * Códigos HTTP que se consideran como "stream online"
- * Similar a AWS Lambda - acepta 2xx, 3xx y 403
+ * Solo códigos 2xx (200-299) son considerados online
  */
-const SUCCESS_CODES = [200, 201, 202, 204, 206, 301, 302, 307, 308, 403];
+const SUCCESS_CODES = [200, 201, 202, 204, 206];
 
 /**
  * Detecta la calidad del stream basándose en la resolución
@@ -116,7 +116,8 @@ async function analyzeM3U8MasterPlaylist(url: string): Promise<{ width?: number;
 
 /**
  * Verificación simple de stream - similar a AWS Lambda verify-simple
- * Usa HEAD primero, si falla con 405 usa GET
+ * Usa HEAD primero, si falla usa GET
+ * Solo acepta códigos 2xx como online
  */
 async function verifyStreamSimple(url: string): Promise<VerificationResponse> {
     const TIMEOUT_SECONDS = 20;
@@ -135,84 +136,59 @@ async function verifyStreamSimple(url: string): Promise<VerificationResponse> {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_SECONDS * 1000);
         
+        let response: Response;
+        let statusCode: number;
+        
         try {
-            const response = await fetch(url, {
+            response = await fetch(url, {
                 method: 'HEAD',
                 headers,
                 signal: controller.signal,
                 redirect: 'follow',
             });
-            
-            clearTimeout(timeoutId);
-            const statusCode = response.status;
-            
-            if (SUCCESS_CODES.includes(statusCode)) {
-                return {
-                    status: 'ok',
-                    quality: 'unknown',
-                    message: `Stream online (HTTP ${statusCode})`,
-                };
-            } else {
-                return {
-                    status: 'failed',
-                    quality: 'unknown',
-                    error: `HTTP ${statusCode}`,
-                    message: `Unexpected status code: ${statusCode}`,
-                };
-            }
+            statusCode = response.status;
         } catch (headError: any) {
             clearTimeout(timeoutId);
+            console.log('HEAD request failed, trying GET:', headError.message);
             
-            // Si hay error, puede ser 405 (Method Not Allowed) - intentar con GET
-            console.log('HEAD failed, trying GET:', headError.message);
-        }
-
-        // Si HEAD falló, intentar con GET
-        const controller2 = new AbortController();
-        const timeoutId2 = setTimeout(() => controller2.abort(), TIMEOUT_SECONDS * 1000);
-        
-        try {
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: {
-                    ...headers,
-                    'Range': 'bytes=0-4096', // Leer solo 4KB para confirmar
-                },
-                signal: controller2.signal,
-                redirect: 'follow',
-            });
-            
-            clearTimeout(timeoutId2);
-            const statusCode = response.status;
-            
-            if (SUCCESS_CODES.includes(statusCode)) {
-                // Leer un poco para confirmar que el stream responde
-                try {
-                    await response.arrayBuffer();
-                } catch (e) {
-                    // Ignorar errores de lectura
-                }
-                
-                return {
-                    status: 'ok',
-                    quality: 'unknown',
-                    message: `Stream online (HTTP ${statusCode} via GET)`,
-                };
-            } else {
+            // Intentar con GET
+            try {
+                response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        ...headers,
+                        'Range': 'bytes=0-4096',
+                    },
+                    signal: controller.signal,
+                    redirect: 'follow',
+                });
+                statusCode = response.status;
+            } catch (getError: any) {
+                clearTimeout(timeoutId);
                 return {
                     status: 'failed',
                     quality: 'unknown',
-                    error: `HTTP ${statusCode}`,
-                    message: `Unexpected status code: ${statusCode}`,
+                    error: getError.name === 'AbortError' ? 'Timeout' : getError.message,
+                    message: `Connection failed: ${getError.message}`,
                 };
             }
-        } catch (getError: any) {
-            clearTimeout(timeoutId2);
+        }
+        
+        clearTimeout(timeoutId);
+        
+        // Solo códigos 2xx son online
+        if (statusCode >= 200 && statusCode < 300) {
+            return {
+                status: 'ok',
+                quality: 'unknown',
+                message: `Stream online (HTTP ${statusCode})`,
+            };
+        } else {
             return {
                 status: 'failed',
                 quality: 'unknown',
-                error: getError.name === 'AbortError' ? 'Timeout' : getError.message,
-                message: `GET failed: ${getError.message}`,
+                error: `HTTP ${statusCode}`,
+                message: `Stream offline (HTTP ${statusCode})`,
             };
         }
         
