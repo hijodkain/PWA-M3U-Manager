@@ -467,30 +467,35 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
         const channelsToVerify = channels.filter(c => channelIdsToVerify.includes(c.id));
         setChannels(prev => prev.map(c => channelIdsToVerify.includes(c.id) ? { ...c, status: 'verifying' } : c));
 
-        const batchSize = 5; // Reducido para evitar saturación
+        const batchSize = 5;
         let verifiedCount = 0;
         let finalChannels: Channel[] = [];
 
         for (let i = 0; i < channelsToVerify.length; i += batchSize) {
             const batch = channelsToVerify.slice(i, i + batchSize);
             
-            // Verificación simple LOCAL (sin AWS Lambda, solo online/offline)
+            // Usar la API de Vercel para evitar problemas de CORS
             const verificationPromises = batch.map(async (channel) => {
                 try {
-                    // Petición HEAD con timeout de 10 segundos
                     const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 10000);
+                    const timeoutId = setTimeout(() => controller.abort(), 20000);
                     
-                    const response = await fetch(channel.url, {
-                        method: 'HEAD',
+                    const response = await fetch(`/api/verify_channel?url=${encodeURIComponent(channel.url)}`, {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json',
+                        },
                         signal: controller.signal,
-                        cache: 'no-store',
                     });
                     
                     clearTimeout(timeoutId);
                     
-                    // Considerar OK si responde 200 o 403 (a veces 403 significa online pero requiere headers)
-                    const isOnline = response.ok || response.status === 403;
+                    if (!response.ok) {
+                        throw new Error(`API error: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    const isOnline = data.status === 'ok';
                     
                     return {
                         id: channel.id,
