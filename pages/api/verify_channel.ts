@@ -56,6 +56,157 @@ function detectQualityFromURL(url: string): QualityLevel | null {
 }
 
 /**
+ * Intenta detectar calidad del stream analizando los headers de respuesta
+ * Útil para streams que no son M3U8
+ */
+async function detectQualityFromHeaders(url: string): Promise<{
+    quality: QualityLevel;
+    bitrate?: number;
+} | null> {
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        
+        const response = await fetch(url, {
+            method: 'HEAD',
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Range': 'bytes=0-65535',
+            },
+            signal: controller.signal,
+            redirect: 'follow',
+        });
+        
+        clearTimeout(timeoutId);
+        
+        // Analizar Content-Length para estimar bitrate
+        const contentLength = response.headers.get('content-length');
+        if (contentLength) {
+            const size = parseInt(contentLength);
+            // Si es un chunk grande, podría ser un stream de alta calidad
+            if (size > 5000000) { // > 5MB
+                return { quality: 'FHD', bitrate: size * 8 }; // bits por segundo aprox
+            } else if (size > 2000000) {
+                return { quality: 'HD', bitrate: size * 8 };
+            }
+        }
+        
+        // Analizar Content-Type
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('video')) {
+            // Si es video pero no podemos determinar más, asumir SD mínimo
+            return { quality: 'SD' };
+        }
+        
+        return null;
+    } catch (error) {
+        return null;
+    }
+}
+
+/**
+ * Intenta analizar un stream para detectar su calidad
+ * Prueba múltiples métodos: M3U8, headers, URL
+ */
+async function detectStreamQuality(url: string): Promise<{
+    quality: QualityLevel;
+    resolution?: string;
+    bitrate?: number;
+    method: string;
+}> {
+    // 1. Si es M3U8, usar análisis completo
+    if (url.includes('.m3u8')) {
+        const { streams } = await analyzeM3U8MasterPlaylist(url);
+        
+        if (streams.length > 0) {
+            // Ordenar por calidad
+            const sortedStreams = [...streams].sort((a, b) => {
+                const heightA = a.height || 0;
+                const heightB = b.height || 0;
+                return heightB - heightA;
+            });
+            
+            const bestStream = sortedStreams[0];
+            
+            if (bestStream.height) {
+                return {
+                    quality: getQualityFromResolution(bestStream.width || 0, bestStream.height),
+                    resolution: bestStream.width ? `${bestStream.width}x${bestStream.height}` : undefined,
+                    bitrate: bestStream.bandwidth,
+                    method: 'm3u8-manifest',
+                };
+            }
+            
+            if (bestStream.bandwidth) {
+                return {
+                    quality: getQualityFromBitrate(bestStream.bandwidth),
+                    bitrate: bestStream.bandwidth,
+                    method: 'm3u8-bandwidth',
+                };
+            }
+        }
+    }
+    
+    // 2. Intentar detectar por headers
+    const headerQuality = await detectQualityFromHeaders(url);
+    if (headerQuality) {
+        return {
+            ...headerQuality,
+            method: 'headers',
+        };
+    }
+    
+    // 3. Detectar por URL
+    const urlQuality = detectQualityFromURL(url);
+    if (urlQuality) {
+        return {
+            quality: urlQuality,
+            method: 'url-pattern',
+        };
+    }
+    
+    // 4. Último recurso: intentar descargar un fragmento para analizar
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Range': 'bytes=0-1048576', // 1MB para analizar
+            },
+            signal: controller.signal,
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
+            const contentLength = response.headers.get('content-length');
+            const contentType = response.headers.get('content-type') || '';
+            
+            // Si es un stream de video válido, asumir al menos SD
+            if (contentType.includes('video') || contentType.includes('mpegurl') || contentType.includes('octet-stream')) {
+                // Intentar inferir calidad por tamaño
+                if (contentLength) {
+                    const size = parseInt(contentLength);
+                    if (size > 1000000) {
+                        return { quality: 'HD', method: 'content-analysis' };
+                    }
+                }
+                return { quality: 'SD', method: 'content-type' };
+            }
+        }
+    } catch (e) {
+        // Fallback falló
+    }
+    
+    // 5. No se pudo detectar
+    return { quality: 'unknown', method: 'none' };
+}
+
+/**
  * Analiza un archivo M3U8 master playlist para extraer información de calidad
  * Ahora también obtiene URLs de variantes para verificación de segmentos reales
  */
@@ -417,13 +568,17 @@ async function verifyChannel(url: string): Promise<VerificationResponse> {
         }
     }
 
-    // 3. Detección de calidad por URL como último recurso
-    const urlQuality = detectQualityFromURL(url);
+    // 3. Para streams que no son M3U8, usar detección avanzada
+    const qualityResult = await detectStreamQuality(url);
     
     return {
         status: 'ok',
-        quality: urlQuality || 'unknown',
-        message: urlQuality ? `Stream online - ${urlQuality} quality from URL` : 'Stream online',
+        quality: qualityResult.quality,
+        resolution: qualityResult.resolution,
+        bitrate: qualityResult.bitrate,
+        message: qualityResult.quality !== 'unknown' 
+            ? `Stream online - ${qualityResult.quality} quality (${qualityResult.method})`
+            : 'Stream online',
     };
 }
 
