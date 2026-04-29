@@ -74,17 +74,10 @@ export const useReparacion = (
         }));
         
         try {
-            // Llamar a AWS Lambda verify-simple o fallback a local
-            const AWS_API_URL = process.env.NEXT_PUBLIC_AWS_VERIFY_API_URL;
-            let apiUrl = '';
-
-            if (AWS_API_URL) {
-                 apiUrl = `${AWS_API_URL}verify-simple?url=${encodeURIComponent(url)}`;
-                 console.log('Verifying (simple/AWS):', url);
-            } else {
-                 console.warn('AWS_API_URL not configured, using local fallback /api/verify_channel');
-                 apiUrl = `/api/verify_channel?url=${encodeURIComponent(url)}`;
-            }
+            // Usar la API de Vercel (/api/verify_channel) - verificación local mejorada
+            // Ya no usa AWS Lambda - toda la verificación se hace en Vercel
+            const apiUrl = `/api/verify_channel?url=${encodeURIComponent(url)}`;
+            console.log('Verifying (Vercel API):', url);
 
             // Timeout de 20 segundos para dar tiempo al servidor
             const controller = new AbortController();
@@ -101,12 +94,12 @@ export const useReparacion = (
             clearTimeout(timeoutId);
             
             if (!response.ok) {
-                console.error('AWS Lambda HTTP error:', response.status, response.statusText);
-                throw new Error(`AWS Lambda error: ${response.status}`);
+                console.error('Verification HTTP error:', response.status, response.statusText);
+                throw new Error(`Verification error: ${response.status}`);
             }
             
             const data = await response.json();
-            console.log('Lambda response:', data);
+            console.log('Verification response:', data);
             
             const isOnline = data.status === 'ok';
             
@@ -171,21 +164,14 @@ export const useReparacion = (
         }));
         
         try {
-            // Llamar a AWS Lambda verify-quality (con FFprobe) o fallback a local
-            const AWS_API_URL = process.env.NEXT_PUBLIC_AWS_VERIFY_API_URL;
-            let apiUrl = '';
-
-            if (AWS_API_URL) {
-                 apiUrl = `${AWS_API_URL}verify-quality?url=${encodeURIComponent(url)}`;
-                 console.log('Verifying (quality/AWS):', url);
-            } else {
-                 console.warn('AWS_API_URL not configured, using local fallback /api/verify_channel');
-                 apiUrl = `/api/verify_channel?url=${encodeURIComponent(url)}`;
-            }
+            // Usar la API de Vercel (/api/verify_channel) - verificación local con análisis de segmentos
+            // Ya no usa AWS Lambda - toda la verificación se hace en Vercel
+            const apiUrl = `/api/verify_channel?url=${encodeURIComponent(url)}`;
+            console.log('Verifying (Vercel API):', url);
             
             console.log('API URL:', apiUrl);
             
-            // Timeout de 35 segundos para dar tiempo al análisis FFprobe
+            // Timeout de 35 segundos para dar tiempo al análisis de segmentos
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 35000);
             
@@ -200,11 +186,11 @@ export const useReparacion = (
             clearTimeout(timeoutId);
             
             if (!response.ok) {
-                console.error('AWS Lambda HTTP error:', response.status, response.statusText);
-                throw new Error(`AWS Lambda error: ${response.status}`);
+                console.error('Verification HTTP error:', response.status, response.statusText);
+                throw new Error(`Verification error: ${response.status}`);
             }
             const data = await response.json();
-            console.log('Lambda quality response:', data);
+            console.log('Verification quality response:', data);
             
             setVerificationInfo(prev => ({ 
                 ...prev, 
