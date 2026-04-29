@@ -43,71 +43,23 @@ function getQualityFromBitrate(bitrate: number): QualityLevel {
 
 /**
  * Detecta calidad analizando patrones en la URL
+ * Este método es el más fiable para streams que no tienen manifest M3U8
  */
 function detectQualityFromURL(url: string): QualityLevel | null {
     const urlLower = url.toLowerCase();
     
-    if (urlLower.match(/\b(4k|2160p?|uhd|ultra)\b/)) return '4K';
-    if (urlLower.match(/\b(1080p?|fhd|fullhd|full.?hd)\b/)) return 'FHD';
-    if (urlLower.match(/\b(720p?|hd)\b/)) return 'HD';
-    if (urlLower.match(/\b(480p?|sd|360p?|240p?)\b/)) return 'SD';
+    // Patrones más específicos primero (evitar falsos positivos)
+    if (urlLower.match(/\b(4k|2160p|uhd|ultra\s*hd)\b/)) return '4K';
+    if (urlLower.match(/\b(1080p|fhd|fullhd|full\s*hd)\b/)) return 'FHD';
+    if (urlLower.match(/\b(720p|hd\s|hd$)\b/)) return 'HD';
+    if (urlLower.match(/\b(480p|sd\s|sd$|360p|240p)\b/)) return 'SD';
     
     return null;
 }
 
 /**
- * Intenta detectar calidad del stream analizando los headers de respuesta
- * Útil para streams que no son M3U8
- */
-async function detectQualityFromHeaders(url: string): Promise<{
-    quality: QualityLevel;
-    bitrate?: number;
-} | null> {
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
-        
-        const response = await fetch(url, {
-            method: 'HEAD',
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                'Accept-Encoding': 'gzip, deflate, br',
-                'Range': 'bytes=0-65535',
-            },
-            signal: controller.signal,
-            redirect: 'follow',
-        });
-        
-        clearTimeout(timeoutId);
-        
-        // Analizar Content-Length para estimar bitrate
-        const contentLength = response.headers.get('content-length');
-        if (contentLength) {
-            const size = parseInt(contentLength);
-            // Si es un chunk grande, podría ser un stream de alta calidad
-            if (size > 5000000) { // > 5MB
-                return { quality: 'FHD', bitrate: size * 8 }; // bits por segundo aprox
-            } else if (size > 2000000) {
-                return { quality: 'HD', bitrate: size * 8 };
-            }
-        }
-        
-        // Analizar Content-Type
-        const contentType = response.headers.get('content-type') || '';
-        if (contentType.includes('video')) {
-            // Si es video pero no podemos determinar más, asumir SD mínimo
-            return { quality: 'SD' };
-        }
-        
-        return null;
-    } catch (error) {
-        return null;
-    }
-}
-
-/**
  * Intenta analizar un stream para detectar su calidad
- * Prueba múltiples métodos: M3U8, headers, URL
+ * Prueba múltiples métodos en orden de fiabilidad
  */
 async function detectStreamQuality(url: string): Promise<{
     quality: QualityLevel;
@@ -115,7 +67,7 @@ async function detectStreamQuality(url: string): Promise<{
     bitrate?: number;
     method: string;
 }> {
-    // 1. Si es M3U8, usar análisis completo
+    // 1. Si es M3U8, usar análisis completo del manifest
     if (url.includes('.m3u8')) {
         const { streams } = await analyzeM3U8MasterPlaylist(url);
         
@@ -148,16 +100,7 @@ async function detectStreamQuality(url: string): Promise<{
         }
     }
     
-    // 2. Intentar detectar por headers
-    const headerQuality = await detectQualityFromHeaders(url);
-    if (headerQuality) {
-        return {
-            ...headerQuality,
-            method: 'headers',
-        };
-    }
-    
-    // 3. Detectar por URL
+    // 2. Detectar por URL (más fiable para streams directos)
     const urlQuality = detectQualityFromURL(url);
     if (urlQuality) {
         return {
@@ -166,7 +109,8 @@ async function detectStreamQuality(url: string): Promise<{
         };
     }
     
-    // 4. Último recurso: intentar descargar un fragmento para analizar
+    // 3. Para streams que no son M3U8 ni tienen calidad en URL
+    // Intentar descargar un fragmento para analizar
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 15000);
@@ -183,26 +127,20 @@ async function detectStreamQuality(url: string): Promise<{
         clearTimeout(timeoutId);
         
         if (response.ok) {
-            const contentLength = response.headers.get('content-length');
             const contentType = response.headers.get('content-type') || '';
             
-            // Si es un stream de video válido, asumir al menos SD
+            // Si es un stream de video válido
             if (contentType.includes('video') || contentType.includes('mpegurl') || contentType.includes('octet-stream')) {
-                // Intentar inferir calidad por tamaño
-                if (contentLength) {
-                    const size = parseInt(contentLength);
-                    if (size > 1000000) {
-                        return { quality: 'HD', method: 'content-analysis' };
-                    }
-                }
-                return { quality: 'SD', method: 'content-type' };
+                // No podemos determinar calidad real sin FFprobe, devolver unknown
+                // en lugar de asumir SD incorrectamente
+                return { quality: 'unknown', method: 'stream-valid' };
             }
         }
     } catch (e) {
         // Fallback falló
     }
     
-    // 5. No se pudo detectar
+    // 4. No se pudo detectar - devolver unknown en lugar de asumir SD
     return { quality: 'unknown', method: 'none' };
 }
 
