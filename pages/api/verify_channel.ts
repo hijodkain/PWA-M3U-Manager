@@ -401,7 +401,7 @@ async function verifyStreamSimple(url: string): Promise<VerificationResponse> {
 
 /**
  * Verificación completa con detección de calidad - similar a AWS Lambda verify-quality
- * Ahora incluye verificación de segmentos reales para mayor precisión
+ * Simplificada: confiar en datos del manifest M3U8 en lugar de verificar segmentos
  */
 async function verifyChannel(url: string): Promise<VerificationResponse> {
     if (!url || url === 'http://--' || url.trim() === '') {
@@ -412,16 +412,17 @@ async function verifyChannel(url: string): Promise<VerificationResponse> {
         };
     }
 
-    // 1. Verificación simple primero (igual que AWS)
+    // 1. Verificación simple primero (HEAD/GET)
     const simpleResult = await verifyStreamSimple(url);
     
     if (simpleResult.status !== 'ok') {
         return simpleResult;
     }
 
-    // 2. Si es M3U8, intentar detectar calidad del manifest Y verificar segmentos reales
+    // 2. Si es M3U8, usar los datos del manifest directamente
+    // (más fiable que intentar verificar segmentos que pueden tener CORS bloqueado)
     if (url.includes('.m3u8')) {
-        const { streams, baseUrl } = await analyzeM3U8MasterPlaylist(url);
+        const { streams } = await analyzeM3U8MasterPlaylist(url);
         
         if (streams.length > 0) {
             // Ordenar streams por calidad (mayor resolución primero)
@@ -431,59 +432,11 @@ async function verifyChannel(url: string): Promise<VerificationResponse> {
                 return heightB - heightA;
             });
 
-            // Intentar verificar el stream de mejor calidad primero
-            for (const stream of sortedStreams) {
-                if (!stream.url) continue;
-
-                // Obtener un segmento real del stream
-                const segmentUrl = await getFirstSegmentUrl(stream.url);
-                
-                if (segmentUrl) {
-                    // Verificar que el segmento es reproducible (como hacía FFprobe)
-                    const segmentResult = await verifyHLSSegment(segmentUrl);
-                    
-                    if (segmentResult.isPlayable) {
-                        // El stream es realmente reproducible
-                        let quality: QualityLevel = 'unknown';
-                        
-                        if (stream.width && stream.height) {
-                            quality = getQualityFromResolution(stream.width, stream.height);
-                            return {
-                                status: 'ok',
-                                quality,
-                                resolution: `${stream.width}x${stream.height}`,
-                                codec: stream.codecs,
-                                bitrate: stream.bandwidth,
-                                message: `Stream online - ${quality} quality verified (segment tested)`,
-                            };
-                        }
-                        
-                        if (stream.bandwidth) {
-                            quality = getQualityFromBitrate(stream.bandwidth);
-                            return {
-                                status: 'ok',
-                                quality,
-                                bitrate: stream.bandwidth,
-                                message: `Stream online - ${quality} quality verified (segment tested)`,
-                            };
-                        }
-                        
-                        // Si tenemos la URL pero no resolución/bitrate, usar la del manifest
-                        return {
-                            status: 'ok',
-                            quality: 'unknown',
-                            message: 'Stream online - verified via segment download',
-                        };
-                    }
-                }
-            }
-
-            // Si no pudimos verificar ningún stream por segmento, usar datos del manifest
             const bestStream = sortedStreams[0];
-            let quality: QualityLevel = 'unknown';
             
-            if (bestStream.width && bestStream.height) {
-                quality = getQualityFromResolution(bestStream.width, bestStream.height);
+            // Usar los datos del manifest directamente
+            if (bestStream.height) {
+                const quality = getQualityFromResolution(bestStream.width || 0, bestStream.height);
                 return {
                     status: 'ok',
                     quality,
@@ -495,7 +448,7 @@ async function verifyChannel(url: string): Promise<VerificationResponse> {
             }
             
             if (bestStream.bandwidth) {
-                quality = getQualityFromBitrate(bestStream.bandwidth);
+                const quality = getQualityFromBitrate(bestStream.bandwidth);
                 return {
                     status: 'ok',
                     quality,
@@ -504,19 +457,24 @@ async function verifyChannel(url: string): Promise<VerificationResponse> {
                 };
             }
         }
+        
+        // M3U8 pero sin variantes detectadas
+        return {
+            status: 'ok',
+            quality: 'unknown',
+            message: 'Stream online - M3U8 without quality variants',
+        };
     }
 
-    // 3. Para streams que no son M3U8, usar detección avanzada
-    const qualityResult = await detectStreamQuality(url);
+    // 3. Para streams que no son M3U8, intentar detectar por URL
+    const urlQuality = detectQualityFromURL(url);
     
     return {
         status: 'ok',
-        quality: qualityResult.quality,
-        resolution: qualityResult.resolution,
-        bitrate: qualityResult.bitrate,
-        message: qualityResult.quality !== 'unknown' 
-            ? `Stream online - ${qualityResult.quality} quality (${qualityResult.method})`
-            : 'Stream online',
+        quality: urlQuality || 'unknown',
+        message: urlQuality 
+            ? `Stream online - ${urlQuality} quality from URL` 
+            : 'Stream online - quality unknown',
     };
 }
 
