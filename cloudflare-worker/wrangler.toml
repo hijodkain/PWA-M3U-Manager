@@ -1,0 +1,14 @@
+name = "pwa-m3u-manager"
+main = "src/verify.js"
+compatibility_date = "2024-01-01"
+
+[env.quality]
+name = "pwa-m3u-manager-quality"
+main = "src/verify-quality.js"
+
+[env.proxy]
+name = "pwa-m3u-manager-proxy"
+main = "src/stream-proxy.js"
+
+[vars]
+ENVIRONMENT = "production"

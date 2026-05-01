@@ -16,6 +16,11 @@ const SAVED_EPG_URLS_KEY = 'saved_epg_urls';
 const CHANNEL_PREFIXES_KEY = 'channel_prefixes';
 const CHANNEL_SUFFIXES_KEY = 'channel_suffixes';
 
+// Cloudflare Worker settings keys
+const CF_VERIFY_API_URL_KEY = 'cf_verify_api_url';
+const CF_PROXY_API_URL_KEY = 'cf_proxy_api_url';
+const USE_CF_WORKER_KEY = 'use_cf_worker';
+
 // Prefijos y sufijos por defecto
 const DEFAULT_PREFIXES = [
     // Prefijos con calidad y región (más específicos primero)
@@ -38,6 +43,11 @@ export const useSettings = () => {
     const [savedEpgUrls, setSavedEpgUrls] = useState<SavedUrl[]>([]);
     const [channelPrefixes, setChannelPrefixes] = useState<string[]>(DEFAULT_PREFIXES);
     const [channelSuffixes, setChannelSuffixes] = useState<string[]>(DEFAULT_SUFFIXES);
+    
+    // Cloudflare Worker settings
+    const [cfVerifyApiUrl, setCfVerifyApiUrl] = useState('');
+    const [cfProxyApiUrl, setCfProxyApiUrl] = useState('');
+    const [useCfWorker, setUseCfWorker] = useState(true);
 
     useEffect(() => {
         try {
@@ -63,6 +73,11 @@ export const useSettings = () => {
             if (savedSuffixesJson) {
                 setChannelSuffixes(JSON.parse(savedSuffixesJson));
             }
+
+            // Cargar configuración de Cloudflare Worker
+            setCfVerifyApiUrl(getStorageItem(CF_VERIFY_API_URL_KEY) || '');
+            setCfProxyApiUrl(getStorageItem(CF_PROXY_API_URL_KEY) || '');
+            setUseCfWorker(getStorageItem(USE_CF_WORKER_KEY) !== 'false');
         } catch (error) {
             console.error("Error loading settings from localStorage", error);
         }
@@ -188,6 +203,20 @@ export const useSettings = () => {
         }
     }, [savedEpgUrls]);
 
+    // Cloudflare Worker settings functions
+    const saveCfSettings = useCallback((verifyUrl: string, proxyUrl: string, useCf: boolean) => {
+        try {
+            setStorageItem(CF_VERIFY_API_URL_KEY, verifyUrl);
+            setStorageItem(CF_PROXY_API_URL_KEY, proxyUrl);
+            setStorageItem(USE_CF_WORKER_KEY, String(useCf));
+            setCfVerifyApiUrl(verifyUrl);
+            setCfProxyApiUrl(proxyUrl);
+            setUseCfWorker(useCf);
+        } catch (error) {
+            console.error("Error saving Cloudflare settings to localStorage", error);
+        }
+    }, []);
+
     return {
         dropboxAppKey,
         dropboxRefreshToken,
@@ -205,5 +234,10 @@ export const useSettings = () => {
         updateChannelPrefixes,
         updateChannelSuffixes,
         resetChannelPrefixesAndSuffixes,
+        // Cloudflare Worker settings
+        cfVerifyApiUrl,
+        cfProxyApiUrl,
+        useCfWorker,
+        saveCfSettings,
     };
 };

@@ -1,0 +1,28 @@
+{
+  "name": "pwa-m3u-manager-cloudflare",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cloudflare Workers para verificación y proxy de streams IPTV",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "deploy:verify": "wrangler deploy --env production",
+    "deploy:quality": "wrangler deploy --env quality",
+    "deploy:proxy": "wrangler deploy --env proxy",
+    "dev": "wrangler dev",
+    "dev:verify": "wrangler dev --env production",
+    "dev:quality": "wrangler dev --env quality",
+    "dev:proxy": "wrangler dev --env proxy"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  },
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "iptv",
+    "m3u",
+    "streaming"
+  ],
+  "author": "",
+  "license": "MIT"
+}

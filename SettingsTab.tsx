@@ -27,7 +27,7 @@ const generateCodeChallenge = async (verifier: string) => {
         .replace(/=/g, '');
 };
 
-type SettingsSubTab = 'dropbox' | 'epg' | 'filters';
+type SettingsSubTab = 'dropbox' | 'epg' | 'filters' | 'verification';
 
 const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
     const {
@@ -43,12 +43,22 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
         updateChannelPrefixes,
         updateChannelSuffixes,
         resetChannelPrefixesAndSuffixes,
+        // Cloudflare Worker settings
+        cfVerifyApiUrl,
+        cfProxyApiUrl,
+        useCfWorker,
+        saveCfSettings,
     } = settingsHook;
 
     const [activeSubTab, setActiveSubTab] = useState<SettingsSubTab>('dropbox');
     const [appKey, setAppKey] = useState(dropboxAppKey);
     const [newEpgUrl, setNewEpgUrl] = useState('');
     const [newEpgName, setNewEpgName] = useState('');
+    
+    // Cloudflare Worker local state
+    const [localCfVerifyUrl, setLocalCfVerifyUrl] = useState(cfVerifyApiUrl);
+    const [localCfProxyUrl, setLocalCfProxyUrl] = useState(cfProxyApiUrl);
+    const [localUseCf, setLocalUseCf] = useState(useCfWorker);
 
     const SUGGESTED_EPGS = [
         { name: 'David_DobleM', url: 'https://raw.githubusercontent.com/davidmuma/EPG_dobleM/master/guiaiptv.xml' },
@@ -68,6 +78,13 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
         setLocalPrefixes(channelPrefixes.join(', '));
         setLocalSuffixes(channelSuffixes.join(', '));
     }, [channelPrefixes, channelSuffixes]);
+
+    // Sincronizar estados de Cloudflare Worker
+    useEffect(() => {
+        setLocalCfVerifyUrl(cfVerifyApiUrl);
+        setLocalCfProxyUrl(cfProxyApiUrl);
+        setLocalUseCf(useCfWorker);
+    }, [cfVerifyApiUrl, cfProxyApiUrl, useCfWorker]);
 
     useEffect(() => {
         const targetSubTab = getStorageItem('settings_target_subtab');
@@ -148,6 +165,12 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
                     active={activeSubTab === 'filters'} 
                     onClick={() => setActiveSubTab('filters')} 
                     tooltip="Filtros Smart Search"
+                />
+                <SidebarButton 
+                    icon={<Zap size={24} />} 
+                    active={activeSubTab === 'verification'} 
+                    onClick={() => setActiveSubTab('verification')} 
+                    tooltip="Verificación"
                 />
             </div>
 
@@ -410,6 +433,94 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
                                 >
                                     Restaurar
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* 4. VERIFICACIÓN (Cloudflare Workers) */}
+                {activeSubTab === 'verification' && (
+                    <div id="settings-verificacion" className="max-w-2xl mx-auto space-y-6 animate-fadeIn">
+                        <div className="mb-8 border-b border-gray-800 pb-4">
+                            <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
+                                <Zap className="text-yellow-500" /> Configuración de Verificación
+                            </h2>
+                            <p className="text-gray-400">Usa Cloudflare Workers para verificar canales sin costos de servidor.</p>
+                        </div>
+
+                        <div className="bg-gray-800 rounded-xl p-8 border border-gray-700 shadow-xl space-y-6">
+                            {/* Toggle para usar Cloudflare */}
+                            <div className="flex items-center justify-between p-4 bg-gray-900 rounded-lg">
+                                <div>
+                                    <h3 className="text-white font-medium">Usar Cloudflare Workers</h3>
+                                    <p className="text-gray-400 text-sm">Gratis hasta 100,000 peticiones/día</p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={localUseCf}
+                                        onChange={(e) => setLocalUseCf(e.target.checked)}
+                                        className="sr-only peer"
+                                    />
+                                    <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+
+                            {/* URLs de Cloudflare Worker */}
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                                        URL del Worker de Verificación
+                                    </label>
+                                    <input 
+                                        type="text"
+                                        value={localCfVerifyUrl}
+                                        onChange={(e) => setLocalCfVerifyUrl(e.target.value)}
+                                        placeholder="https://tu-worker.workers.dev/verify"
+                                        className="w-full bg-gray-900 border border-gray-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                    />
+                                    <p className="text-gray-500 text-xs mt-1">
+                                        Endpoint de verificación simple (sin análisis de calidad)
+                                    </p>
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                                        URL del Proxy de Streams
+                                    </label>
+                                    <input 
+                                        type="text"
+                                        value={localCfProxyUrl}
+                                        onChange={(e) => setLocalCfProxyUrl(e.target.value)}
+                                        placeholder="https://tu-worker.workers.dev/proxy"
+                                        className="w-full bg-gray-900 border border-gray-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                    />
+                                    <p className="text-gray-500 text-xs mt-1">
+                                        Proxy para reproducir streams con CORS bloqueado
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Botón guardar */}
+                            <button
+                                onClick={() => {
+                                    saveCfSettings(localCfVerifyUrl, localCfProxyUrl, localUseCf);
+                                    alert('Configuración guardada correctamente');
+                                }}
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
+                            >
+                                Guardar Configuración
+                            </button>
+
+                            {/* Info adicional */}
+                            <div className="p-4 bg-blue-900/20 border border-blue-900/50 rounded-lg">
+                                <h4 className="text-blue-400 font-medium mb-2">¿Cómo obtener las URLs?</h4>
+                                <ol className="text-gray-400 text-sm space-y-1 list-decimal list-inside">
+                                    <li>Crea una cuenta en <a href="https://dash.cloudflare.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">Cloudflare</a></li>
+                                    <li>Instala Wrangler: <code className="bg-gray-800 px-1 rounded">npm install -g wrangler</code></li>
+                                    <li>Ejecuta <code className="bg-gray-800 px-1 rounded">wrangler login</code></li>
+                                    <li>Despliega los workers desde la carpeta <code className="bg-gray-800 px-1 rounded">cloudflare-worker/</code></li>
+                                </ol>
                             </div>
                         </div>
                     </div>
