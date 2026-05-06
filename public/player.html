@@ -2,20 +2,31 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Reproductor de Stream</title>
   <style>
-    body, html {
-      margin: 0; padding: 0;
-      width: 100%; height: 100%;
-      background: #000; overflow: hidden;
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      overflow: hidden;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
     #player-container {
-      position: fixed; top: 0; left: 0;
-      width: 100vw; height: 100vh;
-      z-index: 9999; background: #000;
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 9999;
+      background: #000;
     }
-    /* Rotación para iOS en fullscreen */
+    #video {
+      width: 100%;
+      height: 100%;
+      background: #000;
+      object-fit: contain;
+    }
     .ios-landscape {
       transform: rotate(90deg);
       transform-origin: center center;
@@ -46,25 +57,49 @@
       color: #818cf8;
       word-break: break-all;
     }
+    #status-badge {
+      position: fixed;
+      top: 1rem;
+      left: 1rem;
+      z-index: 15000;
+      display: none;
+      padding: 0.4rem 0.7rem;
+      border-radius: 999px;
+      background: rgba(17, 24, 39, 0.82);
+      color: #e5e7eb;
+      font-size: 0.8rem;
+      letter-spacing: 0.01em;
+      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(10px);
+    }
     * { -webkit-tap-highlight-color: transparent; outline: none; }
   </style>
 </head>
 <body>
-  <div id="player-container"></div>
+  <div id="player-container">
+    <video id="video" playsinline webkit-playsinline controls autoplay></video>
+  </div>
+  <div id="status-badge"></div>
   <div id="error-message"></div>
 
-  <!-- Clappr siempre se carga -->
-  <script src="https://cdn.jsdelivr.net/gh/clappr/clappr@latest/dist/clappr.min.js"></script>
-  <!-- DashShakaPlayback se carga dinámicamente SOLO para streams .mpd -->
-  <!-- ver lógica más abajo -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/shaka-player@latest/dist/shaka-player.compiled.js"></script>
 
   <script>
-    // Leer la URL del stream desde el parámetro ?url=
     const params = new URLSearchParams(window.location.search);
     const streamUrl = params.get('url');
+    const video = document.getElementById('video');
+    const playerContainer = document.getElementById('player-container');
+    const errorDiv = document.getElementById('error-message');
+    const statusBadge = document.getElementById('status-badge');
+
+    let hlsInstance = null;
+    let shakaInstance = null;
+    let wakeLockSentinel = null;
+    let yaReintento = false;
+    let lastTap = 0;
 
     if (!streamUrl) {
-      const errorDiv = document.getElementById('error-message');
       errorDiv.style.display = 'block';
       errorDiv.innerHTML = '<strong>No se proporcionó URL de stream.</strong><br>Usa: <code>/player.html?url=https://tu-stream.m3u8</code>';
     } else {
@@ -72,141 +107,275 @@
       const urlPath = streamUrl.split('?')[0].toLowerCase();
       const isDash = urlPath.endsWith('.mpd');
 
-      let playerInstance = null;
-      let yaReintento = false;
+      function setStatus(message) {
+        if (!message) {
+          statusBadge.style.display = 'none';
+          statusBadge.textContent = '';
+          return;
+        }
+        statusBadge.textContent = message;
+        statusBadge.style.display = 'block';
+      }
 
-      function crearPlayer(usarProxy) {
-        if (playerInstance) {
-          try { playerInstance.destroy(); } catch (e) {}
-          playerInstance = null;
-          document.getElementById('player-container').innerHTML = '';
+      function showFinalError() {
+        setStatus('');
+        errorDiv.style.display = 'block';
+        errorDiv.innerHTML =
+          '<strong>No se pudo reproducir el stream.</strong><br>' +
+          'El servidor puede estar offline, geo-restringido o no ser compatible con la reproducción web.<br><br>' +
+          '<span style="font-size:0.85rem;color:#9ca3af;">URL: <a href="' + streamUrl + '" target="_blank" rel="noopener noreferrer">' + streamUrl + '</a></span>';
+      }
+
+      async function activarWakeLock() {
+        if (!('wakeLock' in navigator)) return;
+        try {
+          wakeLockSentinel = await navigator.wakeLock.request('screen');
+        } catch (error) {
+        }
+      }
+
+      async function liberarWakeLock() {
+        if (!wakeLockSentinel) return;
+        try {
+          await wakeLockSentinel.release();
+        } catch (error) {
+        }
+        wakeLockSentinel = null;
+      }
+
+      function cleanupPlayers() {
+        if (hlsInstance) {
+          try { hlsInstance.destroy(); } catch (error) {}
+          hlsInstance = null;
+        }
+        if (shakaInstance) {
+          try { shakaInstance.destroy(); } catch (error) {}
+          shakaInstance = null;
+        }
+        video.pause();
+        video.removeAttribute('src');
+        video.load();
+      }
+
+      async function handleFullscreenChange() {
+        const isFullscreen = !!document.fullscreenElement;
+        if (isFullscreen) {
+          if (!isIOS && screen.orientation && screen.orientation.lock) {
+            try { await screen.orientation.lock('landscape'); } catch (error) {}
+          } else if (isIOS) {
+            playerContainer.classList.add('ios-landscape');
+          }
+        } else {
+          if (!isIOS && screen.orientation && screen.orientation.unlock) {
+            try { screen.orientation.unlock(); } catch (error) {}
+          }
+          if (isIOS) {
+            playerContainer.classList.remove('ios-landscape');
+          }
+        }
+      }
+
+      async function toggleFullscreen() {
+        try {
+          if (document.fullscreenElement) {
+            await document.exitFullscreen();
+          } else if (playerContainer.requestFullscreen) {
+            await playerContainer.requestFullscreen();
+          }
+        } catch (error) {
+        }
+      }
+
+      function getPlaybackUrl(usarProxy) {
+        return usarProxy ? '/api/proxy?url=' + encodeURIComponent(streamUrl) : streamUrl;
+      }
+
+      function maybeRetryWithProxy() {
+        if (isDash || yaReintento) {
+          showFinalError();
+          return false;
         }
 
-        const cfg = {
-          parentId: '#player-container',
-          // DashShakaPlayback solo se incluye si está cargado Y es un stream DASH.
-          // Para HLS y streams directos: plugins vacío → Clappr usa HLS.js nativo.
-          // IMPORTANTE: no pasar DashShakaPlayback aquí para HLS aunque esté loaded,
-          // porque se auto-registra globalmente y puede interceptar .m3u8.
-          plugins: (isDash && typeof DashShakaPlayback !== 'undefined') ? [DashShakaPlayback] : [],
-          // Cuando usarProxy=true el proxy actúa como fuente. El proxy detecta que es
-          // un manifiesto HLS y reescribe todas las URLs internas para que los segmentos
-          // también pasen por él → HLS.js solo ve URLs HTTPS, sin Mixed Content.
-          source: usarProxy ? '/api/proxy?url=' + encodeURIComponent(streamUrl) : streamUrl,
-          autoPlay: true,
-          width: '100vw',
-          height: '100vh',
-          mute: false,
-          disableVideoTagContextMenu: true
+        yaReintento = true;
+        setStatus('Reintentando con proxy CORS...');
+        errorDiv.style.display = 'none';
+        setTimeout(function () {
+          initPlayback(true);
+        }, 800);
+        return true;
+      }
+
+      function bindCommonVideoEvents() {
+        video.onplay = function () {
+          setStatus('');
+          activarWakeLock();
         };
+
+        video.onpause = function () {
+          liberarWakeLock();
+        };
+
+        video.onwaiting = function () {
+          setStatus('Cargando stream...');
+        };
+
+        video.onplaying = function () {
+          setStatus('');
+        };
+
+        video.onerror = function () {
+          maybeRetryWithProxy();
+        };
+      }
+
+      async function initDash(source) {
+        if (!window.shaka || !window.shaka.Player) {
+          errorDiv.style.display = 'block';
+          errorDiv.innerHTML = '<strong>Error al cargar el motor DASH.</strong>';
+          return;
+        }
+
+        window.shaka.polyfill.installAll();
+
+        if (!window.shaka.Player.isBrowserSupported()) {
+          errorDiv.style.display = 'block';
+          errorDiv.innerHTML = '<strong>Este navegador no soporta reproducción DASH.</strong>';
+          return;
+        }
+
+        shakaInstance = new window.shaka.Player(video);
+        shakaInstance.configure({
+          preferredAudioLanguage: 'es',
+          streaming: {
+            lowLatencyMode: true,
+            jumpLargeGaps: true,
+          },
+        });
+
+        shakaInstance.addEventListener('error', function () {
+          showFinalError();
+        });
+
+        try {
+          await shakaInstance.load(source);
+          setStatus('');
+          await video.play();
+        } catch (error) {
+          showFinalError();
+        }
+      }
+
+      async function initNativeHls(source) {
+        video.src = source;
+        try {
+          await video.play();
+          setStatus('');
+        } catch (error) {
+        }
+      }
+
+      async function initHlsJs(source) {
+        if (!window.Hls || !window.Hls.isSupported()) {
+          showFinalError();
+          return;
+        }
+
+        hlsInstance = new window.Hls({
+          enableWorker: true,
+          lowLatencyMode: false,
+          backBufferLength: 90,
+          maxBufferLength: 30,
+          maxMaxBufferLength: 60,
+          xhrSetup: function (xhr) {
+            xhr.withCredentials = false;
+          },
+        });
+
+        hlsInstance.attachMedia(video);
+        hlsInstance.on(window.Hls.Events.MEDIA_ATTACHED, function () {
+          hlsInstance.loadSource(source);
+        });
+
+        hlsInstance.on(window.Hls.Events.MANIFEST_PARSED, async function () {
+          setStatus('');
+          try {
+            await video.play();
+          } catch (error) {
+          }
+        });
+
+        hlsInstance.on(window.Hls.Events.ERROR, function (_, data) {
+          if (!data || !data.fatal) return;
+
+          switch (data.type) {
+            case window.Hls.ErrorTypes.NETWORK_ERROR:
+              if (!maybeRetryWithProxy()) {
+                showFinalError();
+              }
+              break;
+            case window.Hls.ErrorTypes.MEDIA_ERROR:
+              try {
+                hlsInstance.recoverMediaError();
+              } catch (error) {
+                if (!maybeRetryWithProxy()) {
+                  showFinalError();
+                }
+              }
+              break;
+            default:
+              if (!maybeRetryWithProxy()) {
+                showFinalError();
+              }
+              break;
+          }
+        });
+      }
+
+      async function initPlayback(usarProxy) {
+        cleanupPlayers();
+        errorDiv.style.display = 'none';
+        setStatus('Inicializando reproductor...');
+
+        const source = getPlaybackUrl(usarProxy);
 
         if (isDash) {
-          cfg.shakaConfiguration = {
-            preferredAudioLanguage: 'es',
-            streaming: { lowLatencyMode: true, jumpLargeGaps: true }
-          };
+          await initDash(source);
+          return;
         }
 
-        playerInstance = new Clappr.Player(cfg);
-
-        // ── Gestos táctiles ──────────────────────────────────────────────
-        playerInstance.on(Clappr.Events.PLAYER_READY, function () {
-          const video = document.querySelector('#player-container video');
-          if (!video) return;
-          let lastTap = 0;
-          video.addEventListener('touchend', function (e) {
-            const now = Date.now();
-            const diff = now - lastTap;
-            if (diff < 300 && diff > 0) {
-              if (playerInstance.core.isFullscreen()) {
-                playerInstance.core.exitFullscreen();
-              } else {
-                playerInstance.core.toggleFullscreen();
-              }
-              e.preventDefault();
-            }
-            lastTap = now;
-          });
-          video.addEventListener('click', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-          }, true);
-        });
-
-        // ── Orientación en fullscreen ────────────────────────────────────
-        playerInstance.on('fullscreen', async function (isFullscreen) {
-          const contenedor = document.getElementById('player-container');
-          if (isFullscreen) {
-            if (!isIOS && screen.orientation?.lock) {
-              try { await screen.orientation.lock('landscape'); } catch (e) {}
-            } else if (isIOS) {
-              contenedor.classList.add('ios-landscape');
-            }
-          } else {
-            if (!isIOS && screen.orientation?.unlock) {
-              try { screen.orientation.unlock(); } catch (e) {}
-            }
-            if (isIOS) contenedor.classList.remove('ios-landscape');
-          }
-        });
-
-        // ── WakeLock ─────────────────────────────────────────────────────
-        async function activarWakeLock() {
-          if ('wakeLock' in navigator) {
-            try { await navigator.wakeLock.request('screen'); } catch (e) {}
-          }
+        if (video.canPlayType('application/vnd.apple.mpegurl')) {
+          await initNativeHls(source);
+          return;
         }
-        playerInstance.on('play', () => activarWakeLock());
-        document.addEventListener('visibilitychange', () => {
-          if (document.visibilityState === 'visible') activarWakeLock();
-        });
 
-        // ── Manejo de errores con reintento vía proxy ────────────────────
-        playerInstance.on(Clappr.Events.PLAYER_ERROR, function () {
-          if (!isDash && !yaReintento) {
-            yaReintento = true;
-            const errorDiv = document.getElementById('error-message');
-            errorDiv.style.display = 'block';
-            errorDiv.innerHTML = '⏳ Reintentando con proxy CORS…';
-            setTimeout(function () {
-              errorDiv.style.display = 'none';
-              crearPlayer(true);
-            }, 800);
-          } else {
-            const errorDiv = document.getElementById('error-message');
-            errorDiv.style.display = 'block';
-            errorDiv.innerHTML =
-              '<strong>No se pudo reproducir el stream.</strong><br>' +
-              'El servidor puede estar offline, geo-restringido o no ser compatible con la reproducción web.<br><br>' +
-              '<span style="font-size:0.85rem;color:#9ca3af;">URL: <a href="' + streamUrl + '" target="_blank" rel="noopener noreferrer">' + streamUrl + '</a></span>';
-          }
-        });
+        await initHlsJs(source);
       }
 
-      // Decisión de carga de scripts:
-      // - Para .mpd: cargar DashShakaPlayback dinámicamente y luego lanzar player
-      // - Para HLS/IPTV: lanzar player directamente SIN cargar Shaka, para que
-      //   Clappr use su HLS.js interno y no interfiera DashShakaPlayback
-      //
-      // Mixed Content: si el stream es http:// y la página corre en https://,
-      // el navegador bloquea la carga directa desde el iframe. En ese caso,
-      // arrancamos directamente con proxy (el servidor de Vercel no tiene esta
-      // restricción y puede hacer fetch de URLs http:// sin problemas).
+      bindCommonVideoEvents();
+
+      video.addEventListener('touchend', function (event) {
+        const now = Date.now();
+        const diff = now - lastTap;
+        if (diff < 300 && diff > 0) {
+          toggleFullscreen();
+          event.preventDefault();
+        }
+        lastTap = now;
+      });
+
+      document.addEventListener('fullscreenchange', handleFullscreenChange);
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible' && !video.paused) {
+          activarWakeLock();
+        }
+      });
+      window.addEventListener('beforeunload', function () {
+        liberarWakeLock();
+        cleanupPlayers();
+      });
+
       const esMixedContent = streamUrl.startsWith('http://') && window.location.protocol === 'https:';
-
-      if (isDash) {
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/gh/clappr/dash-shaka-playback@latest/dist/dash-shaka-playback.min.js';
-        script.onload = function () { crearPlayer(false); };
-        script.onerror = function () {
-          document.getElementById('error-message').style.display = 'block';
-          document.getElementById('error-message').innerHTML = '<strong>Error al cargar el motor DASH.</strong>';
-        };
-        document.head.appendChild(script);
-      } else {
-        // Si es mixed content, ir directo al proxy sin esperar el fallo
-        crearPlayer(esMixedContent);
-      }
+      initPlayback(esMixedContent);
     }
   </script>
 </body>
