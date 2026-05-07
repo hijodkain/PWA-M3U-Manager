@@ -92,7 +92,7 @@ const handler = async (req, res) => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000);
         const upstreamUrl = new URL(fetchUrl);
-        const upstreamHeaders = {
+        const upstreamHeaders: Record<string, string> = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Accept': '*/*',
             'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
