@@ -100,6 +100,7 @@
     let lastTap = 0;
     let activeEngine = null;
     let isResettingPlayer = false;
+    let currentUsingProxy = false;
 
     if (!streamUrl) {
       errorDiv.style.display = 'block';
@@ -122,6 +123,20 @@
       function getErrorDetailHtml(detail) {
         if (!detail) return '';
         return '<br><br><span style="font-size:0.85rem;color:#fca5a5;">Detalle técnico: ' + detail + '</span>';
+      }
+
+      function getHlsErrorDetail(data) {
+        const parts = [data && data.type, data && data.details].filter(Boolean);
+
+        if (data && data.response && data.response.code) {
+          parts.push('HTTP ' + data.response.code);
+        }
+
+        if (data && data.response && data.response.text) {
+          parts.push(String(data.response.text).slice(0, 160));
+        }
+
+        return parts.join(' / ');
       }
 
       function showFinalError(detail) {
@@ -201,9 +216,9 @@
         return usarProxy ? '/api/proxy?url=' + encodeURIComponent(streamUrl) : streamUrl;
       }
 
-      function maybeRetryWithProxy() {
-        if (isDash || yaReintento) {
-          showFinalError('Fallo tras agotar el reintento por proxy');
+      function maybeRetryWithProxy(detail) {
+        if (isDash || yaReintento || currentUsingProxy) {
+          showFinalError(detail || 'Fallo tras agotar el reintento por proxy');
           return false;
         }
 
@@ -241,7 +256,7 @@
             return;
           }
 
-          maybeRetryWithProxy();
+          maybeRetryWithProxy('Error nativo del elemento de vídeo');
         };
       }
 
@@ -345,7 +360,7 @@
         hlsInstance.on(window.Hls.Events.ERROR, function (_, data) {
           if (!data || !data.fatal) return;
 
-          const detail = [data.type, data.details].filter(Boolean).join(' / ');
+          const detail = getHlsErrorDetail(data);
 
           switch (data.type) {
             case window.Hls.ErrorTypes.NETWORK_ERROR:
@@ -357,13 +372,13 @@
               try {
                 hlsInstance.recoverMediaError();
               } catch (error) {
-                if (!maybeRetryWithProxy()) {
+                if (!maybeRetryWithProxy(detail)) {
                   showFinalError(detail);
                 }
               }
               break;
             default:
-              if (!maybeRetryWithProxy()) {
+              if (!maybeRetryWithProxy(detail)) {
                 showFinalError(detail);
               }
               break;
@@ -373,6 +388,7 @@
 
       async function initPlayback(usarProxy) {
         cleanupPlayers();
+        currentUsingProxy = usarProxy;
         errorDiv.style.display = 'none';
         setStatus('Inicializando reproductor...');
 
