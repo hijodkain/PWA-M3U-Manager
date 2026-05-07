@@ -216,6 +216,36 @@
         return usarProxy ? '/api/proxy?url=' + encodeURIComponent(streamUrl) : streamUrl;
       }
 
+      async function probeSource(source) {
+        try {
+          const response = await fetch(source, {
+            method: 'GET',
+            headers: { 'Range': 'bytes=0-2047' },
+          });
+
+          const contentType = response.headers.get('content-type') || '';
+          const bodyPreview = await response.text();
+          const normalizedPreview = bodyPreview.trimStart().slice(0, 160);
+          const looksLikeHtml = normalizedPreview.startsWith('<html') || normalizedPreview.startsWith('<!DOCTYPE html');
+
+          return {
+            ok: response.ok,
+            status: response.status,
+            contentType,
+            bodyPreview: normalizedPreview,
+            looksLikeHtml,
+          };
+        } catch (error) {
+          return {
+            ok: false,
+            status: 0,
+            contentType: '',
+            bodyPreview: error && error.message ? error.message : 'Error de red al inspeccionar la fuente',
+            looksLikeHtml: false,
+          };
+        }
+      }
+
       function maybeRetryWithProxy(detail) {
         if (isDash || yaReintento || currentUsingProxy) {
           showFinalError(detail || 'Fallo tras agotar el reintento por proxy');
@@ -303,6 +333,18 @@
       }
 
       async function initNativeHls(source) {
+        if (currentUsingProxy) {
+          const probe = await probeSource(source);
+          if (!probe.ok || probe.looksLikeHtml) {
+            showFinalError(
+              probe.status
+                ? 'HTTP ' + probe.status + (probe.looksLikeHtml ? ' / Respuesta HTML no reproducible' : '')
+                : probe.bodyPreview
+            );
+            return;
+          }
+        }
+
         activeEngine = 'native';
         video.src = source;
         try {
@@ -313,6 +355,18 @@
       }
 
       async function initDirectMedia(source) {
+        if (currentUsingProxy) {
+          const probe = await probeSource(source);
+          if (!probe.ok || probe.looksLikeHtml) {
+            showFinalError(
+              probe.status
+                ? 'HTTP ' + probe.status + (probe.looksLikeHtml ? ' / Respuesta HTML no reproducible' : '')
+                : probe.bodyPreview
+            );
+            return;
+          }
+        }
+
         activeEngine = 'native';
         video.src = source;
         try {
