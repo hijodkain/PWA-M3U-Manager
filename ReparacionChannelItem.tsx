@@ -32,6 +32,7 @@ interface ReparacionChannelItemProps {
         selectionCheckbox: boolean;
     };
     className?: string; // Add className prop
+    isPendingReview?: boolean;
 }
 
 const MarqueeText: React.FC<{ text: string; className?: string; isSelected?: boolean; animateWhenSelected?: boolean }> = ({ text, className = "", isSelected = false, animateWhenSelected = true }) => {
@@ -108,6 +109,7 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
     animateMarqueeWhenSelected = true,
     visibleFields,
     className = "", // Destructure className
+    isPendingReview = false,
 }) => {
     const fields = visibleFields ?? {
         logo: true,
@@ -182,7 +184,7 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
             style={style}
             onClick={onBodyClick}
             className={`group/item flex items-center gap-1.5 ${isCompact ? 'p-1.5' : 'p-2'} rounded-lg border-2 ${
-                isSelected ? 'border-blue-500 bg-blue-900/50' : 'border-transparent'
+                isSelected ? 'border-blue-500 bg-blue-900/50' : isPendingReview ? 'border-orange-500/70 bg-orange-900/20' : 'border-transparent'
             } cursor-pointer hover:bg-gray-700 ${isCompact ? 'min-h-[46px]' : 'min-h-[60px]'} transition-colors relative ${className}`}
         >
             {fields.logo && (
@@ -235,6 +237,12 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
             </div>
             
             <div className={`flex items-center ${isCompact ? 'gap-1' : 'gap-2'} flex-shrink-0`}>
+                {/* Badge revisión manual pendiente */}
+                {isPendingReview && !isSelected && (
+                    <span className="text-[10px] bg-orange-500/80 text-white px-1 py-0.5 rounded font-bold shrink-0" title="Sin coincidencia en la lista reparadora – revisión manual pendiente">
+                        ⚠
+                    </span>
+                )}
                 {/* Quality Badge */}
                 {!isCompact && (
                     <div className="w-12 flex justify-center">
