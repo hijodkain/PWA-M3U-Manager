@@ -22,6 +22,22 @@ function esContenidoDeTexto(contentType, url) {
            esRutaDeManifiesto(url);
 }
 
+function detectarManifiestoPorContenido(buffer) {
+    const preview = Buffer.from(buffer)
+        .toString('utf8', 0, Math.min(buffer.byteLength, 4096))
+        .trimStart();
+
+    const esHls = preview.startsWith('#EXTM3U') && esManifiestoHLS(preview);
+    const esDash = preview.startsWith('<MPD') || preview.startsWith('<?xml') && preview.includes('<MPD');
+
+    return {
+        esTexto: esHls || esDash,
+        esHls,
+        esDash,
+        preview,
+    };
+}
+
 /**
  * Reescribe las URLs internas de un manifiesto HLS para que los segmentos
  * y sub-playlists pasen también por este proxy.
@@ -128,21 +144,30 @@ const handler = async (req, res) => {
         if (acceptRanges) res.setHeader('Accept-Ranges', acceptRanges);
         if (contentRange) res.setHeader('Content-Range', contentRange);
 
+        const body = await response.arrayBuffer();
+        const sniff = detectarManifiestoPorContenido(body);
+
         // Distinguir entre texto (manifiestos M3U8/MPD) y binario (segmentos .ts, .aac…)
-        // para no corromper el contenido al hacer text()
-        const isText = esContenidoDeTexto(contentType, fetchUrl);
+        // para no corromper el contenido al hacer text(). Algunos paneles IPTV sirven
+        // los manifiestos como application/octet-stream y sin extensión.
+        const isText = esContenidoDeTexto(contentType, fetchUrl) || sniff.esTexto;
 
         if (isText) {
-            const data = await response.text();
+            const data = Buffer.from(body).toString('utf8');
             // URL final tras redirects (necesaria para resolver URLs relativas en el manifiesto)
             const finalUrl = response.url || fetchUrl;
             // Solo reescribir si es un manifiesto HLS de stream, nunca listas de canales M3U
             const rewritten = esManifiestoHLS(data) ? rewriteHlsManifest(data, finalUrl) : data;
+            if (sniff.esHls && !contentType.includes('mpegurl')) {
+                res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+            }
+            if (sniff.esDash && !contentType.includes('dash+xml')) {
+                res.setHeader('Content-Type', 'application/dash+xml');
+            }
             res.status(response.status).send(rewritten);
         } else {
-            const buffer = await response.arrayBuffer();
             if (contentLength) res.setHeader('Content-Length', contentLength);
-            res.status(response.status).send(Buffer.from(buffer));
+            res.status(response.status).send(Buffer.from(body));
         }
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
