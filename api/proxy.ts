@@ -22,6 +22,19 @@ function esContenidoDeTexto(contentType, url) {
            esRutaDeManifiesto(url);
 }
 
+function getManifestTargetUrl(originalRef, resolvedUrl) {
+    const trimmedRef = originalRef.trim();
+
+    // Si el manifiesto ya apunta a una URL HTTPS absoluta, dejarla directa.
+    // Esto evita proxificar streams seguros que ya exponen CORS y que pueden
+    // fallar al pasar por el servidor intermedio.
+    if (/^https:\/\//i.test(trimmedRef)) {
+        return resolvedUrl;
+    }
+
+    return '/api/proxy?url=' + encodeURIComponent(resolvedUrl);
+}
+
 function detectarManifiestoPorContenido(buffer) {
     const preview = Buffer.from(buffer)
         .toString('utf8', 0, Math.min(buffer.byteLength, 4096))
@@ -57,7 +70,7 @@ function rewriteHlsManifest(content, baseUrl) {
             return line.replace(/URI="([^"]+)"/g, (_, uri) => {
                 try {
                     const abs = new URL(uri, base).toString();
-                    return 'URI="/api/proxy?url=' + encodeURIComponent(abs) + '"';
+                    return 'URI="' + getManifestTargetUrl(uri, abs) + '"';
                 } catch { return 'URI="' + uri + '"'; }
             });
         }
@@ -66,7 +79,7 @@ function rewriteHlsManifest(content, baseUrl) {
         if (!trimmed.startsWith('#')) {
             try {
                 const abs = new URL(trimmed, base).toString();
-                return '/api/proxy?url=' + encodeURIComponent(abs);
+                return getManifestTargetUrl(trimmed, abs);
             } catch { return line; }
         }
 
