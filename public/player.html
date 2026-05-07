@@ -98,6 +98,8 @@
     let wakeLockSentinel = null;
     let yaReintento = false;
     let lastTap = 0;
+    let activeEngine = null;
+    let isResettingPlayer = false;
 
     if (!streamUrl) {
       errorDiv.style.display = 'block';
@@ -117,12 +119,18 @@
         statusBadge.style.display = 'block';
       }
 
-      function showFinalError() {
+      function getErrorDetailHtml(detail) {
+        if (!detail) return '';
+        return '<br><br><span style="font-size:0.85rem;color:#fca5a5;">Detalle técnico: ' + detail + '</span>';
+      }
+
+      function showFinalError(detail) {
         setStatus('');
         errorDiv.style.display = 'block';
         errorDiv.innerHTML =
           '<strong>No se pudo reproducir el stream.</strong><br>' +
           'El servidor puede estar offline, geo-restringido o no ser compatible con la reproducción web.<br><br>' +
+          getErrorDetailHtml(detail) +
           '<span style="font-size:0.85rem;color:#9ca3af;">URL: <a href="' + streamUrl + '" target="_blank" rel="noopener noreferrer">' + streamUrl + '</a></span>';
       }
 
@@ -144,6 +152,8 @@
       }
 
       function cleanupPlayers() {
+        isResettingPlayer = true;
+        activeEngine = null;
         if (hlsInstance) {
           try { hlsInstance.destroy(); } catch (error) {}
           hlsInstance = null;
@@ -155,6 +165,7 @@
         video.pause();
         video.removeAttribute('src');
         video.load();
+        isResettingPlayer = false;
       }
 
       async function handleFullscreenChange() {
@@ -192,7 +203,7 @@
 
       function maybeRetryWithProxy() {
         if (isDash || yaReintento) {
-          showFinalError();
+          showFinalError('Fallo tras agotar el reintento por proxy');
           return false;
         }
 
@@ -224,11 +235,22 @@
         };
 
         video.onerror = function () {
+          if (isResettingPlayer) return;
+
+          if (activeEngine === 'hls' || activeEngine === 'shaka') {
+            return;
+          }
+
           maybeRetryWithProxy();
         };
       }
 
+      function isLikelyDirectMedia(url) {
+        return /\.(mp4|m4v|webm|ogg|ogv|mov|mp3|aac)(?:$|[?#])/i.test(url);
+      }
+
       async function initDash(source) {
+        activeEngine = 'shaka';
         if (!window.shaka || !window.shaka.Player) {
           errorDiv.style.display = 'block';
           errorDiv.innerHTML = '<strong>Error al cargar el motor DASH.</strong>';
@@ -253,7 +275,7 @@
         });
 
         shakaInstance.addEventListener('error', function () {
-          showFinalError();
+          showFinalError('Error fatal de Shaka Player');
         });
 
         try {
@@ -261,11 +283,22 @@
           setStatus('');
           await video.play();
         } catch (error) {
-          showFinalError();
+          showFinalError(error && error.message ? error.message : 'Fallo cargando stream DASH');
         }
       }
 
       async function initNativeHls(source) {
+        activeEngine = 'native';
+        video.src = source;
+        try {
+          await video.play();
+          setStatus('');
+        } catch (error) {
+        }
+      }
+
+      async function initDirectMedia(source) {
+        activeEngine = 'native';
         video.src = source;
         try {
           await video.play();
@@ -276,9 +309,11 @@
 
       async function initHlsJs(source) {
         if (!window.Hls || !window.Hls.isSupported()) {
-          showFinalError();
+          showFinalError('HLS.js no está disponible en este navegador');
           return;
         }
+
+        activeEngine = 'hls';
 
         hlsInstance = new window.Hls({
           enableWorker: true,
@@ -286,6 +321,9 @@
           backBufferLength: 90,
           maxBufferLength: 30,
           maxMaxBufferLength: 60,
+          manifestLoadingTimeOut: 20000,
+          levelLoadingTimeOut: 20000,
+          fragLoadingTimeOut: 30000,
           xhrSetup: function (xhr) {
             xhr.withCredentials = false;
           },
@@ -307,10 +345,12 @@
         hlsInstance.on(window.Hls.Events.ERROR, function (_, data) {
           if (!data || !data.fatal) return;
 
+          const detail = [data.type, data.details].filter(Boolean).join(' / ');
+
           switch (data.type) {
             case window.Hls.ErrorTypes.NETWORK_ERROR:
               if (!maybeRetryWithProxy()) {
-                showFinalError();
+                showFinalError(detail);
               }
               break;
             case window.Hls.ErrorTypes.MEDIA_ERROR:
@@ -318,13 +358,13 @@
                 hlsInstance.recoverMediaError();
               } catch (error) {
                 if (!maybeRetryWithProxy()) {
-                  showFinalError();
+                  showFinalError(detail);
                 }
               }
               break;
             default:
               if (!maybeRetryWithProxy()) {
-                showFinalError();
+                showFinalError(detail);
               }
               break;
           }
@@ -340,6 +380,11 @@
 
         if (isDash) {
           await initDash(source);
+          return;
+        }
+
+        if (isLikelyDirectMedia(streamUrl)) {
+          await initDirectMedia(source);
           return;
         }
 

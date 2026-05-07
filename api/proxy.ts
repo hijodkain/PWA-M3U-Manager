@@ -9,6 +9,19 @@ function esManifiestoHLS(content) {
            content.includes('#EXT-X-STREAM-INF');
 }
 
+function esRutaDeManifiesto(url) {
+    return /\.m3u8?(?:$|[?#])|\.mpd(?:$|[?#])/i.test(url);
+}
+
+function esContenidoDeTexto(contentType, url) {
+    return contentType.includes('text') ||
+           contentType.includes('mpegurl') ||
+           contentType.includes('dash+xml') ||
+           contentType.includes('xml') ||
+           contentType.includes('json') ||
+           esRutaDeManifiesto(url);
+}
+
 /**
  * Reescribe las URLs internas de un manifiesto HLS para que los segmentos
  * y sub-playlists pasen también por este proxy.
@@ -78,12 +91,21 @@ const handler = async (req, res) => {
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000);
+        const upstreamUrl = new URL(fetchUrl);
+        const upstreamHeaders = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': '*/*',
+            'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+            'Origin': upstreamUrl.origin,
+            'Referer': upstreamUrl.origin + '/',
+        };
+
+        if (typeof req.headers.range === 'string') {
+            upstreamHeaders.Range = req.headers.range;
+        }
 
         const response = await fetch(fetchUrl, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': '*/*',
-            },
+            headers: upstreamHeaders,
             signal: controller.signal,
         });
         clearTimeout(timeoutId);
@@ -97,14 +119,18 @@ const handler = async (req, res) => {
 
         const contentType = response.headers.get('content-type') || 'application/octet-stream';
         res.setHeader('Content-Type', contentType);
+        const cacheControl = response.headers.get('cache-control');
+        const acceptRanges = response.headers.get('accept-ranges');
+        const contentRange = response.headers.get('content-range');
+        const contentLength = response.headers.get('content-length');
+
+        if (cacheControl) res.setHeader('Cache-Control', cacheControl);
+        if (acceptRanges) res.setHeader('Accept-Ranges', acceptRanges);
+        if (contentRange) res.setHeader('Content-Range', contentRange);
 
         // Distinguir entre texto (manifiestos M3U8/MPD) y binario (segmentos .ts, .aac…)
         // para no corromper el contenido al hacer text()
-        const isText = contentType.includes('text') ||
-                       contentType.includes('mpegurl') ||
-                       contentType.includes('dash+xml') ||
-                       contentType.includes('xml') ||
-                       contentType.includes('json');
+        const isText = esContenidoDeTexto(contentType, fetchUrl);
 
         if (isText) {
             const data = await response.text();
@@ -112,10 +138,11 @@ const handler = async (req, res) => {
             const finalUrl = response.url || fetchUrl;
             // Solo reescribir si es un manifiesto HLS de stream, nunca listas de canales M3U
             const rewritten = esManifiestoHLS(data) ? rewriteHlsManifest(data, finalUrl) : data;
-            res.status(200).send(rewritten);
+            res.status(response.status).send(rewritten);
         } else {
             const buffer = await response.arrayBuffer();
-            res.status(200).send(Buffer.from(buffer));
+            if (contentLength) res.setHeader('Content-Length', contentLength);
+            res.status(response.status).send(Buffer.from(buffer));
         }
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
