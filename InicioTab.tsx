@@ -1275,6 +1275,15 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                                                 </td>
                                                 <td className="px-3 py-2 sm:px-6 sm:py-4 text-right">
                                                     <div className="flex items-center justify-end gap-1 sm:gap-2 opacity-100 sm:opacity-60 group-hover:opacity-100 transition-opacity">
+                                                        {list.url !== 'local' && (
+                                                            <button
+                                                                onClick={() => navigator.clipboard.writeText(list.url).catch(() => {})}
+                                                                className="p-1.5 sm:p-2 hover:bg-blue-900/30 rounded-md text-gray-400 hover:text-blue-400"
+                                                                title="Copiar URL al portapapeles"
+                                                            >
+                                                                <Share2 size={14} className="sm:w-4 sm:h-4" />
+                                                            </button>
+                                                        )}
                                                         <button 
                                                             onClick={() => handleDeleteList('medicina', list.id, list.name)} 
                                                             className="p-1.5 sm:p-2 hover:bg-red-900/30 rounded-md text-gray-400 hover:text-red-400"

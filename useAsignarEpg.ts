@@ -41,6 +41,7 @@ export const useAsignarEpg = (
     const [assignmentMode, setAssignmentMode] = useState<'tvg-id' | 'tvg-name'>('tvg-id');
     const [selectedEpgChannels, setSelectedEpgChannels] = useState<Set<string>>(new Set());
     const [lastSelectedEpgChannelIndex, setLastSelectedEpgChannelIndex] = useState<number | null>(null);
+    const [autoAssignEpgThreshold, setAutoAssignEpgThreshold] = useState(0.8);
 
     // Inicializar búsqueda inteligente - se recrea cuando cambian los prefijos/sufijos
     const smartSearch = useSmartSearch({
@@ -285,6 +286,14 @@ export const useAsignarEpg = (
                     epgCh.name.trim().toLowerCase().replace(/\s+/g, '') === channelNameNoSpaces
                 );
             }
+
+            // Intento 5: Búsqueda inteligente con umbral configurado
+            if (!exactMatch && autoAssignEpgThreshold < 1) {
+                const fuzzyResults = searchChannels(epgChannels, channel.name, autoAssignEpgThreshold);
+                if (fuzzyResults.length > 0 && fuzzyResults[0].score >= autoAssignEpgThreshold) {
+                    exactMatch = fuzzyResults[0].item;
+                }
+            }
             
             if (exactMatch) {
                 matches.set(channel.id, exactMatch);
@@ -342,7 +351,7 @@ export const useAsignarEpg = (
         } else {
             alert(`EPG asignado automáticamente a ${matches.size} de ${channelsWithoutEpg.length} canales. Se asignó: ${assignedTypes.join(', ')}.`);
         }
-    }, [assignmentMode, epgChannels, epgIdSet, normalizeChannelName, setChannels, saveStateToHistory, attributesToCopy]);
+    }, [assignmentMode, epgChannels, epgIdSet, normalizeChannelName, searchChannels, autoAssignEpgThreshold, setChannels, saveStateToHistory, attributesToCopy]);
 
     // Función para buscar canales EPG similares automáticamente
     const findSimilarEpgChannels = useCallback((channelName: string) => {
@@ -508,5 +517,8 @@ export const useAsignarEpg = (
         autoAssignEpgToVisibleGroup,
         // Función para limpiar fuente EPG
         clearEpgChannels,
+        // Umbral de autoasignación EPG
+        autoAssignEpgThreshold,
+        setAutoAssignEpgThreshold,
     };
 };
