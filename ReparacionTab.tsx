@@ -857,87 +857,6 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                     )}
                 </div>
 
-                {/* Panel de Autoasignación de URLs */}
-                {reparacionChannels.length > 0 && (
-                    <div className="mb-2 p-2.5 bg-gray-800/60 border border-purple-700/40 rounded-lg space-y-2">
-                        {/* Fila título + botón */}
-                        <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-semibold text-purple-300 flex items-center gap-1">
-                                <Database size={13} /> Autoasignar URLs
-                            </span>
-                            <button
-                                onClick={() => handleAutoAssign(filteredMainChannels)}
-                                disabled={isAutoAssigning || reparacionChannels.length === 0}
-                                className="relative text-xs py-1 px-3 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded flex items-center gap-1.5 transition-colors"
-                                title="Buscar y asignar automáticamente la URL más similar en la lista reparadora"
-                            >
-                                {isAutoAssigning ? (
-                                    <><RefreshCw size={12} className="animate-spin" /> Asignando...</>
-                                ) : (
-                                    <><SlidersHorizontal size={12} /> Autoasignar</>
-                                )}
-                                {pendingManualReview.size > 0 && (
-                                    <span className="absolute -top-1.5 -right-1.5 bg-orange-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
-                                        {pendingManualReview.size > 9 ? '9+' : pendingManualReview.size}
-                                    </span>
-                                )}
-                            </button>
-                        </div>
-                        {/* Fila slider + checkbox */}
-                        <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                                <span className="text-[11px] text-gray-400 shrink-0">Min. similitud:</span>
-                                <input
-                                    type="range"
-                                    min={50}
-                                    max={100}
-                                    step={5}
-                                    value={Math.round(autoAssignThreshold * 100)}
-                                    onChange={(e) => setAutoAssignThreshold(Number(e.target.value) / 100)}
-                                    className="flex-1 h-1.5 accent-purple-500 cursor-pointer"
-                                    title={`Umbral de similitud: ${Math.round(autoAssignThreshold * 100)}%`}
-                                    aria-label="Porcentaje mínimo de similitud para autoasignación"
-                                />
-                                <span className={`text-xs font-bold w-9 text-right shrink-0 ${autoAssignThreshold >= 0.95 ? 'text-green-400' : autoAssignThreshold >= 0.75 ? 'text-yellow-400' : 'text-orange-400'}`}>
-                                    {Math.round(autoAssignThreshold * 100)}%
-                                </span>
-                            </div>
-                            <label className="flex items-center gap-1.5 cursor-pointer shrink-0" title="Los canales que no alcancen el mínimo quedarán marcados para revisión manual">
-                                <input
-                                    type="checkbox"
-                                    checked={autoAssignManualReview}
-                                    onChange={(e) => setAutoAssignManualReview(e.target.checked)}
-                                    className="h-3.5 w-3.5 rounded border-gray-500 bg-gray-900 accent-orange-500 cursor-pointer"
-                                />
-                                <span className="text-[11px] text-gray-300">Rev. manual</span>
-                            </label>
-                        </div>
-                        {/* Fila resultados + ver pendientes */}
-                        {pendingManualReview.size > 0 && (
-                            <div className="flex items-center justify-between gap-2 pt-1 border-t border-gray-700/50">
-                                <span className="text-[11px] text-orange-400 flex items-center gap-1">
-                                    <Filter size={11} /> {pendingManualReview.size} canal{pendingManualReview.size > 1 ? 'es' : ''} pendiente{pendingManualReview.size > 1 ? 's' : ''} de revisión
-                                </span>
-                                <div className="flex items-center gap-1.5">
-                                    <button
-                                        onClick={() => setShowOnlyPendingReview(prev => !prev)}
-                                        className={`text-[11px] px-2 py-0.5 rounded transition-colors ${showOnlyPendingReview ? 'bg-orange-500 text-white' : 'bg-orange-900/40 text-orange-300 hover:bg-orange-800/50'}`}
-                                    >
-                                        {showOnlyPendingReview ? '× Todos' : `Ver ${pendingManualReview.size} pendientes`}
-                                    </button>
-                                    <button
-                                        onClick={() => { clearManualReview(); setShowOnlyPendingReview(false); }}
-                                        className="text-[11px] px-2 py-0.5 rounded bg-gray-700 text-gray-400 hover:bg-gray-600 transition-colors"
-                                        title="Limpiar marcas de revisión manual"
-                                    >
-                                        Limpiar
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                )}
-
                 {/* Lista de Canales */}
                 <div ref={mainListParentRef} className="flex-1 overflow-y-auto min-h-0 pr-1">
                     <div style={{ height: `${mainListRowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
@@ -1024,6 +943,88 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                         <RotateCcw size={isLiteAndLandscape ? 10 : 12} /> {!isLiteAndLandscape && 'Deshacer'}
                     </button>
                 </div>
+
+                {/* Panel de Autoasignación de URLs */}
+                {reparacionChannels.length > 0 && (
+                    <div className={`w-full mt-2 p-2 bg-gray-800/60 border border-purple-700/40 rounded-lg space-y-2 ${isLiteAndLandscape ? 'hidden' : ''}`}>
+                        {/* Fila título + botón */}
+                        <div className="flex flex-col items-center gap-1.5">
+                            <span className="text-[10px] font-semibold text-purple-300 flex items-center gap-1">
+                                <Database size={12} /> Autoasignar
+                            </span>
+                            <button
+                                onClick={() => handleAutoAssign(filteredMainChannels)}
+                                disabled={isAutoAssigning || reparacionChannels.length === 0}
+                                className="relative w-full text-xs py-1 px-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded flex items-center justify-center gap-1 transition-colors"
+                                title="Buscar y asignar automáticamente la URL más similar en la lista reparadora"
+                            >
+                                {isAutoAssigning ? (
+                                    <><RefreshCw size={11} className="animate-spin" /> Asignando...</>
+                                ) : (
+                                    <><SlidersHorizontal size={11} /> Autoasignar</>
+                                )}
+                                {pendingManualReview.size > 0 && (
+                                    <span className="absolute -top-1.5 -right-1.5 bg-orange-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
+                                        {pendingManualReview.size > 9 ? '9+' : pendingManualReview.size}
+                                    </span>
+                                )}
+                            </button>
+                        </div>
+                        {/* Slider similitud */}
+                        <div className="space-y-1">
+                            <div className="flex items-center justify-between">
+                                <span className="text-[10px] text-gray-400">Similitud mín:</span>
+                                <span className={`text-[10px] font-bold ${autoAssignThreshold >= 0.95 ? 'text-green-400' : autoAssignThreshold >= 0.75 ? 'text-yellow-400' : 'text-orange-400'}`}>
+                                    {Math.round(autoAssignThreshold * 100)}%
+                                </span>
+                            </div>
+                            <input
+                                type="range"
+                                min={0}
+                                max={100}
+                                step={5}
+                                value={Math.round(autoAssignThreshold * 100)}
+                                onChange={(e) => setAutoAssignThreshold(Number(e.target.value) / 100)}
+                                className="w-full h-1.5 accent-purple-500 cursor-pointer"
+                                title={`Umbral de similitud: ${Math.round(autoAssignThreshold * 100)}%`}
+                                aria-label="Porcentaje mínimo de similitud para autoasignación"
+                            />
+                        </div>
+                        {/* Checkbox revisión manual */}
+                        <label className="flex items-center gap-1.5 cursor-pointer" title="Los canales que no alcancen el mínimo quedarán marcados para revisión manual">
+                            <input
+                                type="checkbox"
+                                checked={autoAssignManualReview}
+                                onChange={(e) => setAutoAssignManualReview(e.target.checked)}
+                                className="h-3 w-3 rounded border-gray-500 bg-gray-900 accent-orange-500 cursor-pointer"
+                            />
+                            <span className="text-[10px] text-gray-300">Rev. manual</span>
+                        </label>
+                        {/* Pendientes de revisión */}
+                        {pendingManualReview.size > 0 && (
+                            <div className="space-y-1 pt-1 border-t border-gray-700/50">
+                                <span className="text-[10px] text-orange-400 flex items-center gap-1">
+                                    <Filter size={10} /> {pendingManualReview.size} pendiente{pendingManualReview.size > 1 ? 's' : ''}
+                                </span>
+                                <div className="flex flex-col gap-1">
+                                    <button
+                                        onClick={() => setShowOnlyPendingReview(prev => !prev)}
+                                        className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${showOnlyPendingReview ? 'bg-orange-500 text-white' : 'bg-orange-900/40 text-orange-300 hover:bg-orange-800/50'}`}
+                                    >
+                                        {showOnlyPendingReview ? '× Todos' : 'Ver pendientes'}
+                                    </button>
+                                    <button
+                                        onClick={() => { clearManualReview(); setShowOnlyPendingReview(false); }}
+                                        className="text-[10px] px-1.5 py-0.5 rounded bg-gray-700 text-gray-400 hover:bg-gray-600 transition-colors"
+                                        title="Limpiar marcas de revisión manual"
+                                    >
+                                        Limpiar
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
             )}
 
