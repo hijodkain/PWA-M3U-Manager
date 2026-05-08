@@ -53,6 +53,18 @@ export const useReparacion = (
     const [isSmartSearchEnabled, setIsSmartSearchEnabled] = useState(true);
     const [mainStatusFilter, setMainStatusFilter] = useState('Todos');
 
+    // --- Estados de Autoasignación ---
+    const [autoAssignThreshold, setAutoAssignThreshold] = useState(1.0);
+    const [autoAssignManualReview, setAutoAssignManualReview] = useState(false);
+    const [pendingManualReview, setPendingManualReview] = useState<Set<string>>(new Set());
+    interface AutoAssignResults {
+        assigned: number;
+        needsReview: number;
+        noMatch: number;
+    }
+    const [autoAssignResults, setAutoAssignResults] = useState<AutoAssignResults | null>(null);
+    const [isAutoAssigning, setIsAutoAssigning] = useState(false);
+
     // Inicializar búsqueda inteligente
     const smartSearch = useSmartSearch({
         channelPrefixes: settingsHook.channelPrefixes,
@@ -755,6 +767,111 @@ export const useReparacion = (
         return result ? result.score : 0;
     }, [smartSearchResults]);
 
+    /**
+     * Autoasigna URLs desde la lista reparadora a los canales rotos/pendientes del grupo visible.
+     * Usa el sistema de búsqueda inteligente con el umbral definido por el usuario.
+     * Si autoAssignManualReview está activo, los que no alcanzan el umbral se añaden a pendingManualReview.
+     * @param visibleChannels - canales actualmente visibles en la lista principal (ya filtrados por grupo)
+     */
+    const handleAutoAssign = useCallback(async (visibleChannels: Channel[]) => {
+        if (reparacionChannels.length === 0) return;
+        if (isAutoAssigning) return;
+
+        // Canales objetivo: solo rotos (failed) o pendientes de reparar
+        const targetChannels = visibleChannels.filter(ch =>
+            ch.status === 'failed' || ch.url === '-- Reparar Canal'
+        );
+
+        if (targetChannels.length === 0) {
+            alert('No hay canales rotos o pendientes en el grupo visible. Verifica el estado de los canales o cambia el filtro de grupo.');
+            return;
+        }
+
+        saveStateToHistory();
+        setIsAutoAssigning(true);
+
+        let assigned = 0;
+        let needsReview = 0;
+        let noMatch = 0;
+        const newPendingReview = new Set<string>();
+
+        // Mapa de actualizaciones para aplicar en un solo setMainChannels
+        const channelUpdates = new Map<string, Partial<Channel>>();
+
+        for (const targetChannel of targetChannels) {
+            // Buscar en reparacionChannels con el umbral de similitud
+            const matches = searchChannels(reparacionChannels, targetChannel.name, autoAssignThreshold);
+
+            if (matches.length > 0) {
+                // Ordenar por score desc y tomar el mejor
+                const sortedMatches = [...matches].sort((a, b) => b.score - a.score);
+                const bestMatch = sortedMatches[0];
+
+                if (bestMatch.score >= autoAssignThreshold) {
+                    // Aplicar los atributos marcados en attributesToCopy
+                    const updates: Partial<Channel> = {};
+                    attributesToCopy.forEach(attr => {
+                        (updates[attr] as Channel[typeof attr]) = bestMatch.item[attr];
+                    });
+                    channelUpdates.set(targetChannel.id, updates);
+                    assigned++;
+                } else {
+                    // Score insuficiente
+                    if (autoAssignManualReview) {
+                        newPendingReview.add(targetChannel.id);
+                        needsReview++;
+                    } else {
+                        noMatch++;
+                    }
+                }
+            } else {
+                // Sin coincidencias
+                if (autoAssignManualReview) {
+                    newPendingReview.add(targetChannel.id);
+                    needsReview++;
+                } else {
+                    noMatch++;
+                }
+            }
+        }
+
+        // Aplicar todas las actualizaciones en un solo setMainChannels
+        if (channelUpdates.size > 0) {
+            setMainChannels(prev =>
+                prev.map(ch => {
+                    const updates = channelUpdates.get(ch.id);
+                    if (updates) {
+                        return { ...ch, ...updates };
+                    }
+                    return ch;
+                })
+            );
+        }
+
+        // Actualizar revisión manual
+        setPendingManualReview(newPendingReview);
+        setAutoAssignResults({ assigned, needsReview, noMatch });
+        setIsAutoAssigning(false);
+
+        // Resumen de la operación
+        const parts: string[] = [];
+        if (assigned > 0) parts.push(`✅ ${assigned} canal${assigned > 1 ? 'es' : ''} asignado${assigned > 1 ? 's' : ''} automáticamente`);
+        if (needsReview > 0) parts.push(`🔶 ${needsReview} canal${needsReview > 1 ? 'es' : ''} pendiente${needsReview > 1 ? 's' : ''} de revisión manual`);
+        if (noMatch > 0) parts.push(`❌ ${noMatch} canal${noMatch > 1 ? 'es' : ''} sin coincidencia en la lista reparadora`);
+
+        if (parts.length > 0) {
+            alert(parts.join('\n'));
+        }
+    }, [reparacionChannels, searchChannels, autoAssignThreshold, autoAssignManualReview, attributesToCopy, isAutoAssigning, saveStateToHistory, setMainChannels]);
+
+    /**
+     * Limpia el estado de revisión manual y los resultados de la última autoasignación
+     */
+    const clearManualReview = useCallback(() => {
+        setPendingManualReview(new Set());
+        setAutoAssignResults(null);
+    }, []);
+
     return {
         selectedReparacionChannels,
         attributesToCopy,
@@ -811,5 +928,15 @@ export const useReparacion = (
         mainStatusFilter,
         setMainStatusFilter,
         handleDeleteSelectedReparacionChannels,
+        // Autoasignación
+        autoAssignThreshold,
+        setAutoAssignThreshold,
+        autoAssignManualReview,
+        setAutoAssignManualReview,
+        pendingManualReview,
+        clearManualReview,
+        autoAssignResults,
+        isAutoAssigning,
+        handleAutoAssign,
     };
 };
