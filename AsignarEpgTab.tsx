@@ -52,6 +52,8 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
         assignChannelName,
         autoAssignEpgToVisibleGroup,
         clearEpgChannels,
+        autoAssignEpgThreshold,
+        setAutoAssignEpgThreshold,
     } = epgHook;
     
     const { searchChannels: epgSearchChannels, normalizeChannelName: epgNormalizeChannelName } = smartSearch;
@@ -290,6 +292,31 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                     </button>
 
                     <div className="w-full border-t border-gray-700/80" />
+
+                    {/* Slider de similitud mínima para autoasignar */}
+                    <div className="w-full space-y-0.5">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[7px] text-gray-500 uppercase tracking-wider">Mín. simil.</span>
+                            <span className={`text-[8px] font-bold ${
+                                autoAssignEpgThreshold >= 0.95 ? 'text-green-400'
+                                : autoAssignEpgThreshold >= 0.75 ? 'text-yellow-400'
+                                : 'text-orange-400'
+                            }`}>
+                                {Math.round(autoAssignEpgThreshold * 100)}%
+                            </span>
+                        </div>
+                        <input
+                            type="range"
+                            min={0}
+                            max={100}
+                            step={5}
+                            value={Math.round(autoAssignEpgThreshold * 100)}
+                            onChange={(e) => setAutoAssignEpgThreshold(Number(e.target.value) / 100)}
+                            className="w-full h-1.5 accent-indigo-500 cursor-pointer"
+                            title={`Umbral de similitud mínima: ${Math.round(autoAssignEpgThreshold * 100)}%`}
+                            aria-label="Umbral de similitud mínima para autoasignación EPG"
+                        />
+                    </div>
 
                     <button
                         onClick={handleAutoAssign}
