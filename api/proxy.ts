@@ -9,6 +9,48 @@ function esManifiestoHLS(content) {
            content.includes('#EXT-X-STREAM-INF');
 }
 
+function esRutaDeManifiesto(url) {
+    return /\.m3u8?(?:$|[?#])|\.mpd(?:$|[?#])/i.test(url);
+}
+
+function esContenidoDeTexto(contentType, url) {
+    return contentType.includes('text') ||
+           contentType.includes('mpegurl') ||
+           contentType.includes('dash+xml') ||
+           contentType.includes('xml') ||
+           contentType.includes('json') ||
+           esRutaDeManifiesto(url);
+}
+
+function getManifestTargetUrl(originalRef, resolvedUrl) {
+    const trimmedRef = originalRef.trim();
+
+    // Si el manifiesto ya apunta a una URL HTTPS absoluta, dejarla directa.
+    // Esto evita proxificar streams seguros que ya exponen CORS y que pueden
+    // fallar al pasar por el servidor intermedio.
+    if (/^https:\/\//i.test(trimmedRef)) {
+        return resolvedUrl;
+    }
+
+    return '/api/proxy?url=' + encodeURIComponent(resolvedUrl);
+}
+
+function detectarManifiestoPorContenido(buffer) {
+    const preview = Buffer.from(buffer)
+        .toString('utf8', 0, Math.min(buffer.byteLength, 4096))
+        .trimStart();
+
+    const esHls = preview.startsWith('#EXTM3U') && esManifiestoHLS(preview);
+    const esDash = preview.startsWith('<MPD') || preview.startsWith('<?xml') && preview.includes('<MPD');
+
+    return {
+        esTexto: esHls || esDash,
+        esHls,
+        esDash,
+        preview,
+    };
+}
+
 /**
  * Reescribe las URLs internas de un manifiesto HLS para que los segmentos
  * y sub-playlists pasen también por este proxy.
@@ -28,7 +70,7 @@ function rewriteHlsManifest(content, baseUrl) {
             return line.replace(/URI="([^"]+)"/g, (_, uri) => {
                 try {
                     const abs = new URL(uri, base).toString();
-                    return 'URI="/api/proxy?url=' + encodeURIComponent(abs) + '"';
+                    return 'URI="' + getManifestTargetUrl(uri, abs) + '"';
                 } catch { return 'URI="' + uri + '"'; }
             });
         }
@@ -37,7 +79,7 @@ function rewriteHlsManifest(content, baseUrl) {
         if (!trimmed.startsWith('#')) {
             try {
                 const abs = new URL(trimmed, base).toString();
-                return '/api/proxy?url=' + encodeURIComponent(abs);
+                return getManifestTargetUrl(trimmed, abs);
             } catch { return line; }
         }
 
@@ -78,12 +120,21 @@ const handler = async (req, res) => {
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000);
+        const upstreamUrl = new URL(fetchUrl);
+        const upstreamHeaders: Record<string, string> = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': '*/*',
+            'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+            'Origin': upstreamUrl.origin,
+            'Referer': upstreamUrl.origin + '/',
+        };
+
+        if (typeof req.headers.range === 'string') {
+            upstreamHeaders.Range = req.headers.range;
+        }
 
         const response = await fetch(fetchUrl, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': '*/*',
-            },
+            headers: upstreamHeaders,
             signal: controller.signal,
         });
         clearTimeout(timeoutId);
@@ -97,25 +148,44 @@ const handler = async (req, res) => {
 
         const contentType = response.headers.get('content-type') || 'application/octet-stream';
         res.setHeader('Content-Type', contentType);
+        const cacheControl = response.headers.get('cache-control');
+        const acceptRanges = response.headers.get('accept-ranges');
+        const contentRange = response.headers.get('content-range');
+        const contentLength = response.headers.get('content-length');
+
+        if (cacheControl) res.setHeader('Cache-Control', cacheControl);
+        if (acceptRanges) res.setHeader('Accept-Ranges', acceptRanges);
+        if (contentRange) res.setHeader('Content-Range', contentRange);
+
+        const body = await response.arrayBuffer();
+        const sniff = detectarManifiestoPorContenido(body);
 
         // Distinguir entre texto (manifiestos M3U8/MPD) y binario (segmentos .ts, .aac…)
-        // para no corromper el contenido al hacer text()
-        const isText = contentType.includes('text') ||
-                       contentType.includes('mpegurl') ||
-                       contentType.includes('dash+xml') ||
-                       contentType.includes('xml') ||
-                       contentType.includes('json');
+        // para no corromper el contenido al hacer text(). Algunos paneles IPTV sirven
+        // los manifiestos como application/octet-stream y sin extensión.
+        const isText = esContenidoDeTexto(contentType, fetchUrl) || sniff.esTexto;
 
         if (isText) {
-            const data = await response.text();
+            const data = Buffer.from(body).toString('utf8');
             // URL final tras redirects (necesaria para resolver URLs relativas en el manifiesto)
             const finalUrl = response.url || fetchUrl;
             // Solo reescribir si es un manifiesto HLS de stream, nunca listas de canales M3U
             const rewritten = esManifiestoHLS(data) ? rewriteHlsManifest(data, finalUrl) : data;
-            res.status(200).send(rewritten);
+            if (sniff.esHls && !contentType.includes('mpegurl')) {
+                res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+            }
+            if (sniff.esDash && !contentType.includes('dash+xml')) {
+                res.setHeader('Content-Type', 'application/dash+xml');
+            }
+            res.status(response.status).send(rewritten);
         } else {
-            const buffer = await response.arrayBuffer();
-            res.status(200).send(Buffer.from(buffer));
+            if (contentLength) res.setHeader('Content-Length', contentLength);
+            // Si la URL apunta a un segmento .ts y el servidor no informa el tipo correcto,
+            // forzamos video/mp2t para que el navegador (especialmente iOS/Safari) lo identifique.
+            if (contentType === 'application/octet-stream' && /\.ts(?:$|[?#])/i.test(fetchUrl)) {
+                res.setHeader('Content-Type', 'video/mp2t');
+            }
+            res.status(response.status).send(Buffer.from(body));
         }
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
