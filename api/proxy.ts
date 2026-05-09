@@ -180,6 +180,11 @@ const handler = async (req, res) => {
             res.status(response.status).send(rewritten);
         } else {
             if (contentLength) res.setHeader('Content-Length', contentLength);
+            // Si la URL apunta a un segmento .ts y el servidor no informa el tipo correcto,
+            // forzamos video/mp2t para que el navegador (especialmente iOS/Safari) lo identifique.
+            if (contentType === 'application/octet-stream' && /\.ts(?:$|[?#])/i.test(fetchUrl)) {
+                res.setHeader('Content-Type', 'video/mp2t');
+            }
             res.status(response.status).send(Buffer.from(body));
         }
     } catch (error) {

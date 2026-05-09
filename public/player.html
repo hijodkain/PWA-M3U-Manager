@@ -97,6 +97,7 @@
     let shakaInstance = null;
     let wakeLockSentinel = null;
     let yaReintento = false;
+    let yaReintentoHlsTs = false;
     let lastTap = 0;
     let activeEngine = null;
     let isResettingPlayer = false;
@@ -109,6 +110,7 @@
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
       const urlPath = streamUrl.split('?')[0].toLowerCase();
       const isDash = urlPath.endsWith('.mpd');
+      const isTsStream = urlPath.endsWith('.ts');
 
       function setStatus(message) {
         if (!message) {
@@ -147,6 +149,91 @@
           'El servidor puede estar offline, geo-restringido o no ser compatible con la reproducción web.<br><br>' +
           getErrorDetailHtml(detail) +
           '<span style="font-size:0.85rem;color:#9ca3af;">URL: <a href="' + streamUrl + '" target="_blank" rel="noopener noreferrer">' + streamUrl + '</a></span>';
+      }
+
+      function showTsTranscodingError() {
+        setStatus('');
+        errorDiv.style.display = 'block';
+        errorDiv.innerHTML =
+          '<strong>Stream MPEG-TS no reproducible en el navegador.</strong><br>' +
+          'El proveedor no ofrece HLS. Para reproducir streams .ts en vivo se requiere ' +
+          'un servidor de transcoding (p.ej. FFmpeg) que los convierta a HLS en tiempo real.<br><br>' +
+          '<span style="font-size:0.85rem;color:#9ca3af;">URL: <a href="' + streamUrl + '" target="_blank" rel="noopener noreferrer">' + streamUrl + '</a></span>';
+      }
+
+      // Construye URLs candidatas HLS a partir de una URL .ts de IPTV.
+      // Xtream Codes acepta directamente .m3u8 en lugar de .ts.
+      // Otros paneles aceptan ?output=hls como parámetro.
+      function buildHlsCandidates(tsUrl) {
+        const candidates = [];
+        // Candidato 1: reemplazar .ts por .m3u8 (Xtream Codes y compatibles)
+        const withM3u8 = tsUrl.replace(/\.ts(?:$|[?#])/i, '.m3u8');
+        if (withM3u8 !== tsUrl) candidates.push(withM3u8);
+        // Candidato 2: añadir ?output=hls (algunos paneles alternativos)
+        const sep = tsUrl.includes('?') ? '&' : '?';
+        candidates.push(tsUrl + sep + 'output=hls');
+        return candidates;
+      }
+
+      // Prueba rápida (HEAD o GET parcial) para ver si una URL candidata HLS es válida.
+      async function probeHlsCandidate(url) {
+        try {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 6000);
+          const response = await fetch(url, {
+            method: 'GET',
+            headers: { 'Range': 'bytes=0-511' },
+            signal: controller.signal,
+          });
+          clearTimeout(timer);
+          if (!response.ok) return false;
+          const contentType = response.headers.get('content-type') || '';
+          if (contentType.includes('mpegurl') || contentType.includes('x-mpegurl')) return true;
+          // Leer los primeros bytes para detectar contenido M3U8
+          const text = await response.text();
+          return text.trimStart().startsWith('#EXTM3U');
+        } catch {
+          return false;
+        }
+      }
+
+      // Secuencia de intentos para streams MPEG-TS:
+      // 1. Probar URL .m3u8 (Xtream) → HLS.js
+      // 2. Probar ?output=hls → HLS.js
+      // 3. Proxy CORS sobre el .ts original (útil si el .ts es estático y corto, o iOS)
+      // 4. Error con mensaje informativo sobre transcoding
+      async function initTsWithFallback() {
+        const candidates = buildHlsCandidates(streamUrl);
+
+        for (const candidate of candidates) {
+          setStatus('Probando HLS del proveedor...');
+          const valid = await probeHlsCandidate(candidate);
+          if (valid) {
+            setStatus('Reproduciendo en HLS...');
+            await initHlsJs(candidate);
+            return;
+          }
+        }
+
+        // Ningún candidato HLS funcionó → intentar el .ts directo por proxy CORS
+        // (sirve para streams .ts estáticos o iOS que puede reproducir video/mp2t)
+        if (!yaReintento) {
+          yaReintento = true;
+          setStatus('Probando stream directo vía proxy...');
+          errorDiv.style.display = 'none';
+          const proxiedTs = '/api/proxy?url=' + encodeURIComponent(streamUrl);
+          activeEngine = 'native';
+          currentUsingProxy = true;
+          video.src = proxiedTs;
+          try {
+            await video.play();
+            setStatus('');
+          } catch {
+            showTsTranscodingError();
+          }
+        } else {
+          showTsTranscodingError();
+        }
       }
 
       async function activarWakeLock() {
@@ -450,6 +537,14 @@
 
         if (isDash) {
           await initDash(source);
+          return;
+        }
+
+        // Streams MPEG-TS de IPTV: intentar HLS del proveedor antes que cualquier otra cosa.
+        // Solo en el primer intento (sin proxy forzado); si ya estamos en proxy es que venimos
+        // del fallback de initTsWithFallback y no hay que volver a entrar en bucle.
+        if (isTsStream && !usarProxy) {
+          await initTsWithFallback();
           return;
         }
 
