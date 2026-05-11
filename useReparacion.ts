@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { Channel, AttributeKey, QualityLevel, ChannelStatus } from './index';
 import { useSmartSearch, SearchMatch } from './useSmartSearch';
 
@@ -49,6 +49,8 @@ export const useReparacion = (
     const [reparacionListFilter, setReparacionListFilter] = useState('Todos los canales');
     const [mainListSearch, setMainListSearch] = useState('');
     const [reparacionListSearch, setReparacionListSearch] = useState('');
+    // Estado con debounce para no ejecutar Levenshtein en cada pulsación de tecla
+    const [debouncedReparacionSearch, setDebouncedReparacionSearch] = useState('');
     const [smartSearchResults, setSmartSearchResults] = useState<SearchMatch<Channel>[]>([]);
     const [isSmartSearchEnabled, setIsSmartSearchEnabled] = useState(true);
     const [mainStatusFilter, setMainStatusFilter] = useState('Todos');
@@ -73,6 +75,14 @@ export const useReparacion = (
     
     // Extraer funciones para evitar problemas de dependencias
     const { searchChannels, normalizeChannelName } = smartSearch;
+
+    // Debounce de 150ms: evita ejecutar Levenshtein sobre 1500 canales en cada pulsación
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedReparacionSearch(reparacionListSearch);
+        }, 150);
+        return () => clearTimeout(timer);
+    }, [reparacionListSearch]);
 
     /**
      * Verificación SIMPLE (AWS Lambda) - Solo comprueba si el canal está online
@@ -664,22 +674,32 @@ export const useReparacion = (
         if (reparacionListFilter !== 'Todos los canales') {
             channels = channels.filter(c => c.groupTitle === reparacionListFilter);
         }
-        if (reparacionListSearch) {
+        if (debouncedReparacionSearch) {
             if (isSmartSearchEnabled) {
-                // Usar búsqueda inteligente y guardar resultados para mostrar scores
-                const searchResults = searchChannels(channels, reparacionListSearch, 0.4);
-                setSmartSearchResults(searchResults);
+                // Usar búsqueda inteligente con el término debounced
+                const searchResults = searchChannels(channels, debouncedReparacionSearch, 0.4);
                 return searchResults.map(result => result.item);
             } else {
                 // Búsqueda tradicional exacta
-                channels = channels.filter(c => c.name.toLowerCase().includes(reparacionListSearch.toLowerCase()));
-                setSmartSearchResults([]);
+                channels = channels.filter(c => c.name.toLowerCase().includes(debouncedReparacionSearch.toLowerCase()));
             }
+        }
+        return channels;
+    }, [reparacionChannels, reparacionListFilter, debouncedReparacionSearch, isSmartSearchEnabled, searchChannels]);
+
+    // Actualizar smartSearchResults fuera del useMemo para evitar el anti-patrón setState-durante-render
+    useEffect(() => {
+        if (debouncedReparacionSearch && isSmartSearchEnabled) {
+            let channels = reparacionChannels;
+            if (reparacionListFilter !== 'Todos los canales') {
+                channels = channels.filter(c => c.groupTitle === reparacionListFilter);
+            }
+            const searchResults = searchChannels(channels, debouncedReparacionSearch, 0.4);
+            setSmartSearchResults(searchResults);
         } else {
             setSmartSearchResults([]);
         }
-        return channels;
-    }, [reparacionChannels, reparacionListFilter, reparacionListSearch, isSmartSearchEnabled, searchChannels]);
+    }, [reparacionChannels, reparacionListFilter, debouncedReparacionSearch, isSmartSearchEnabled, searchChannels]);
 
     const toggleReparacionSelection = useCallback((id: string, index: number, shiftKey: boolean, metaKey: boolean, ctrlKey: boolean) => {
         const newSelected = new Set(selectedReparacionChannels);

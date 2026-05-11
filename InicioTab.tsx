@@ -1231,6 +1231,18 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                                 >
                                     <Search className="w-3 h-3 sm:w-4 sm:h-4" /> <span className="hidden xs:inline">Buscar en Dropbox</span><span className="xs:hidden">Buscar</span>
                                 </button>
+                                <button
+                                    onClick={() => {
+                                        if (!confirm(`¿Eliminar las ${savedMedicinaLists.length} listas del listado? Los archivos en Dropbox no se borrarán.`)) return;
+                                        setSavedMedicinaLists([]);
+                                        setStorageItem('medicinaLists', '[]');
+                                    }}
+                                    disabled={savedMedicinaLists.length === 0}
+                                    className="px-2 py-1.5 sm:px-3 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-1 sm:gap-2 shadow-sm transition-all bg-red-700 hover:bg-red-800 text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                                    title="Eliminar todas las listas del listado (los archivos en Dropbox no se borran)"
+                                >
+                                    <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" /> <span className="hidden xs:inline">Limpiar todas</span><span className="xs:hidden">Limpiar</span>
+                                </button>
                                 <span className="bg-purple-900/30 text-purple-400 px-2 py-1.5 sm:px-3 rounded-lg text-xs sm:text-sm font-medium border border-purple-900/50 whitespace-nowrap">
                                     {savedMedicinaLists.length} <span className="hidden sm:inline">listas</span>
                                 </span>

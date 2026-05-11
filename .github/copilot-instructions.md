@@ -1,6 +1,21 @@
 # PWA M3U Manager - Instrucciones para Agentes de IA
 
-## 🗣️ IDIOMA Y COMUNICACIÓN
+## � VERSIÓN ACTUAL: v1.0
+
+### 🔢 Política de Versionado Semántico
+La versión se muestra en el header de la app (`PWAM3UManager.tsx`) y debe actualizarse con cada subida a main o rama feature significativa.
+
+| Tipo de cambio | Acción | Ejemplo |
+|---|---|---|
+| Rediseño visual completo o cambio arquitectónico mayor | +1.0 (major) | v1.0 → v2.0 |
+| Nueva funcionalidad añadida | +0.1 (minor) | v1.0 → v1.1 |
+| Corrección de bug, mejora menor, optimización | +0.0.1 (patch) | v1.0 → v1.0.1 |
+
+**Regla obligatoria**: Al hacer cualquier commit a main (o merge de rama feature), actualizar:
+1. La versión en `PWAM3UManager.tsx`: `<span className="text-xs text-gray-500 font-normal ml-1">vX.Y.Z</span>`
+2. La línea `## 📌 VERSIÓN ACTUAL` en este archivo
+
+## �🗣️ IDIOMA Y COMUNICACIÓN
 **SIEMPRE responde en ESPAÑOL**. Este proyecto es en español, los commits deben ser en español, los comentarios de código en español, y toda comunicación con el desarrollador en español.
 
 ## 🏗️ Visión General de la Arquitectura
