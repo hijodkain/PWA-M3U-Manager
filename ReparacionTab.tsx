@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Upload, Copy, CheckSquare, ArrowLeftCircle, RotateCcw, Trash2, Link, Check, Search, X, RefreshCw, SlidersHorizontal, Filter, Database, ChevronDown } from 'lucide-react';
+import { Upload, Copy, CheckSquare, ArrowLeftCircle, RotateCcw, Trash2, Link, Check, Search, X, RefreshCw, SlidersHorizontal, Filter, Database } from 'lucide-react';
 import { useReparacion } from './useReparacion';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useChannels } from './useChannels';
@@ -58,8 +58,9 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
     const [isUpdatingReparacionList, setIsUpdatingReparacionList] = useState(false);
     const [showMainColumnsMenu, setShowMainColumnsMenu] = useState(false);
     const [showReparacionColumnsMenu, setShowReparacionColumnsMenu] = useState(false);
-    const [showGroupDropdown, setShowGroupDropdown] = useState(false);
-    const [lastClickedGroupIndex, setLastClickedGroupIndex] = useState<number | null>(null);
+    // Modal para eliminar grupos en bloque de la lista reparadora
+    const [showDeleteGroupsModal, setShowDeleteGroupsModal] = useState(false);
+    const [modalSelectedGroups, setModalSelectedGroups] = useState<Set<string>>(new Set());
     const [showMedicinaSearchControls, setShowMedicinaSearchControls] = useState(false);
     const [selectedMedicinaLettersCount, setSelectedMedicinaLettersCount] = useState(0);
     const [mainVisibleFields, setMainVisibleFields] = useState<ColumnVisibilityConfig>(DEFAULT_COLUMN_VISIBILITY);
@@ -79,8 +80,6 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         setMainDomainFilter,
         reparacionListFilter,
         setReparacionListFilter,
-        selectedRepairGroups,
-        setSelectedRepairGroups,
         deleteChannelsBySelectedGroups,
         handleReparacionFileUpload,
         processCurationM3U,
@@ -140,7 +139,6 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
     const reparacionListParentRef = useRef<HTMLDivElement>(null);
     const mainColumnsMenuRef = useRef<HTMLDivElement>(null);
     const reparacionColumnsMenuRef = useRef<HTMLDivElement>(null);
-    const groupDropdownRef = useRef<HTMLDivElement>(null);
     const medicinaSearchInputRef = useRef<HTMLInputElement>(null);
 
     // Initial Load of Medicina Lists
@@ -236,9 +234,6 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
             }
             if (reparacionColumnsMenuRef.current && !reparacionColumnsMenuRef.current.contains(target)) {
                 setShowReparacionColumnsMenu(false);
-            }
-            if (groupDropdownRef.current && !groupDropdownRef.current.contains(target)) {
-                setShowGroupDropdown(false);
             }
         };
 
@@ -488,29 +483,6 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         }
     };
 
-    // Maneja click en un grupo del dropdown: toggle simple o rango con Shift
-    const handleGroupClick = (group: string, index: number, isShift: boolean) => {
-        setSelectedRepairGroups(prev => {
-            const next = new Set(prev);
-            if (isShift && lastClickedGroupIndex !== null) {
-                const allGroups = reparacionListUniqueGroups.filter(g => g !== 'Todos los canales');
-                const start = Math.min(lastClickedGroupIndex, index);
-                const end = Math.max(lastClickedGroupIndex, index);
-                for (let i = start; i <= end; i++) {
-                    next.add(allGroups[i]);
-                }
-            } else {
-                if (next.has(group)) {
-                    next.delete(group);
-                } else {
-                    next.add(group);
-                }
-            }
-            return next;
-        });
-        setLastClickedGroupIndex(index);
-    };
-
     // Guarda la lista reparadora como un archivo nuevo (pide nombre, sube a Dropbox o descarga local)
     const handleSaveAsNewReparacionList = async () => {
         const base = (reparacionListName || 'lista').replace(/\.m3u8?$/i, '');
@@ -697,6 +669,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
 
 
     return (
+        <>
         <div className={`grid gap-2 ${
             isLiteAndLandscape
                 ? 'grid-cols-11 h-[calc(100vh-80px)]'
@@ -1086,6 +1059,19 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                         )}
                     </div>
                 )}
+
+                {/* Botón para abrir el modal de eliminación de grupos de la lista reparadora */}
+                {reparacionChannels.length > 0 && (
+                    <button
+                        onClick={() => {
+                            setModalSelectedGroups(new Set());
+                            setShowDeleteGroupsModal(true);
+                        }}
+                        className={`w-full mt-2 text-xs py-1.5 px-2 bg-red-900/40 hover:bg-red-900/60 border border-red-700/50 text-red-400 hover:text-red-300 rounded flex items-center justify-center gap-1.5 transition-colors ${isLiteAndLandscape ? 'hidden' : ''}`}
+                    >
+                        <Trash2 size={11} /> Eliminar grupos de la lista
+                    </button>
+                )}
             </div>
             )}
 
@@ -1279,89 +1265,23 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                             )}
                         </div>
                          
-                        {/* Selector de grupos multi-selecci\u00f3n (Shift+click para rango) */}
+                        {/* Selector de grupo (filtro simple) */}
                         <div className="flex gap-1.5 items-center w-full overflow-hidden">
-                            <div className="relative flex-1 min-w-0" ref={groupDropdownRef}>
-                                <button
-                                    onClick={() => setShowGroupDropdown(prev => !prev)}
-                                    className="w-full flex items-center justify-between bg-gray-900 border border-gray-600 rounded px-1.5 py-1 text-xs text-white hover:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 min-w-0"
-                                >
-                                    <span className="truncate text-left flex-1">
-                                        {selectedRepairGroups.size > 0
-                                            ? <span className="text-red-400 font-medium">{selectedRepairGroups.size} grupo{selectedRepairGroups.size > 1 ? 's' : ''} (borrar)</span>
-                                            : (reparacionListFilter === 'Todos los canales' ? 'Todos los Grupos' : reparacionListFilter)
-                                        }
-                                    </span>
-                                    <ChevronDown size={12} className={`shrink-0 ml-1 transition-transform duration-150 ${showGroupDropdown ? 'rotate-180' : ''}`} />
-                                </button>
-
-                                {showGroupDropdown && (
-                                    <div className="absolute top-full left-0 right-0 z-50 mt-0.5 bg-gray-900 border border-gray-600 rounded-lg shadow-2xl max-h-52 overflow-y-auto">
-                                        {/* Opci\u00f3n "Todos los grupos" */}
-                                        <div
-                                            onClick={() => {
-                                                setSelectedRepairGroups(new Set());
-                                                setReparacionListFilter('Todos los canales');
-                                                setLastClickedGroupIndex(null);
-                                                setShowGroupDropdown(false);
-                                            }}
-                                            className={`px-2.5 py-1.5 text-xs cursor-pointer hover:bg-gray-700 flex items-center gap-2 ${
-                                                selectedRepairGroups.size === 0 && reparacionListFilter === 'Todos los canales'
-                                                    ? 'text-blue-400 font-medium bg-gray-800'
-                                                    : 'text-gray-300'
-                                            }`}
-                                        >
-                                            Todos los Grupos
-                                        </div>
-                                        {/* Grupos individuales — Shift+click selecciona rango */}
-                                        {reparacionListUniqueGroups
-                                            .filter(g => g !== 'Todos los canales')
-                                            .map((group, index) => (
-                                                <div
-                                                    key={group}
-                                                    onClick={(e) => handleGroupClick(group, index, e.shiftKey)}
-                                                    className={`px-2.5 py-1.5 text-xs cursor-pointer hover:bg-gray-700 flex items-center gap-2 select-none ${
-                                                        selectedRepairGroups.has(group)
-                                                            ? 'bg-red-900/40 text-red-300'
-                                                            : reparacionListFilter === group
-                                                                ? 'text-blue-400 font-medium bg-gray-800'
-                                                                : 'text-white'
-                                                    }`}
-                                                    title={selectedRepairGroups.size > 0 ? 'Shift+click para seleccionar rango' : 'Click para filtrar · Shift+click para seleccionar varios'}
-                                                >
-                                                    <div className={`w-3 h-3 rounded border shrink-0 flex items-center justify-center ${
-                                                        selectedRepairGroups.has(group) ? 'bg-red-600 border-red-600' : 'border-gray-500'
-                                                    }`}>
-                                                        {selectedRepairGroups.has(group) && <X size={8} />}
-                                                    </div>
-                                                    <span className="truncate">{group}</span>
-                                                </div>
-                                            ))
-                                        }
-                                    </div>
-                                )}
-                            </div>
-
+                            <select
+                                value={reparacionListFilter}
+                                onChange={(e) => setReparacionListFilter(e.target.value)}
+                                className="min-w-0 flex-1 bg-gray-900 border border-gray-600 rounded px-1.5 py-1 text-xs text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                                <option value="Todos los canales">Todos los Grupos</option>
+                                {reparacionListUniqueGroups.map(g => (
+                                    <option key={g} value={g}>{g}</option>
+                                ))}
+                            </select>
+                            
                             <button onClick={() => toggleSelectAllReparacionGroup()} className="shrink-0 px-2 py-1 bg-gray-600 hover:bg-gray-500 rounded text-[10px] text-white leading-tight">
                                 {isAllInGroupSelected ? 'Deselect.' : 'Select. Grupo'}
                             </button>
                         </div>
-
-                        {/* Bot\u00f3n eliminar grupos seleccionados */}
-                        {selectedRepairGroups.size > 0 && (
-                            <button
-                                onClick={() => {
-                                    const count = reparacionChannels.filter(c => selectedRepairGroups.has(c.groupTitle)).length;
-                                    if (!confirm(`\u00bfEliminar ${selectedRepairGroups.size} grupo${selectedRepairGroups.size > 1 ? 's' : ''} de la lista reparadora? Se borrar\u00e1n ${count} canal${count !== 1 ? 'es' : ''}. Los archivos en Dropbox no se modifican.`)) return;
-                                    deleteChannelsBySelectedGroups(selectedRepairGroups);
-                                    setHasPendingReparacionChanges(true);
-                                }}
-                                className="w-full py-1.5 bg-red-700 hover:bg-red-600 text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-colors"
-                            >
-                                <Trash2 size={13} />
-                                Eliminar {selectedRepairGroups.size} grupo{selectedRepairGroups.size > 1 ? 's' : ''} seleccionado{selectedRepairGroups.size > 1 ? 's' : ''}
-                            </button>
-                        )}
                     </div>
                 )}
                 
@@ -1471,6 +1391,113 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
 
             </div>
         </div>
+
+        {/* ===== MODAL: Eliminar grupos de la lista reparadora ===== */}
+        {showDeleteGroupsModal && (            <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+                <div className="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-md flex flex-col max-h-[80vh]">
+                    {/* Cabecera */}
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700 shrink-0">
+                        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                            <Trash2 size={15} className="text-red-400" />
+                            Eliminar grupos de la lista reparadora
+                        </h3>
+                        <button
+                            onClick={() => setShowDeleteGroupsModal(false)}
+                            className="text-gray-400 hover:text-white transition-colors p-1 rounded hover:bg-gray-700"
+                            title="Cerrar"
+                        >
+                            <X size={16} />
+                        </button>
+                    </div>
+
+                    {/* Botones Seleccionar / Deseleccionar todos */}
+                    <div className="flex gap-2 px-4 py-2 border-b border-gray-700/50 shrink-0">
+                        <button
+                            onClick={() => {
+                                const allGroups = reparacionListUniqueGroups.filter(g => g !== 'Todos los canales');
+                                setModalSelectedGroups(new Set(allGroups));
+                            }}
+                            className="flex-1 text-xs py-1 px-2 bg-red-900/40 hover:bg-red-900/60 border border-red-700/50 text-red-300 rounded transition-colors"
+                        >
+                            Seleccionar todos
+                        </button>
+                        <button
+                            onClick={() => setModalSelectedGroups(new Set())}
+                            className="flex-1 text-xs py-1 px-2 bg-gray-700/60 hover:bg-gray-700 border border-gray-600/50 text-gray-300 rounded transition-colors"
+                        >
+                            Deseleccionar todos
+                        </button>
+                    </div>
+
+                    {/* Lista de grupos con checkboxes */}
+                    <div className="flex-1 overflow-y-auto px-2 py-2 min-h-0">
+                        {reparacionListUniqueGroups
+                            .filter(g => g !== 'Todos los canales')
+                            .map(group => {
+                                const count = reparacionChannels.filter(c => c.groupTitle === group).length;
+                                const isChecked = modalSelectedGroups.has(group);
+                                return (
+                                    <label
+                                        key={group}
+                                        className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors mb-0.5 ${
+                                            isChecked ? 'bg-red-900/30 border border-red-700/40' : 'hover:bg-gray-800 border border-transparent'
+                                        }`}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={isChecked}
+                                            onChange={() => {
+                                                setModalSelectedGroups(prev => {
+                                                    const next = new Set(prev);
+                                                    if (next.has(group)) next.delete(group);
+                                                    else next.add(group);
+                                                    return next;
+                                                });
+                                            }}
+                                            className="h-4 w-4 rounded border-gray-500 bg-gray-900 accent-red-500 cursor-pointer shrink-0"
+                                        />
+                                        <span className={`flex-1 text-xs truncate ${isChecked ? 'text-red-300' : 'text-gray-200'}`}>{group}</span>
+                                        <span className="text-[10px] text-gray-500 shrink-0">{count} canal{count !== 1 ? 'es' : ''}</span>
+                                    </label>
+                                );
+                            })
+                        }
+                    </div>
+
+                    {/* Pie: resumen + botones de acción */}
+                    <div className="px-4 py-3 border-t border-gray-700 shrink-0 space-y-2">
+                        {modalSelectedGroups.size > 0 && (
+                            <p className="text-xs text-red-400 text-center">
+                                {modalSelectedGroups.size} grupo{modalSelectedGroups.size > 1 ? 's' : ''} seleccionado{modalSelectedGroups.size > 1 ? 's' : ''} &bull;{' '}
+                                {reparacionChannels.filter(c => modalSelectedGroups.has(c.groupTitle)).length} canal{reparacionChannels.filter(c => modalSelectedGroups.has(c.groupTitle)).length !== 1 ? 'es' : ''} se eliminar{reparacionChannels.filter(c => modalSelectedGroups.has(c.groupTitle)).length !== 1 ? 'án' : 'á'}
+                            </p>
+                        )}
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setShowDeleteGroupsModal(false)}
+                                className="flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (modalSelectedGroups.size === 0) return;
+                                    deleteChannelsBySelectedGroups(modalSelectedGroups);
+                                    setHasPendingReparacionChanges(true);
+                                    setShowDeleteGroupsModal(false);
+                                }}
+                                disabled={modalSelectedGroups.size === 0}
+                                className="flex-1 py-2 bg-red-700 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold rounded-lg flex items-center justify-center gap-2 transition-colors"
+                            >
+                                <Trash2 size={14} />
+                                Eliminar grupos
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
+        </>
     );
 };
 
