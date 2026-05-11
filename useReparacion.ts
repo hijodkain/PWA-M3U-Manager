@@ -47,6 +47,8 @@ export const useReparacion = (
     const [mainListFilter, setMainListFilter] = useState('Todos los canales');
     const [mainDomainFilter, setMainDomainFilter] = useState('Todos los dominios');
     const [reparacionListFilter, setReparacionListFilter] = useState('Todos los canales');
+    // Grupos marcados para eliminar en bloque (multi-selección en el dropdown)
+    const [selectedRepairGroups, setSelectedRepairGroups] = useState<Set<string>>(new Set());
     const [mainListSearch, setMainListSearch] = useState('');
     const [reparacionListSearch, setReparacionListSearch] = useState('');
     // Estado con debounce para no ejecutar Levenshtein en cada pulsación de tecla
@@ -671,27 +673,30 @@ export const useReparacion = (
 
     const filteredReparacionChannels = useMemo(() => {
         let channels = reparacionChannels;
-        if (reparacionListFilter !== 'Todos los canales') {
+        // Multi-selección de grupos tiene prioridad sobre el filtro simple
+        if (selectedRepairGroups.size > 0) {
+            channels = channels.filter(c => selectedRepairGroups.has(c.groupTitle));
+        } else if (reparacionListFilter !== 'Todos los canales') {
             channels = channels.filter(c => c.groupTitle === reparacionListFilter);
         }
         if (debouncedReparacionSearch) {
             if (isSmartSearchEnabled) {
-                // Usar búsqueda inteligente con el término debounced
                 const searchResults = searchChannels(channels, debouncedReparacionSearch, 0.4);
                 return searchResults.map(result => result.item);
             } else {
-                // Búsqueda tradicional exacta
                 channels = channels.filter(c => c.name.toLowerCase().includes(debouncedReparacionSearch.toLowerCase()));
             }
         }
         return channels;
-    }, [reparacionChannels, reparacionListFilter, debouncedReparacionSearch, isSmartSearchEnabled, searchChannels]);
+    }, [reparacionChannels, reparacionListFilter, selectedRepairGroups, debouncedReparacionSearch, isSmartSearchEnabled, searchChannels]);
 
     // Actualizar smartSearchResults fuera del useMemo para evitar el anti-patrón setState-durante-render
     useEffect(() => {
         if (debouncedReparacionSearch && isSmartSearchEnabled) {
             let channels = reparacionChannels;
-            if (reparacionListFilter !== 'Todos los canales') {
+            if (selectedRepairGroups.size > 0) {
+                channels = channels.filter(c => selectedRepairGroups.has(c.groupTitle));
+            } else if (reparacionListFilter !== 'Todos los canales') {
                 channels = channels.filter(c => c.groupTitle === reparacionListFilter);
             }
             const searchResults = searchChannels(channels, debouncedReparacionSearch, 0.4);
@@ -699,7 +704,7 @@ export const useReparacion = (
         } else {
             setSmartSearchResults([]);
         }
-    }, [reparacionChannels, reparacionListFilter, debouncedReparacionSearch, isSmartSearchEnabled, searchChannels]);
+    }, [reparacionChannels, reparacionListFilter, selectedRepairGroups, debouncedReparacionSearch, isSmartSearchEnabled, searchChannels]);
 
     const toggleReparacionSelection = useCallback((id: string, index: number, shiftKey: boolean, metaKey: boolean, ctrlKey: boolean) => {
         const newSelected = new Set(selectedReparacionChannels);
@@ -892,6 +897,12 @@ export const useReparacion = (
         setAutoAssignResults(null);
     }, []);
 
+    // Elimina todos los canales cuyo groupTitle esté en el conjunto de grupos indicado
+    const deleteChannelsBySelectedGroups = useCallback((groups: Set<string>) => {
+        setReparacionChannels(prev => prev.filter(c => !groups.has(c.groupTitle)));
+        setSelectedRepairGroups(new Set());
+    }, []);
+
     return {
         selectedReparacionChannels,
         attributesToCopy,
@@ -903,6 +914,9 @@ export const useReparacion = (
         setMainDomainFilter,
         reparacionListFilter,
         setReparacionListFilter,
+        selectedRepairGroups,
+        setSelectedRepairGroups,
+        deleteChannelsBySelectedGroups,
         handleReparacionFileUpload,
         processCurationM3U,
         toggleAttributeToCopy,

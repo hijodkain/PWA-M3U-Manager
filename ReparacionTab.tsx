@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Upload, Copy, CheckSquare, ArrowLeftCircle, RotateCcw, Trash2, Link, Check, Search, X, RefreshCw, SlidersHorizontal, Filter, Database } from 'lucide-react';
+import { Upload, Copy, CheckSquare, ArrowLeftCircle, RotateCcw, Trash2, Link, Check, Search, X, RefreshCw, SlidersHorizontal, Filter, Database, ChevronDown } from 'lucide-react';
 import { useReparacion } from './useReparacion';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useChannels } from './useChannels';
@@ -58,6 +58,8 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
     const [isUpdatingReparacionList, setIsUpdatingReparacionList] = useState(false);
     const [showMainColumnsMenu, setShowMainColumnsMenu] = useState(false);
     const [showReparacionColumnsMenu, setShowReparacionColumnsMenu] = useState(false);
+    const [showGroupDropdown, setShowGroupDropdown] = useState(false);
+    const [lastClickedGroupIndex, setLastClickedGroupIndex] = useState<number | null>(null);
     const [showMedicinaSearchControls, setShowMedicinaSearchControls] = useState(false);
     const [selectedMedicinaLettersCount, setSelectedMedicinaLettersCount] = useState(0);
     const [mainVisibleFields, setMainVisibleFields] = useState<ColumnVisibilityConfig>(DEFAULT_COLUMN_VISIBILITY);
@@ -77,6 +79,9 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         setMainDomainFilter,
         reparacionListFilter,
         setReparacionListFilter,
+        selectedRepairGroups,
+        setSelectedRepairGroups,
+        deleteChannelsBySelectedGroups,
         handleReparacionFileUpload,
         processCurationM3U,
         toggleAttributeToCopy,
@@ -135,6 +140,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
     const reparacionListParentRef = useRef<HTMLDivElement>(null);
     const mainColumnsMenuRef = useRef<HTMLDivElement>(null);
     const reparacionColumnsMenuRef = useRef<HTMLDivElement>(null);
+    const groupDropdownRef = useRef<HTMLDivElement>(null);
     const medicinaSearchInputRef = useRef<HTMLInputElement>(null);
 
     // Initial Load of Medicina Lists
@@ -230,6 +236,9 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
             }
             if (reparacionColumnsMenuRef.current && !reparacionColumnsMenuRef.current.contains(target)) {
                 setShowReparacionColumnsMenu(false);
+            }
+            if (groupDropdownRef.current && !groupDropdownRef.current.contains(target)) {
+                setShowGroupDropdown(false);
             }
         };
 
@@ -340,8 +349,8 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         return url.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('dl=0', 'dl=1');
     };
 
-    const getReparacionFileName = (): string => {
-        const base = (reparacionListName || 'lista_reparadora').trim().replace(/\s+/g, '_');
+    const getReparacionFileName = (nameOverride?: string): string => {
+        const base = (nameOverride || reparacionListName || 'lista_reparadora').trim().replace(/\s+/g, '_');
         return base.endsWith('.m3u') || base.endsWith('.m3u8') ? base : `${base}.m3u`;
     };
 
@@ -358,8 +367,9 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         return content;
     };
 
-    const handleUpdateReparacionList = async () => {
-        if (!reparacionListName) {
+    const handleUpdateReparacionList = async (nameOverride?: string) => {
+        const effectiveName = nameOverride || reparacionListName;
+        if (!effectiveName) {
             alert('No hay una lista reparadora cargada para actualizar.');
             return;
         }
@@ -371,7 +381,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         setIsUpdatingReparacionList(true);
         try {
             const accessToken = await getDropboxAccessToken();
-            const filename = getReparacionFileName();
+            const filename = getReparacionFileName(nameOverride);
             const uploadPath = `/Listas Reparadoras/${filename}`;
             const content = generateReparacionM3UContent();
 
@@ -432,20 +442,20 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 const stored = JSON.parse(localStorage.getItem('medicinaLists') || '[]');
                 const updated = Array.isArray(stored)
                     ? stored.map((list: any) =>
-                        list.name === reparacionListName
+                        list.name === effectiveName
                             ? { ...list, url: sharedUrl }
                             : list
                     )
                     : [];
 
-                const exists = updated.some((list: any) => list.name === reparacionListName);
+                const exists = updated.some((list: any) => list.name === effectiveName);
                 const finalLists = exists
                     ? updated
                     : [
                         ...updated,
                         {
                             id: Date.now().toString(),
-                            name: reparacionListName,
+                            name: effectiveName,
                             url: sharedUrl,
                         },
                     ];
@@ -456,7 +466,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
             }
 
             setHasPendingReparacionChanges(false);
-            alert('Lista reparadora actualizada en Dropbox correctamente.');
+            alert(nameOverride ? `Nueva lista "${effectiveName}" guardada en Dropbox.` : 'Lista reparadora actualizada en Dropbox correctamente.');
         } catch (error) {
             console.error('Error actualizando lista reparadora', error);
             alert(`No se pudo actualizar la lista reparadora: ${error instanceof Error ? error.message : 'Error desconocido'}`);
@@ -476,6 +486,57 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         if (deletedCount > 0) {
             setHasPendingReparacionChanges(true);
         }
+    };
+
+    // Maneja click en un grupo del dropdown: toggle simple o rango con Shift
+    const handleGroupClick = (group: string, index: number, isShift: boolean) => {
+        setSelectedRepairGroups(prev => {
+            const next = new Set(prev);
+            if (isShift && lastClickedGroupIndex !== null) {
+                const allGroups = reparacionListUniqueGroups.filter(g => g !== 'Todos los canales');
+                const start = Math.min(lastClickedGroupIndex, index);
+                const end = Math.max(lastClickedGroupIndex, index);
+                for (let i = start; i <= end; i++) {
+                    next.add(allGroups[i]);
+                }
+            } else {
+                if (next.has(group)) {
+                    next.delete(group);
+                } else {
+                    next.add(group);
+                }
+            }
+            return next;
+        });
+        setLastClickedGroupIndex(index);
+    };
+
+    // Guarda la lista reparadora como un archivo nuevo (pide nombre, sube a Dropbox o descarga local)
+    const handleSaveAsNewReparacionList = async () => {
+        const base = (reparacionListName || 'lista').replace(/\.m3u8?$/i, '');
+        const newName = prompt('Nombre para la nueva lista reparadora:', `${base}_nueva`);
+        if (!newName?.trim()) return;
+
+        if (!settingsHook.dropboxRefreshToken || !settingsHook.dropboxAppKey) {
+            // Sin Dropbox: descarga local con el nuevo nombre
+            const content = generateReparacionM3UContent();
+            const safeName = newName.trim().replace(/\s+/g, '_');
+            const fname = safeName.endsWith('.m3u') || safeName.endsWith('.m3u8') ? safeName : `${safeName}.m3u`;
+            const blob = new Blob([content], { type: 'text/plain' });
+            const blobUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = fname;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(blobUrl);
+            setHasPendingReparacionChanges(false);
+            return;
+        }
+
+        await handleUpdateReparacionList(newName.trim());
+        setReparacionListName(newName.trim());
     };
 
     // Clear Main List Logic
@@ -1218,22 +1279,89 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                             )}
                         </div>
                          
-                         <div className="flex gap-1.5 items-center w-full overflow-hidden">
-                            <select
-                                value={reparacionListFilter}
-                                onChange={(e) => setReparacionListFilter(e.target.value)}
-                                className="min-w-0 flex-1 bg-gray-900 border border-gray-600 rounded px-1.5 py-1 text-xs text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                            >
-                                <option value="Todos los canales">Todos los Grupos</option>
-                                {reparacionListUniqueGroups.map(g => (
-                                    <option key={g} value={g}>{g}</option>
-                                ))}
-                            </select>
-                            
+                        {/* Selector de grupos multi-selecci\u00f3n (Shift+click para rango) */}
+                        <div className="flex gap-1.5 items-center w-full overflow-hidden">
+                            <div className="relative flex-1 min-w-0" ref={groupDropdownRef}>
+                                <button
+                                    onClick={() => setShowGroupDropdown(prev => !prev)}
+                                    className="w-full flex items-center justify-between bg-gray-900 border border-gray-600 rounded px-1.5 py-1 text-xs text-white hover:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 min-w-0"
+                                >
+                                    <span className="truncate text-left flex-1">
+                                        {selectedRepairGroups.size > 0
+                                            ? <span className="text-red-400 font-medium">{selectedRepairGroups.size} grupo{selectedRepairGroups.size > 1 ? 's' : ''} (borrar)</span>
+                                            : (reparacionListFilter === 'Todos los canales' ? 'Todos los Grupos' : reparacionListFilter)
+                                        }
+                                    </span>
+                                    <ChevronDown size={12} className={`shrink-0 ml-1 transition-transform duration-150 ${showGroupDropdown ? 'rotate-180' : ''}`} />
+                                </button>
+
+                                {showGroupDropdown && (
+                                    <div className="absolute top-full left-0 right-0 z-50 mt-0.5 bg-gray-900 border border-gray-600 rounded-lg shadow-2xl max-h-52 overflow-y-auto">
+                                        {/* Opci\u00f3n "Todos los grupos" */}
+                                        <div
+                                            onClick={() => {
+                                                setSelectedRepairGroups(new Set());
+                                                setReparacionListFilter('Todos los canales');
+                                                setLastClickedGroupIndex(null);
+                                                setShowGroupDropdown(false);
+                                            }}
+                                            className={`px-2.5 py-1.5 text-xs cursor-pointer hover:bg-gray-700 flex items-center gap-2 ${
+                                                selectedRepairGroups.size === 0 && reparacionListFilter === 'Todos los canales'
+                                                    ? 'text-blue-400 font-medium bg-gray-800'
+                                                    : 'text-gray-300'
+                                            }`}
+                                        >
+                                            Todos los Grupos
+                                        </div>
+                                        {/* Grupos individuales — Shift+click selecciona rango */}
+                                        {reparacionListUniqueGroups
+                                            .filter(g => g !== 'Todos los canales')
+                                            .map((group, index) => (
+                                                <div
+                                                    key={group}
+                                                    onClick={(e) => handleGroupClick(group, index, e.shiftKey)}
+                                                    className={`px-2.5 py-1.5 text-xs cursor-pointer hover:bg-gray-700 flex items-center gap-2 select-none ${
+                                                        selectedRepairGroups.has(group)
+                                                            ? 'bg-red-900/40 text-red-300'
+                                                            : reparacionListFilter === group
+                                                                ? 'text-blue-400 font-medium bg-gray-800'
+                                                                : 'text-white'
+                                                    }`}
+                                                    title={selectedRepairGroups.size > 0 ? 'Shift+click para seleccionar rango' : 'Click para filtrar · Shift+click para seleccionar varios'}
+                                                >
+                                                    <div className={`w-3 h-3 rounded border shrink-0 flex items-center justify-center ${
+                                                        selectedRepairGroups.has(group) ? 'bg-red-600 border-red-600' : 'border-gray-500'
+                                                    }`}>
+                                                        {selectedRepairGroups.has(group) && <X size={8} />}
+                                                    </div>
+                                                    <span className="truncate">{group}</span>
+                                                </div>
+                                            ))
+                                        }
+                                    </div>
+                                )}
+                            </div>
+
                             <button onClick={() => toggleSelectAllReparacionGroup()} className="shrink-0 px-2 py-1 bg-gray-600 hover:bg-gray-500 rounded text-[10px] text-white leading-tight">
                                 {isAllInGroupSelected ? 'Deselect.' : 'Select. Grupo'}
                             </button>
                         </div>
+
+                        {/* Bot\u00f3n eliminar grupos seleccionados */}
+                        {selectedRepairGroups.size > 0 && (
+                            <button
+                                onClick={() => {
+                                    const count = reparacionChannels.filter(c => selectedRepairGroups.has(c.groupTitle)).length;
+                                    if (!confirm(`\u00bfEliminar ${selectedRepairGroups.size} grupo${selectedRepairGroups.size > 1 ? 's' : ''} de la lista reparadora? Se borrar\u00e1n ${count} canal${count !== 1 ? 'es' : ''}. Los archivos en Dropbox no se modifican.`)) return;
+                                    deleteChannelsBySelectedGroups(selectedRepairGroups);
+                                    setHasPendingReparacionChanges(true);
+                                }}
+                                className="w-full py-1.5 bg-red-700 hover:bg-red-600 text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+                            >
+                                <Trash2 size={13} />
+                                Eliminar {selectedRepairGroups.size} grupo{selectedRepairGroups.size > 1 ? 's' : ''} seleccionado{selectedRepairGroups.size > 1 ? 's' : ''}
+                            </button>
+                        )}
                     </div>
                 )}
                 
@@ -1321,14 +1449,22 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                 )}
 
                 {hasPendingReparacionChanges && reparacionListName && (
-                    <div className="pt-2 border-t border-gray-700 mt-2">
+                    <div className="pt-2 border-t border-gray-700 mt-2 space-y-2">
                         <button
-                            onClick={handleUpdateReparacionList}
+                            onClick={() => handleUpdateReparacionList()}
                             disabled={isUpdatingReparacionList}
                             className="w-full py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white text-sm font-bold rounded-lg flex items-center justify-center gap-2 transition-colors shadow"
                         >
                             {isUpdatingReparacionList ? <RefreshCw size={15} className="animate-spin" /> : <RefreshCw size={15} />}
                             {isUpdatingReparacionList ? 'Actualizando lista reparadora...' : 'Actualizar lista reparadora'}
+                        </button>
+                        <button
+                            onClick={handleSaveAsNewReparacionList}
+                            disabled={isUpdatingReparacionList}
+                            className="w-full py-2 bg-green-700 hover:bg-green-600 disabled:opacity-60 text-white text-sm font-bold rounded-lg flex items-center justify-center gap-2 transition-colors shadow"
+                        >
+                            <Database size={15} />
+                            Guardar como nueva lista
                         </button>
                     </div>
                 )}

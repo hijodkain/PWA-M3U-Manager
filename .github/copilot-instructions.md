@@ -1,6 +1,6 @@
 # PWA M3U Manager - Instrucciones para Agentes de IA
 
-## � VERSIÓN ACTUAL: v1.0
+## 📌 VERSIÓN ACTUAL: v1.1
 
 ### 🔢 Política de Versionado Semántico
 La versión se muestra en el header de la app (`PWAM3UManager.tsx`) y debe actualizarse con cada subida a main o rama feature significativa.
