@@ -1,4 +1,5 @@
 {
     "githubIssues.alwaysPromptForNewIssueRepo": true,
-    "githubPullRequests.quickDiff": true
+    "githubPullRequests.quickDiff": true,
+    "geminicodeassist.project": "gen-lang-client-0479776122"
 }
