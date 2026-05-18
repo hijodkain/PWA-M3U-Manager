@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ExternalLink, PlusCircle, Trash2, Filter, List, Cloud, Zap, Plus, Copy } from 'lucide-react';
+import { ExternalLink, PlusCircle, Trash2, Filter, List, Cloud, Zap, Plus, Copy, Upload } from 'lucide-react';
 import { useSettings } from './useSettings';
 import { getStorageItem, removeStorageItem, setStorageItem } from './utils/storage';
 
@@ -50,10 +50,21 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
         saveCfSettings,
     } = settingsHook;
 
-    const [activeSubTab, setActiveSubTab] = useState<SettingsSubTab>('dropbox');
+    const [activeSubTab, setActiveSubTab] = useState<SettingsSubTab>(() => {
+        // Leer directamente de localStorage para evitar el desfase del useEffect de useSettings
+        try {
+            const token = typeof window !== 'undefined' ? localStorage.getItem('dropbox_refresh_token') : null;
+            return token ? 'epg' : 'dropbox';
+        } catch {
+            return 'dropbox';
+        }
+    });
     const [appKey, setAppKey] = useState(dropboxAppKey);
     const [newEpgUrl, setNewEpgUrl] = useState('');
+    const xmlFileInputRef = React.useRef<HTMLInputElement>(null);
     const [newEpgName, setNewEpgName] = useState('');
+    const [isUploadingXml, setIsUploadingXml] = useState(false);
+    const [xmlUploadStatus, setXmlUploadStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
     
     // Cloudflare Worker local state
     const [localCfVerifyUrl, setLocalCfVerifyUrl] = useState(cfVerifyApiUrl);
@@ -122,6 +133,115 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
             addSavedEpgUrl(newEpgName, newEpgUrl);
             setNewEpgName('');
             setNewEpgUrl('');
+        }
+    };
+
+    const getDropboxAccessToken = async (): Promise<string> => {
+        const tokenRes = await fetch('https://api.dropboxapi.com/oauth2/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                grant_type: 'refresh_token',
+                refresh_token: dropboxRefreshToken,
+                client_id: dropboxAppKey,
+            }),
+        });
+        if (!tokenRes.ok) throw new Error('No se pudo obtener el token de Dropbox.');
+        const tokenData = await tokenRes.json();
+        return tokenData.access_token as string;
+    };
+
+    const convertDropboxUrl = (url: string): string =>
+        url.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('dl=0', 'dl=1');
+
+    const handleXmlFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        e.target.value = '';
+
+        if (!dropboxRefreshToken || !dropboxAppKey) {
+            setXmlUploadStatus({ type: 'error', message: 'Debes conectar Dropbox primero para subir archivos XML.' });
+            return;
+        }
+
+        setIsUploadingXml(true);
+        setXmlUploadStatus(null);
+
+        try {
+            // Leer contenido del archivo
+            const content = await file.text();
+            const epgName = file.name.replace(/\.xml$/i, '');
+            const uploadPath = `/Fuentes EPG Subidas/${file.name}`;
+
+            // Obtener token de acceso
+            const accessToken = await getDropboxAccessToken();
+
+            // Subir archivo a Dropbox
+            const uploadRes = await fetch('https://content.dropboxapi.com/2/files/upload', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Dropbox-API-Arg': JSON.stringify({
+                        path: uploadPath,
+                        mode: 'overwrite',
+                        autorename: false,
+                        mute: false,
+                        strict_conflict: false,
+                    }),
+                    'Content-Type': 'application/octet-stream',
+                },
+                body: content,
+            });
+
+            if (!uploadRes.ok) {
+                const errText = await uploadRes.text();
+                throw new Error(`Error al subir a Dropbox: ${uploadRes.status} ${errText}`);
+            }
+
+            const uploaded = await uploadRes.json();
+
+            // Crear enlace compartido (o recuperar el existente)
+            let sharedUrl = '';
+            const shareResponse = await fetch('https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ path: uploaded.path_display }),
+            });
+
+            if (shareResponse.ok) {
+                const shareData = await shareResponse.json();
+                sharedUrl = convertDropboxUrl(shareData.url);
+            } else {
+                // Si ya existe un enlace, recuperarlo
+                const listLinks = await fetch('https://api.dropboxapi.com/2/sharing/list_shared_links', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ path: uploaded.path_display }),
+                });
+                if (listLinks.ok) {
+                    const existing = await listLinks.json();
+                    if (existing.links && existing.links.length > 0) {
+                        sharedUrl = convertDropboxUrl(existing.links[0].url);
+                    }
+                }
+            }
+
+            if (!sharedUrl) {
+                throw new Error('No se pudo generar el enlace compartido de Dropbox.');
+            }
+
+            addSavedEpgUrl(epgName, sharedUrl);
+            setXmlUploadStatus({ type: 'success', message: `"${epgName}" subido a Dropbox y añadido como fuente EPG.` });
+        } catch (err) {
+            setXmlUploadStatus({ type: 'error', message: err instanceof Error ? err.message : 'Error desconocido al subir el archivo.' });
+        } finally {
+            setIsUploadingXml(false);
         }
     };
 
@@ -328,10 +448,41 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
                                         onClick={handleSaveEpgUrl}
                                         disabled={!newEpgName || !newEpgUrl}
                                         className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white p-2 rounded-lg"
+                                        title="Añadir URL"
                                     >
                                         <PlusCircle size={24} />
                                     </button>
                                 </div>
+                            </div>
+                            <div className="border-t border-gray-700 pt-4">
+                                <p className="text-sm text-gray-400 mb-3">
+                                    O sube un archivo EPG local (.xml) — se guardará en tu Dropbox en la carpeta <span className="text-white font-medium">Fuentes EPG Subidas</span>:
+                                </p>
+                                <input
+                                    ref={xmlFileInputRef}
+                                    type="file"
+                                    accept=".xml,application/xml,text/xml"
+                                    className="hidden"
+                                    onChange={handleXmlFileUpload}
+                                />
+                                <button
+                                    onClick={() => xmlFileInputRef.current?.click()}
+                                    disabled={isUploadingXml}
+                                    className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-600 text-white px-4 py-2 rounded-lg transition-colors text-sm"
+                                >
+                                    {isUploadingXml
+                                        ? <><span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full" /> Subiendo...</>
+                                        : <><Upload size={16} /> Subir archivo .xml a Dropbox</>
+                                    }
+                                </button>
+                                {!dropboxRefreshToken && (
+                                    <p className="text-yellow-400 text-xs mt-2">⚠️ Conecta Dropbox primero para usar esta función.</p>
+                                )}
+                                {xmlUploadStatus && (
+                                    <p className={`text-xs mt-2 ${xmlUploadStatus.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>
+                                        {xmlUploadStatus.type === 'success' ? '✓' : '✗'} {xmlUploadStatus.message}
+                                    </p>
+                                )}
                             </div>
                         </div>
 
