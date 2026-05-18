@@ -63,12 +63,22 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
     const [selectedGroup, setSelectedGroup] = useState('all');
     const [loadedEpgSourceName, setLoadedEpgSourceName] = useState('');
     
-    // UI State for toggles
-    const [ottModeActive, setOttModeActive] = useState(false);
-    const [tivimateModeActive, setTivimateModeActive] = useState(false);
-    const [transferLogoActive, setTransferLogoActive] = useState(false);
-    const [keepLogoActive, setKeepLogoActive] = useState(false);
-    const [copyNameActive, setCopyNameActive] = useState(false);
+    // UI State for toggles — persistido en localStorage
+    const [tvgNameActive, setTvgNameActive] = useState<boolean>(() => {
+        try { return localStorage.getItem('epg_toggle_tvgName') === 'true'; } catch { return false; }
+    });
+    const [tvgIdActive, setTvgIdActive] = useState<boolean>(() => {
+        try {
+            const stored = localStorage.getItem('epg_toggle_tvgId');
+            return stored === null ? true : stored === 'true'; // true por defecto la primera vez
+        } catch { return true; }
+    });
+    const [transferLogoActive, setTransferLogoActive] = useState<boolean>(() => {
+        try { return localStorage.getItem('epg_toggle_logo') === 'true'; } catch { return false; }
+    });
+    const [copyNameActive, setCopyNameActive] = useState<boolean>(() => {
+        try { return localStorage.getItem('epg_toggle_name') === 'true'; } catch { return false; }
+    });
     const [isShortViewport, setIsShortViewport] = useState(false);
     const [selectedLettersCount, setSelectedLettersCount] = useState(0);
     const [showEpgControls, setShowEpgControls] = useState(false);
@@ -76,12 +86,21 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
 
     useEffect(() => {
         const attrs = new Set<AttributeKey>();
-        if (tivimateModeActive) attrs.add('tvgId');
-        if (ottModeActive) attrs.add('tvgName');
+        if (tvgIdActive) attrs.add('tvgId');
+        if (tvgNameActive) attrs.add('tvgName');
         if (transferLogoActive) attrs.add('tvgLogo');
         if (copyNameActive) attrs.add('name');
         setAttributesToCopy(attrs);
-    }, [tivimateModeActive, ottModeActive, transferLogoActive, copyNameActive, setAttributesToCopy]);
+        // Sincronizar assignmentMode con el último botón activo
+        if (tvgIdActive && !tvgNameActive) setAssignmentMode('tvg-id');
+        else if (tvgNameActive && !tvgIdActive) setAssignmentMode('tvg-name');
+    }, [tvgIdActive, tvgNameActive, transferLogoActive, copyNameActive, setAttributesToCopy, setAssignmentMode]);
+
+    // Persistir toggles en localStorage cuando cambian
+    useEffect(() => { try { localStorage.setItem('epg_toggle_tvgId', String(tvgIdActive)); } catch {} }, [tvgIdActive]);
+    useEffect(() => { try { localStorage.setItem('epg_toggle_tvgName', String(tvgNameActive)); } catch {} }, [tvgNameActive]);
+    useEffect(() => { try { localStorage.setItem('epg_toggle_logo', String(transferLogoActive)); } catch {} }, [transferLogoActive]);
+    useEffect(() => { try { localStorage.setItem('epg_toggle_name', String(copyNameActive)); } catch {} }, [copyNameActive]);
 
     useEffect(() => {
         const checkViewport = () => setIsShortViewport(window.innerHeight <= 560);
@@ -161,28 +180,13 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
         autoAssignEpgToVisibleGroup(filteredMainChannelsForEpg);
     };
 
-    // Helper: Logic for Toggle Buttons (Single Source of Truth)
-    const handleToggle = (type: 'ott' | 'tivimate' | 'logo' | 'no-logo' | 'name') => {
-        // Here we would implement the logic to update global state or hook
-        // For now, local UI toggle
+    // Helper: Logic for Toggle Buttons
+    const handleToggle = (type: 'tvg-id' | 'tvg-name' | 'logo' | 'name') => {
         switch(type) {
-            case 'ott': 
-                setOttModeActive(!ottModeActive);
-                setAssignmentMode('tvg-name');
-                break;
-            case 'tivimate': 
-                setTivimateModeActive(!tivimateModeActive);
-                setAssignmentMode('tvg-id');
-                break;
-            case 'logo': 
-                setTransferLogoActive(!transferLogoActive); 
-                if(!transferLogoActive) setKeepLogoActive(false); 
-                break;
-            case 'no-logo':
-                setKeepLogoActive(!keepLogoActive);
-                if(!keepLogoActive) setTransferLogoActive(false);
-                break;
-            case 'name': setCopyNameActive(!copyNameActive); break;
+            case 'tvg-id':   setTvgIdActive(prev => !prev); break;
+            case 'tvg-name': setTvgNameActive(prev => !prev); break;
+            case 'logo':     setTransferLogoActive(prev => !prev); break;
+            case 'name':     setCopyNameActive(prev => !prev); break;
         }
     };
 
@@ -197,7 +201,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                         <button
                             onClick={() => {
                                 setAssignmentMode('tvg-id');
-                                setTivimateModeActive(true);
+                                setTvgIdActive(true);
                             }}
                             className={`flex ${buttonHeightClass} items-center justify-center rounded-lg border text-[11px] font-bold transition-all ${
                                 assignmentMode === 'tvg-id'
@@ -210,7 +214,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                         <button
                             onClick={() => {
                                 setAssignmentMode('tvg-name');
-                                setOttModeActive(true);
+                                setTvgNameActive(true);
                             }}
                             className={`flex ${buttonHeightClass} items-center justify-center rounded-lg border text-[11px] font-bold transition-all ${
                                 assignmentMode === 'tvg-name'
@@ -228,26 +232,26 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                 <div className="flex w-full flex-col items-stretch gap-1">
                     <span className="text-center text-[8px] font-semibold uppercase tracking-wider text-gray-500">Preparar para</span>
                     <button
-                        onClick={() => handleToggle('ott')}
+                        onClick={() => handleToggle('tvg-id')}
                         className={`flex ${buttonHeightClass} items-center justify-center rounded-lg border transition-all duration-200 ${
-                            ottModeActive
-                                ? 'border-orange-500 bg-orange-900/40 shadow-[0_0_8px_rgba(249,115,22,0.3)]'
-                                : 'border-gray-600/60 bg-gray-700/60 hover:border-orange-600/60 hover:bg-gray-700'
+                            tvgIdActive
+                                ? 'border-blue-500 bg-blue-900/40 text-blue-300 shadow-[0_0_8px_rgba(59,130,246,0.3)]'
+                                : 'border-gray-600/60 bg-gray-700/60 text-gray-400 hover:border-blue-600/60 hover:bg-gray-700'
                         }`}
-                        title="Usar formato para OTT Navigator"
+                        title="Transferir tvg-id desde EPG"
                     >
-                        <img src="/ott-logo.png" alt="OTT" className="h-full w-auto object-contain px-1" onError={(e) => e.currentTarget.style.display = 'none'} />
+                        <span className="text-[10px] font-bold leading-none">tvg-id</span>
                     </button>
                     <button
-                        onClick={() => handleToggle('tivimate')}
+                        onClick={() => handleToggle('tvg-name')}
                         className={`flex ${buttonHeightClass} items-center justify-center rounded-lg border transition-all duration-200 ${
-                            tivimateModeActive
-                                ? 'border-blue-500 bg-blue-900/40 shadow-[0_0_8px_rgba(59,130,246,0.3)]'
-                                : 'border-gray-600/60 bg-gray-700/60 hover:border-blue-600/60 hover:bg-gray-700'
+                            tvgNameActive
+                                ? 'border-orange-500 bg-orange-900/40 text-orange-300 shadow-[0_0_8px_rgba(249,115,22,0.3)]'
+                                : 'border-gray-600/60 bg-gray-700/60 text-gray-400 hover:border-orange-600/60 hover:bg-gray-700'
                         }`}
-                        title="Usar formato para TiviMate"
+                        title="Transferir tvg-name desde EPG"
                     >
-                        <img src="/tivimate-logo.png" alt="TiviMate" className="h-full w-auto object-contain px-1" onError={(e) => e.currentTarget.style.display = 'none'} />
+                        <span className="text-[10px] font-bold leading-none">tvg-name</span>
                     </button>
                 </div>
 
@@ -265,18 +269,6 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                         title="Copiar logo desde EPG al canal"
                     >
                         <span className="rounded-sm border border-black/20 bg-white px-2 py-0.5 text-[10px] font-bold leading-none text-gray-900">Logo</span>
-                    </button>
-
-                    <button
-                        onClick={() => handleToggle('no-logo')}
-                        className={`flex ${buttonHeightClass} items-center justify-center rounded-lg border transition-all ${
-                            keepLogoActive
-                                ? 'border-red-500 bg-red-800/50 text-red-300'
-                                : 'border-gray-600/60 bg-gray-700/60 text-gray-400 hover:border-gray-500 hover:text-gray-200'
-                        }`}
-                        title="No copiar logo, mantener el logo actual del canal"
-                    >
-                        <span className="text-[10px] font-bold leading-none">NO LOGO</span>
                     </button>
 
                     <button
@@ -746,10 +738,10 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                                 onClick={() => {
                                                     if (destinationChannelId) {
                                                         handleEpgSourceClick(epg, {
-                                                            ottMode: ottModeActive,
-                                                            tivimateMode: tivimateModeActive,
+                                                            ottMode: tvgNameActive,
+                                                            tivimateMode: tvgIdActive,
                                                             transferLogo: transferLogoActive,
-                                                            keepLogo: keepLogoActive,
+                                                            keepLogo: false,
                                                             copyName: copyNameActive
                                                         });
                                                     } else {
