@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ExternalLink, PlusCircle, Trash2, Filter, List, Cloud, Zap, Plus, Copy } from 'lucide-react';
+import { ExternalLink, PlusCircle, Trash2, Filter, List, Cloud, Zap, Plus, Copy, Upload } from 'lucide-react';
 import { useSettings } from './useSettings';
 import { getStorageItem, removeStorageItem, setStorageItem } from './utils/storage';
 
@@ -50,9 +50,18 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
         saveCfSettings,
     } = settingsHook;
 
-    const [activeSubTab, setActiveSubTab] = useState<SettingsSubTab>('dropbox');
+    const [activeSubTab, setActiveSubTab] = useState<SettingsSubTab>(() => {
+        // Leer directamente de localStorage para evitar el desfase del useEffect de useSettings
+        try {
+            const token = typeof window !== 'undefined' ? localStorage.getItem('dropbox_refresh_token') : null;
+            return token ? 'epg' : 'dropbox';
+        } catch {
+            return 'dropbox';
+        }
+    });
     const [appKey, setAppKey] = useState(dropboxAppKey);
     const [newEpgUrl, setNewEpgUrl] = useState('');
+    const xmlFileInputRef = React.useRef<HTMLInputElement>(null);
     const [newEpgName, setNewEpgName] = useState('');
     
     // Cloudflare Worker local state
@@ -123,6 +132,22 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
             setNewEpgName('');
             setNewEpgUrl('');
         }
+    };
+
+    const handleXmlFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const content = ev.target?.result as string;
+            const blob = new Blob([content], { type: 'text/xml' });
+            const objectUrl = URL.createObjectURL(blob);
+            const name = file.name.replace(/\.xml$/i, '');
+            addSavedEpgUrl(name, objectUrl);
+        };
+        reader.readAsText(file);
+        // Reset input para permitir subir el mismo archivo de nuevo
+        e.target.value = '';
     };
 
     const handleSaveFilters = () => {
@@ -328,10 +353,27 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
                                         onClick={handleSaveEpgUrl}
                                         disabled={!newEpgName || !newEpgUrl}
                                         className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white p-2 rounded-lg"
+                                        title="Añadir URL"
                                     >
                                         <PlusCircle size={24} />
                                     </button>
                                 </div>
+                            </div>
+                            <div className="border-t border-gray-700 pt-4">
+                                <p className="text-sm text-gray-400 mb-3">O sube un archivo EPG local (.xml):</p>
+                                <input
+                                    ref={xmlFileInputRef}
+                                    type="file"
+                                    accept=".xml,application/xml,text/xml"
+                                    className="hidden"
+                                    onChange={handleXmlFileUpload}
+                                />
+                                <button
+                                    onClick={() => xmlFileInputRef.current?.click()}
+                                    className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 border border-gray-600 text-white px-4 py-2 rounded-lg transition-colors text-sm"
+                                >
+                                    <Upload size={16} /> Subir archivo .xml
+                                </button>
                             </div>
                         </div>
 
