@@ -366,7 +366,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
                                                             <Copy size={16} />
                                                         </button>
                                                         <button
-                                                            onClick={() => deleteSavedEpgUrl(epg.id)}
+                                                            onClick={() => deleteSavedEpgUrl(epg.url)}
                                                             className="text-gray-500 hover:text-red-400 transition-colors"
                                                             title="Eliminar fuente"
                                                         >
