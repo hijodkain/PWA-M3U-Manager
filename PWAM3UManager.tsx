@@ -264,7 +264,7 @@ export default function PWAM3UManager() {
                         <div className="flex items-center">
                             <img src="/logo.svg" alt="Logo" className={`${isShortViewport ? 'h-6 w-6 mr-2' : 'h-8 w-8 mr-3'}`} />
                              <div>
-                                <h1 className={`${isShortViewport ? 'text-lg' : 'text-xl'} font-bold text-blue-400`}>M3U Manager <span className="text-xs text-gray-500 font-normal ml-1">v1.2</span></h1>
+                                <h1 className={`${isShortViewport ? 'text-lg' : 'text-xl'} font-bold text-blue-400`}>M3U Manager <span className="text-xs text-gray-500 font-normal ml-1">v1.3</span></h1>
                                 <p className={`text-xs text-gray-400 ${isShortViewport ? 'hidden' : 'hidden sm:block'}`}>Gestión inteligente de listas IPTV</p>
                             </div>
                         </div>
