@@ -917,6 +917,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     verificationStatus={channelInfo.status}
                                     quality={channelInfo.quality}
                                     resolution={channelInfo.resolution}
+                                    warning={channelInfo.warning}
                                     onVerifyClick={() => verifyChannel(ch.id, ch.url)}
                                     onPlayClick={shouldShowPlayButton ? () => openInVLC(ch.url) : undefined}
                                     isSencillo={isSencillo}
@@ -1325,6 +1326,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     verificationStatus={channelInfo.status}
                                     quality={channelInfo.quality}
                                     resolution={channelInfo.resolution}
+                                    warning={channelInfo.warning}
                                     onVerifyClick={() => verifyChannel(ch.id, ch.url)}
                                     onPlayClick={shouldShowPlayButton ? () => openInVLC(ch.url) : undefined}
                                     visibleFields={isPro ? reparacionVisibleFields : undefined}

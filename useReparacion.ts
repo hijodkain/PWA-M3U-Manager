@@ -6,6 +6,7 @@ interface ChannelVerificationInfo {
     status: ChannelStatus;
     quality: QualityLevel;
     resolution?: string;
+    warning?: 'segments-blocked';
 }
 
 interface VerificationProgress {
@@ -220,6 +221,7 @@ export const useReparacion = (
                     status: data.status || 'failed',
                     quality: data.quality || 'unknown',
                     resolution: data.resolution,
+                    warning: data.warning,
                 }
             }));
 
