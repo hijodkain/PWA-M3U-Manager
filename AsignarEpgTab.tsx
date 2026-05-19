@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import { Upload, Download, Copy, Zap, ArrowLeftCircle, Settings as SettingsIcon, X, Tv, Image, List, Plus, Search, Filter, RotateCcw } from 'lucide-react';
+import { Upload, Download, Copy, Zap, ArrowLeftCircle, Settings as SettingsIcon, X, Tv, Image, List, Plus, Search, Filter, RotateCcw, BookOpen, Trash2 } from 'lucide-react';
 import { useAsignarEpg } from './useAsignarEpg';
 import { useChannels } from './useChannels';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -54,6 +54,9 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
         clearEpgChannels,
         autoAssignEpgThreshold,
         setAutoAssignEpgThreshold,
+        learnedMappings,
+        deleteLearnedMapping,
+        clearLearnedMappings,
     } = epgHook;
     
     const { searchChannels: epgSearchChannels, normalizeChannelName: epgNormalizeChannelName } = smartSearch;
@@ -83,6 +86,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
     const [selectedLettersCount, setSelectedLettersCount] = useState(0);
     const [showEpgControls, setShowEpgControls] = useState(false);
     const [showOnlyNoEpg, setShowOnlyNoEpg] = useState(false);
+    const [showLearnedModal, setShowLearnedModal] = useState(false);
 
     useEffect(() => {
         const attrs = new Set<AttributeKey>();
@@ -318,6 +322,18 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                         <Zap size={14} />
                     </button>
 
+                    {/* Botón diccionario aprendido */}
+                    {Object.keys(learnedMappings).length > 0 && (
+                        <button
+                            onClick={() => setShowLearnedModal(true)}
+                            className={`flex ${buttonHeightClass} items-center justify-center gap-0.5 rounded-lg border border-purple-500/70 bg-purple-900/50 text-purple-300 transition-all hover:border-purple-400 hover:bg-purple-800/60`}
+                            title={`${Object.keys(learnedMappings).length} asignaciones aprendidas — clic para gestionar`}
+                        >
+                            <BookOpen size={11} />
+                            <span className="text-[9px] font-bold leading-none">{Object.keys(learnedMappings).length}</span>
+                        </button>
+                    )}
+
                     <button
                         onClick={undo}
                         disabled={history.length === 0}
@@ -346,7 +362,69 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
 
     return (
         <div className="flex min-h-0 h-full flex-col overflow-hidden">
-            {/* Header: Load EPG Source & Tools */}
+            {/* Modal: gestión del diccionario de asignaciones aprendidas */}
+            {showLearnedModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={() => setShowLearnedModal(false)}>
+                    <div className="bg-gray-800 border border-purple-500/50 rounded-xl shadow-2xl w-full max-w-lg mx-4 flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
+                        {/* Header modal */}
+                        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700 flex-shrink-0">
+                            <div className="flex items-center gap-2">
+                                <BookOpen size={16} className="text-purple-400" />
+                                <span className="text-white font-semibold text-sm">Asignaciones aprendidas</span>
+                                <span className="text-[10px] bg-purple-900/60 text-purple-300 border border-purple-500/40 rounded px-1.5 py-0.5 font-mono">
+                                    {Object.keys(learnedMappings).length}
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {Object.keys(learnedMappings).length > 0 && (
+                                    <button
+                                        onClick={() => { if (confirm('¿Borrar todas las asignaciones aprendidas?')) { clearLearnedMappings(); } }}
+                                        className="flex items-center gap-1 text-[11px] text-red-400 hover:text-red-300 transition-colors border border-red-500/40 rounded px-2 py-1 hover:bg-red-900/30"
+                                        title="Borrar todo el diccionario aprendido"
+                                    >
+                                        <Trash2 size={11} />
+                                        Borrar todo
+                                    </button>
+                                )}
+                                <button onClick={() => setShowLearnedModal(false)} className="text-gray-400 hover:text-white transition-colors">
+                                    <X size={18} />
+                                </button>
+                            </div>
+                        </div>
+                        {/* Descripción */}
+                        <p className="text-[11px] text-gray-400 px-4 py-2 border-b border-gray-700/50 flex-shrink-0">
+                            Cada vez que asignas manualmente un canal EPG, se guarda aquí para que la autoasignación lo aplique primero.
+                        </p>
+                        {/* Lista de mappings */}
+                        <div className="overflow-y-auto flex-1 min-h-0 px-2 py-2">
+                            {Object.keys(learnedMappings).length === 0 ? (
+                                <p className="text-center text-gray-500 text-xs py-8">No hay asignaciones aprendidas aún.</p>
+                            ) : (
+                                <div className="flex flex-col gap-1">
+                                    {Object.entries(learnedMappings)
+                                        .sort(([a], [b]) => a.localeCompare(b))
+                                        .map(([channelName, epgId]) => (
+                                            <div key={channelName} className="flex items-center justify-between gap-2 bg-gray-900/60 rounded-lg px-3 py-2 border border-gray-700/40 hover:border-purple-500/30 transition-colors group">
+                                                <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                                                    <span className="text-white text-xs truncate font-medium">{channelName}</span>
+                                                    <span className="text-purple-300 text-[10px] font-mono truncate">→ {epgId}</span>
+                                                </div>
+                                                <button
+                                                    onClick={() => deleteLearnedMapping(channelName)}
+                                                    className="flex-shrink-0 text-gray-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                                                    title="Eliminar esta asignación aprendida"
+                                                >
+                                                    <X size={13} />
+                                                </button>
+                                            </div>
+                                        ))
+                                    }
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
             <div className={`bg-gray-800 rounded-lg border border-gray-700 shadow-lg z-20 flex-shrink-0 md:h-auto md:min-h-0 md:overflow-visible mb-2 ${isShortViewport ? 'px-1.5 py-1' : 'px-2 py-1.5'}`}>
                 <div className={`flex items-center justify-between gap-1.5 ${isShortViewport ? 'min-h-6' : 'min-h-8'}`}>
                     <div className="flex items-center gap-1 truncate min-w-0">
