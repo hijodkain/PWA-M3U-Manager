@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { ExternalLink, PlusCircle, Trash2, Filter, List, Cloud, Zap, Plus, Copy, Upload } from 'lucide-react';
+import { ExternalLink, PlusCircle, Trash2, Filter, List, Cloud, Zap, Plus, Copy, Upload, RotateCcw, Activity } from 'lucide-react';
 import { useSettings } from './useSettings';
 import { getStorageItem, removeStorageItem, setStorageItem } from './utils/storage';
+import { useUsageTracking } from './useUsageTracking';
+import { VERCEL_MONTHLY_LIMIT, CF_DAILY_LIMIT } from './utils/usageTracking';
 
 interface SettingsTabProps {
     settingsHook: ReturnType<typeof useSettings>;
@@ -28,6 +30,123 @@ const generateCodeChallenge = async (verifier: string) => {
 };
 
 type SettingsSubTab = 'dropbox' | 'epg' | 'filters' | 'verification';
+
+// ─── Componente de contador de uso ─────────────────────────────────────────
+
+function UsageBar({ percent, color }: { percent: number; color: string }) {
+    const capped = Math.min(100, percent);
+    // Clase de color dinámica según % de uso
+    const barColor =
+        percent >= 90 ? 'bg-red-500' :
+        percent >= 70 ? 'bg-yellow-500' :
+        color;
+    return (
+        <div className="w-full bg-gray-700 rounded-full h-2.5 overflow-hidden">
+            <div
+                className={`h-2.5 rounded-full transition-all duration-500 ${barColor}`}
+                style={{ width: `${capped}%` }}
+            />
+        </div>
+    );
+}
+
+function UsageWidget() {
+    const { usage, vercelPercent, cfPercent, resetVercel, resetCf, refresh } = useUsageTracking();
+
+    // Formatea la fecha de reset en formato legible en español
+    const formatResetDate = (dateStr: string) => {
+        try {
+            const d = new Date(dateStr + 'T00:00:00Z');
+            return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+        } catch {
+            return dateStr;
+        }
+    };
+
+    const formatCount = (n: number) => n.toLocaleString('es-ES');
+
+    return (
+        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-xl space-y-5">
+            <div className="flex items-center justify-between">
+                <h3 className="text-white font-semibold flex items-center gap-2">
+                    <Activity size={18} className="text-green-400" />
+                    Consumo de APIs gratuitas
+                </h3>
+                <button
+                    onClick={refresh}
+                    className="text-gray-400 hover:text-white transition-colors p-1 rounded"
+                    title="Actualizar contadores"
+                >
+                    <RotateCcw size={14} />
+                </button>
+            </div>
+
+            {/* Vercel */}
+            <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-300 font-medium flex items-center gap-1.5">
+                        <span className="inline-block w-2 h-2 rounded-full bg-blue-400"></span>
+                        Vercel Serverless Functions
+                        <span className="text-gray-500 text-xs font-normal">(verificaciones)</span>
+                    </span>
+                    <button
+                        onClick={resetVercel}
+                        className="text-xs text-gray-500 hover:text-red-400 transition-colors"
+                        title="Resetear contador Vercel"
+                    >
+                        Resetear
+                    </button>
+                </div>
+                <UsageBar percent={vercelPercent} color="bg-blue-500" />
+                <div className="flex justify-between text-xs text-gray-400">
+                    <span>
+                        <span className={vercelPercent >= 90 ? 'text-red-400 font-bold' : vercelPercent >= 70 ? 'text-yellow-400 font-bold' : 'text-white'}>
+                            {formatCount(usage.vercel.count)}
+                        </span>
+                        {' '}/{' '}{formatCount(VERCEL_MONTHLY_LIMIT)} peticiones / mes
+                    </span>
+                    <span className="text-gray-500">
+                        Renueva: {formatResetDate(usage.vercel.resetDate)}
+                    </span>
+                </div>
+            </div>
+
+            {/* Cloudflare Workers */}
+            <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-300 font-medium flex items-center gap-1.5">
+                        <span className="inline-block w-2 h-2 rounded-full bg-orange-400"></span>
+                        Cloudflare Workers
+                        <span className="text-gray-500 text-xs font-normal">(si está activado)</span>
+                    </span>
+                    <button
+                        onClick={resetCf}
+                        className="text-xs text-gray-500 hover:text-red-400 transition-colors"
+                        title="Resetear contador Cloudflare"
+                    >
+                        Resetear
+                    </button>
+                </div>
+                <UsageBar percent={cfPercent} color="bg-orange-500" />
+                <div className="flex justify-between text-xs text-gray-400">
+                    <span>
+                        <span className={cfPercent >= 90 ? 'text-red-400 font-bold' : cfPercent >= 70 ? 'text-yellow-400 font-bold' : 'text-white'}>
+                            {formatCount(usage.cf.count)}
+                        </span>
+                        {' '}/{' '}{formatCount(CF_DAILY_LIMIT)} peticiones / día
+                    </span>
+                    <span className="text-gray-500">
+                        Renueva: {formatResetDate(usage.cf.resetDate)} (UTC)
+                    </span>
+                </div>
+            </div>
+
+            <p className="text-xs text-gray-600 pt-1 border-t border-gray-700">
+                Contadores aproximados basados en peticiones iniciadas desde esta app. Se resetean automáticamente.
+            </p>
+        </div>
+    );
+}
 
 const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
     const {
@@ -598,6 +717,9 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
                             </h2>
                             <p className="text-gray-400">Usa Cloudflare Workers para verificar canales sin costos de servidor.</p>
                         </div>
+
+                        {/* --- CONTADOR DE USO DE APIS --- */}
+                        <UsageWidget />
 
                         <div className="bg-gray-800 rounded-xl p-8 border border-gray-700 shadow-xl space-y-6">
                             {/* Toggle para usar Cloudflare */}

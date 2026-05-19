@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { Channel, AttributeKey, QualityLevel, ChannelStatus } from './index';
 import { useSmartSearch, SearchMatch } from './useSmartSearch';
+import { trackVercelCall } from './utils/usageTracking';
 
 interface ChannelVerificationInfo {
     status: ChannelStatus;
@@ -124,6 +125,9 @@ export const useReparacion = (
             const data = await response.json();
             console.log('Verification response:', data);
             
+            // Contar petición a Vercel
+            trackVercelCall();
+
             const isOnline = data.status === 'ok';
             
             setVerificationInfo(prev => ({ 
@@ -209,6 +213,9 @@ export const useReparacion = (
             }
             const data = await response.json();
             console.log('Verification quality response:', data);
+
+            // Contar petición a Vercel
+            trackVercelCall();
 
             // Fallback client-side: si el servidor de Vercel (IP de datacenter) marca como
             // "failed" pero el stream podría estar siendo bloqueado solo para esa IP,
