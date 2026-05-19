@@ -396,8 +396,10 @@ async function detectMediaPlaylistQuality(url: string): Promise<{
     }
 }
 
-// Códigos HTTP de HEAD que indican que el método no está soportado → hacer fallback a GET
-const HEAD_UNSUPPORTED_CODES = [400, 405, 416, 501];
+// Códigos HTTP de HEAD que indican que el método no está soportado o el proxy falla → hacer fallback a GET
+// 400/405/416/501: servidor no acepta HEAD
+// 502/503/504: proxy/gateway falla con HEAD pero puede funcionar con GET (ej: Xtream Codes)
+const HEAD_UNSUPPORTED_CODES = [400, 405, 416, 501, 502, 503, 504];
 
 /**
  * Intenta una petición GET con su propio AbortController independiente
@@ -439,7 +441,10 @@ async function tryGetRequest(url: string, timeoutMs: number): Promise<{ statusCo
  * Solo acepta códigos 2xx como online.
  */
 async function verifyStreamSimple(url: string): Promise<VerificationResponse> {
-    const TIMEOUT_MS = 20000;
+    // HEAD con timeout corto: si el servidor es lento respondiendo al HEAD (ej: proxies Xtream
+    // que dan 502 tras varios segundos), no queremos esperar demasiado antes del GET de fallback
+    const HEAD_TIMEOUT_MS = 10000;
+    const GET_TIMEOUT_MS = 20000;
 
     // HEAD sin Range — muchos CDN/streaming rechazan HEAD+Range con 416 o 400
     const headHeaders = {
@@ -455,7 +460,7 @@ async function verifyStreamSimple(url: string): Promise<VerificationResponse> {
     try {
         // Intento 1: HEAD
         const headController = new AbortController();
-        const headTimeoutId = setTimeout(() => headController.abort(), TIMEOUT_MS);
+        const headTimeoutId = setTimeout(() => headController.abort(), HEAD_TIMEOUT_MS);
 
         try {
             const headResponse = await fetch(url, {
@@ -470,7 +475,7 @@ async function verifyStreamSimple(url: string): Promise<VerificationResponse> {
             clearTimeout(headTimeoutId);
             console.log('HEAD request failed, trying GET:', headError.message);
             // HEAD falló con error de red o timeout → GET con nuevo controller
-            const getResult = await tryGetRequest(url, TIMEOUT_MS);
+            const getResult = await tryGetRequest(url, GET_TIMEOUT_MS);
             if (getResult.statusCode === 0) {
                 return {
                     status: 'failed',
@@ -485,7 +490,7 @@ async function verifyStreamSimple(url: string): Promise<VerificationResponse> {
         // Intento 2: si HEAD devuelve código que indica que no soporta el método → GET
         if (HEAD_UNSUPPORTED_CODES.includes(statusCode)) {
             console.log(`HEAD returned ${statusCode}, falling back to GET`);
-            const getResult = await tryGetRequest(url, TIMEOUT_MS);
+            const getResult = await tryGetRequest(url, GET_TIMEOUT_MS);
             if (getResult.statusCode > 0) {
                 statusCode = getResult.statusCode;
             }
