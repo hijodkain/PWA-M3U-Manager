@@ -11,6 +11,7 @@ interface VerificationResponse {
     bitrate?: number;
     error?: string;
     message?: string;
+    warning?: 'segments-blocked';
 }
 
 /**
@@ -31,13 +32,15 @@ function getQualityFromResolution(width: number, height: number): QualityLevel {
 }
 
 /**
- * Detecta calidad basándose en el bitrate (en bps)
+ * Detecta calidad basándose en el bitrate (en bps).
+ * Umbrales ajustados para streaming moderno con H.264/H.265:
+ * un FHD con buena compresión puede ir a 1.5-3 Mbps.
  */
 function getQualityFromBitrate(bitrate: number): QualityLevel {
-    if (bitrate >= 20000000) return '4K';
-    if (bitrate >= 8000000) return 'FHD';
-    if (bitrate >= 3000000) return 'HD';
-    if (bitrate >= 1000000) return 'SD';
+    if (bitrate >= 10000000) return '4K';   // >= 10 Mbps
+    if (bitrate >= 2000000) return 'FHD';   // >= 2 Mbps
+    if (bitrate >= 900000) return 'HD';     // >= 900 Kbps
+    if (bitrate >= 200000) return 'SD';     // >= 200 Kbps
     return 'SD';
 }
 
@@ -157,7 +160,7 @@ async function analyzeM3U8MasterPlaylist(url: string): Promise<{
             method: 'GET',
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Range': 'bytes=0-65535',
+                'Range': 'bytes=0-262143',
                 'Accept': '*/*',
                 'Accept-Language': 'en-US,en;q=0.9',
                 'Accept-Encoding': 'gzip, deflate, br',
@@ -311,67 +314,189 @@ async function getFirstSegmentUrl(variantUrl: string): Promise<string | null> {
 }
 
 /**
- * Verificación simple de stream - similar a AWS Lambda verify-simple
- * Usa HEAD primero, si falla usa GET
- * Solo acepta códigos 2xx como online
+ * Bug D: Detecta calidad de una M3U8 media playlist (variante directa, sin #EXT-X-STREAM-INF).
+ * Busca #EXT-X-BITRATE, y si no lo encuentra intenta descargar el primer segmento para
+ * confirmar que es reproducible. La URL aquí es la de la propia media playlist.
  */
-async function verifyStreamSimple(url: string): Promise<VerificationResponse> {
-    const TIMEOUT_SECONDS = 20;
-    
-    const headers = {
+async function detectMediaPlaylistQuality(url: string): Promise<{
+    quality: QualityLevel;
+    resolution?: string;
+    bitrate?: number;
+} | null> {
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Range': 'bytes=0-32767',
+                'Accept': '*/*',
+            },
+            signal: AbortSignal.timeout(15000),
+        });
+
+        if (!response.ok) return null;
+
+        const content = await response.text();
+
+        // Solo procesar si realmente es una media playlist
+        if (!content.includes('#EXTINF')) return null;
+
+        // 1. Buscar #EXT-X-BITRATE (valor en kbps)
+        const bitrateMatch = content.match(/#EXT-X-BITRATE:(\d+)/i);
+        if (bitrateMatch) {
+            const bitrateBps = parseInt(bitrateMatch[1]) * 1000;
+            return { quality: getQualityFromBitrate(bitrateBps), bitrate: bitrateBps };
+        }
+
+        // 2. Buscar resolución embebida (raro pero posible)
+        const resMatch = content.match(/RESOLUTION=(\d+)x(\d+)/i);
+        if (resMatch) {
+            const w = parseInt(resMatch[1]);
+            const h = parseInt(resMatch[2]);
+            return { quality: getQualityFromResolution(w, h), resolution: `${w}x${h}` };
+        }
+
+        // 3. Calcular bitrate real: (Content-Length del segmento * 8) / duración #EXTINF
+        // Esto es lo más fiable para media playlists en vivo sin metadatos de calidad
+        const extinf = content.match(/#EXTINF:(\d+\.?\d*),/);
+        const segmentDuration = extinf ? parseFloat(extinf[1]) : null;
+
+        const segmentUrl = await getFirstSegmentUrl(url);
+        if (segmentUrl && segmentDuration && segmentDuration > 0) {
+            try {
+                const headResp = await fetch(segmentUrl, {
+                    method: 'HEAD',
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    },
+                    signal: AbortSignal.timeout(8000),
+                });
+                const contentLength = headResp.headers.get('content-length');
+                if (headResp.ok && contentLength) {
+                    const bytes = parseInt(contentLength);
+                    const bitrateBps = Math.round((bytes * 8) / segmentDuration);
+                    return { quality: getQualityFromBitrate(bitrateBps), bitrate: bitrateBps };
+                }
+                // HEAD sin Content-Length → stream reproducible, calidad desconocida
+                if (headResp.ok) {
+                    return { quality: 'unknown' };
+                }
+            } catch (_) {
+                // Si HEAD del segmento falla (CORS, timeout), intentar confirmar reproducibilidad con GET parcial
+                const segResult = await verifyHLSSegment(segmentUrl);
+                if (segResult.isPlayable) {
+                    return { quality: 'unknown' };
+                }
+            }
+        }
+
+        return null;
+    } catch (e) {
+        return null;
+    }
+}
+
+// Códigos HTTP de HEAD que indican que el método no está soportado o el proxy falla → hacer fallback a GET
+// 400/405/416/501: servidor no acepta HEAD
+// 502/503/504: proxy/gateway falla con HEAD pero puede funcionar con GET (ej: Xtream Codes)
+const HEAD_UNSUPPORTED_CODES = [400, 405, 416, 501, 502, 503, 504];
+
+/**
+ * Intenta una petición GET con su propio AbortController independiente
+ */
+async function tryGetRequest(url: string, timeoutMs: number): Promise<{ statusCode: number; error?: string }> {
+    const getController = new AbortController();
+    const getTimeoutId = setTimeout(() => getController.abort(), timeoutMs);
+    const getHeaders = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Range': 'bytes=0-65535',
         'Accept': '*/*',
         'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Range': 'bytes=0-4096',
+        'Connection': 'keep-alive',
+    };
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: getHeaders,
+            signal: getController.signal,
+            redirect: 'follow',
+        });
+        clearTimeout(getTimeoutId);
+        return { statusCode: response.status };
+    } catch (err: any) {
+        clearTimeout(getTimeoutId);
+        return {
+            statusCode: 0,
+            error: err.name === 'AbortError' ? 'Timeout' : err.message,
+        };
+    }
+}
+
+/**
+ * Verificación simple de stream.
+ * Usa HEAD primero (sin Range para evitar rechazos en CDN).
+ * Si HEAD responde 400/405/416/501 o lanza error de red, hace fallback a GET
+ * con un AbortController nuevo e independiente (Bug A+B+C).
+ * Solo acepta códigos 2xx como online.
+ */
+async function verifyStreamSimple(url: string): Promise<VerificationResponse> {
+    // HEAD con timeout corto: si el servidor es lento respondiendo al HEAD (ej: proxies Xtream
+    // que dan 502 tras varios segundos), no queremos esperar demasiado antes del GET de fallback
+    const HEAD_TIMEOUT_MS = 10000;
+    const GET_TIMEOUT_MS = 20000;
+
+    // HEAD sin Range — muchos CDN/streaming rechazan HEAD+Range con 416 o 400
+    const headHeaders = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': '*/*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
         'Connection': 'keep-alive',
     };
 
+    let statusCode: number = 0;
+
     try {
-        // Intentar primero con HEAD
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_SECONDS * 1000);
-        
-        let response: Response;
-        let statusCode: number;
-        
+        // Intento 1: HEAD
+        const headController = new AbortController();
+        const headTimeoutId = setTimeout(() => headController.abort(), HEAD_TIMEOUT_MS);
+
         try {
-            response = await fetch(url, {
+            const headResponse = await fetch(url, {
                 method: 'HEAD',
-                headers,
-                signal: controller.signal,
+                headers: headHeaders,
+                signal: headController.signal,
                 redirect: 'follow',
             });
-            statusCode = response.status;
+            clearTimeout(headTimeoutId);
+            statusCode = headResponse.status;
         } catch (headError: any) {
-            clearTimeout(timeoutId);
+            clearTimeout(headTimeoutId);
             console.log('HEAD request failed, trying GET:', headError.message);
-            
-            // Intentar con GET
-            try {
-                response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        ...headers,
-                        'Range': 'bytes=0-4096',
-                    },
-                    signal: controller.signal,
-                    redirect: 'follow',
-                });
-                statusCode = response.status;
-            } catch (getError: any) {
-                clearTimeout(timeoutId);
+            // HEAD falló con error de red o timeout → GET con nuevo controller
+            const getResult = await tryGetRequest(url, GET_TIMEOUT_MS);
+            if (getResult.statusCode === 0) {
                 return {
                     status: 'failed',
                     quality: 'unknown',
-                    error: getError.name === 'AbortError' ? 'Timeout' : getError.message,
-                    message: `Connection failed: ${getError.message}`,
+                    error: getResult.error || 'Connection failed',
+                    message: `Connection failed: ${getResult.error}`,
                 };
             }
+            statusCode = getResult.statusCode;
         }
-        
-        clearTimeout(timeoutId);
-        
+
+        // Intento 2: si HEAD devuelve código que indica que no soporta el método → GET
+        if (HEAD_UNSUPPORTED_CODES.includes(statusCode)) {
+            console.log(`HEAD returned ${statusCode}, falling back to GET`);
+            const getResult = await tryGetRequest(url, GET_TIMEOUT_MS);
+            if (getResult.statusCode > 0) {
+                statusCode = getResult.statusCode;
+            }
+            // Si GET también falla (0), mantenemos el statusCode del HEAD
+        }
+
         // Solo códigos 2xx son online
         if (statusCode >= 200 && statusCode < 300) {
             return {
@@ -387,7 +512,7 @@ async function verifyStreamSimple(url: string): Promise<VerificationResponse> {
                 message: `Stream offline (HTTP ${statusCode})`,
             };
         }
-        
+
     } catch (error: any) {
         console.error('Verification error:', error);
         return {
@@ -400,8 +525,10 @@ async function verifyStreamSimple(url: string): Promise<VerificationResponse> {
 }
 
 /**
- * Verificación completa con detección de calidad - similar a AWS Lambda verify-quality
- * Simplificada: confiar en datos del manifest M3U8 en lugar de verificar segmentos
+ * Verificación completa con detección de calidad.
+ * Orden: 1) verifica conectividad (HEAD/GET), 2) analiza manifest M3U8 master,
+ * 3) si es media playlist directa detecta calidad (Bug D),
+ * 4) verifica primer segmento para detectar falsos positivos (Bug F).
  */
 async function verifyChannel(url: string): Promise<VerificationResponse> {
     if (!url || url === 'http://--' || url.trim() === '') {
@@ -420,7 +547,6 @@ async function verifyChannel(url: string): Promise<VerificationResponse> {
     }
 
     // 2. Si es M3U8, usar los datos del manifest directamente
-    // (más fiable que intentar verificar segmentos que pueden tener CORS bloqueado)
     if (url.includes('.m3u8')) {
         const { streams } = await analyzeM3U8MasterPlaylist(url);
         
@@ -433,7 +559,7 @@ async function verifyChannel(url: string): Promise<VerificationResponse> {
             });
 
             const bestStream = sortedStreams[0];
-            
+
             // Usar los datos del manifest directamente
             if (bestStream.height) {
                 const quality = getQualityFromResolution(bestStream.width || 0, bestStream.height);
@@ -458,7 +584,20 @@ async function verifyChannel(url: string): Promise<VerificationResponse> {
             }
         }
         
-        // M3U8 pero sin variantes detectadas
+        // Bug D: streams.length === 0 → puede ser una media playlist (variante directa)
+        // Intentar detectar calidad a partir de la propia playlist
+        const mediaQuality = await detectMediaPlaylistQuality(url);
+        if (mediaQuality) {
+            return {
+                status: 'ok',
+                quality: mediaQuality.quality,
+                resolution: mediaQuality.resolution,
+                bitrate: mediaQuality.bitrate,
+                message: `Stream online - quality from media playlist`,
+            };
+        }
+
+        // M3U8 pero sin variantes ni metadatos de calidad
         return {
             status: 'ok',
             quality: 'unknown',

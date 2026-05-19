@@ -6,6 +6,7 @@ interface ChannelVerificationInfo {
     status: ChannelStatus;
     quality: QualityLevel;
     resolution?: string;
+    warning?: 'segments-blocked';
 }
 
 interface VerificationProgress {
@@ -186,14 +187,9 @@ export const useReparacion = (
         }));
         
         try {
-            // Usar la API de Vercel (/api/verify_channel) - verificación local con análisis de segmentos
-            // Ya no usa AWS Lambda - toda la verificación se hace en Vercel
             const apiUrl = `/api/verify_channel?url=${encodeURIComponent(url)}`;
             console.log('Verifying (Vercel API):', url);
             
-            console.log('API URL:', apiUrl);
-            
-            // Timeout de 35 segundos para dar tiempo al análisis de segmentos
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 35000);
             
@@ -213,6 +209,36 @@ export const useReparacion = (
             }
             const data = await response.json();
             console.log('Verification quality response:', data);
+
+            // Fallback client-side: si el servidor de Vercel (IP de datacenter) marca como
+            // "failed" pero el stream podría estar siendo bloqueado solo para esa IP,
+            // intentamos verificar directamente desde el navegador del usuario.
+            // Con mode:'no-cors' no vemos el status, pero si fetch no lanza excepción
+            // significa que el servidor es alcanzable desde la IP del usuario.
+            if (data.status === 'failed') {
+                try {
+                    await fetch(url, {
+                        method: 'HEAD',
+                        mode: 'no-cors',
+                        signal: AbortSignal.timeout(8000),
+                    });
+                    // Si llega aquí sin excepción → servidor alcanzable desde el cliente
+                    console.log('Client-side fallback: server reachable from browser for', url);
+                    setVerificationInfo(prev => ({
+                        ...prev,
+                        [channelId]: { status: 'ok', quality: 'unknown' },
+                    }));
+                    setReparacionChannels(prev => prev.map(ch =>
+                        ch.id === channelId ? { ...ch, status: 'ok', quality: undefined, resolution: undefined } : ch
+                    ));
+                    setMainChannels(prev => prev.map(ch =>
+                        ch.id === channelId ? { ...ch, status: 'ok' } : ch
+                    ));
+                    return;
+                } catch (_) {
+                    // El cliente tampoco puede llegar → realmente offline
+                }
+            }
             
             setVerificationInfo(prev => ({ 
                 ...prev, 
@@ -220,10 +246,10 @@ export const useReparacion = (
                     status: data.status || 'failed',
                     quality: data.quality || 'unknown',
                     resolution: data.resolution,
+                    warning: data.warning,
                 }
             }));
 
-            // También actualizar el canal con la calidad detectada
             setReparacionChannels(prevChannels => 
                 prevChannels.map(ch => 
                     ch.id === channelId 

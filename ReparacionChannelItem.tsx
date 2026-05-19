@@ -33,6 +33,7 @@ interface ReparacionChannelItemProps {
     };
     className?: string; // Add className prop
     isPendingReview?: boolean;
+    warning?: 'segments-blocked';
 }
 
 const MarqueeText: React.FC<{ text: string; className?: string; isSelected?: boolean; animateWhenSelected?: boolean }> = ({ text, className = "", isSelected = false, animateWhenSelected = true }) => {
@@ -110,6 +111,7 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
     visibleFields,
     className = "", // Destructure className
     isPendingReview = false,
+    warning,
 }) => {
     const fields = visibleFields ?? {
         logo: true,
@@ -241,6 +243,15 @@ const ReparacionChannelItem: React.FC<ReparacionChannelItemProps> = ({
                 {isPendingReview && !isSelected && (
                     <span className="text-[10px] bg-orange-500/80 text-white px-1 py-0.5 rounded font-bold shrink-0" title="Sin coincidencia en la lista reparadora – revisión manual pendiente">
                         ⚠
+                    </span>
+                )}
+                {/* Badge segmentos bloqueados (playlist ok pero 403 en segmentos) */}
+                {warning === 'segments-blocked' && (
+                    <span
+                        className="text-[10px] bg-yellow-600/90 text-white px-1 py-0.5 rounded font-bold shrink-0"
+                        title="Playlist accesible pero los segmentos de vídeo están bloqueados (posible 403). El canal puede no reproducirse."
+                    >
+                        ⚠403
                     </span>
                 )}
                 {/* Quality Badge */}
