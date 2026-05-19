@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { Channel, EpgChannel, AttributeKey } from './index';
 import { useSmartSearch, SearchMatch } from './useSmartSearch';
 
@@ -43,6 +43,14 @@ export const useAsignarEpg = (
     const [lastSelectedEpgChannelIndex, setLastSelectedEpgChannelIndex] = useState<number | null>(null);
     const [autoAssignEpgThreshold, setAutoAssignEpgThreshold] = useState(0.8);
 
+    // --- Diccionario de asignaciones aprendidas ---
+    // Clave localStorage: 'epg_learned_mappings' → { channelName: epgId }
+    const LEARNED_MAPPINGS_KEY = 'epg_learned_mappings';
+    // useRef para búsqueda O(1) sin re-renders (incluye claves normalizadas en minúsculas)
+    const learnedMappingsMap = useRef<Map<string, string>>(new Map());
+    // useState para UI reactiva (solo claves exactas, para mostrar en modal)
+    const [learnedMappings, setLearnedMappings] = useState<Record<string, string>>({});
+
     // Inicializar búsqueda inteligente - se recrea cuando cambian los prefijos/sufijos
     const smartSearch = useSmartSearch({
         channelPrefixes: settingsHook.channelPrefixes,
@@ -51,6 +59,71 @@ export const useAsignarEpg = (
     
     // Extraer funciones - se actualizarán automáticamente cuando smartSearch cambie
     const { searchChannels, normalizeChannelName } = smartSearch;
+
+    // Carga inicial del diccionario desde localStorage; se reconstruye si cambian prefijos/sufijos
+    useEffect(() => {
+        try {
+            const stored = localStorage.getItem(LEARNED_MAPPINGS_KEY);
+            if (!stored) return;
+            const parsed: Record<string, string> = JSON.parse(stored);
+            setLearnedMappings(parsed);
+            // Construir Map con clave exacta Y clave normalizada para búsqueda O(1)
+            const map = new Map<string, string>();
+            Object.entries(parsed).forEach(([channelName, epgId]) => {
+                map.set(channelName, epgId);
+                const normalized = normalizeChannelName(channelName).toLowerCase();
+                if (normalized !== channelName) {
+                    map.set(normalized, epgId);
+                }
+            });
+            learnedMappingsMap.current = map;
+        } catch {
+            // Ignorar errores de localStorage corrupto
+        }
+    }, [normalizeChannelName]);
+
+    // Guarda una asignación aprendida en localStorage y en el Map en memoria
+    const saveLearnedMapping = useCallback((channelName: string, epgId: string) => {
+        try {
+            const stored = localStorage.getItem(LEARNED_MAPPINGS_KEY);
+            const current: Record<string, string> = stored ? JSON.parse(stored) : {};
+            current[channelName] = epgId;
+            localStorage.setItem(LEARNED_MAPPINGS_KEY, JSON.stringify(current));
+            setLearnedMappings({ ...current });
+            // Actualizar el Map en memoria sin re-parsear todo
+            learnedMappingsMap.current.set(channelName, epgId);
+            const normalized = normalizeChannelName(channelName).toLowerCase();
+            if (normalized !== channelName) {
+                learnedMappingsMap.current.set(normalized, epgId);
+            }
+        } catch {
+            // Ignorar errores de localStorage lleno
+        }
+    }, [normalizeChannelName]);
+
+    // Elimina una asignación aprendida concreta
+    const deleteLearnedMapping = useCallback((channelName: string) => {
+        try {
+            const stored = localStorage.getItem(LEARNED_MAPPINGS_KEY);
+            if (!stored) return;
+            const current: Record<string, string> = JSON.parse(stored);
+            delete current[channelName];
+            localStorage.setItem(LEARNED_MAPPINGS_KEY, JSON.stringify(current));
+            setLearnedMappings({ ...current });
+            learnedMappingsMap.current.delete(channelName);
+            const normalized = normalizeChannelName(channelName).toLowerCase();
+            learnedMappingsMap.current.delete(normalized);
+        } catch {}
+    }, [normalizeChannelName]);
+
+    // Limpia todo el diccionario aprendido
+    const clearLearnedMappings = useCallback(() => {
+        try {
+            localStorage.removeItem(LEARNED_MAPPINGS_KEY);
+            setLearnedMappings({});
+            learnedMappingsMap.current = new Map();
+        } catch {}
+    }, []);
 
     const handleEpgFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -173,6 +246,13 @@ export const useAsignarEpg = (
     }) => {
         if (!destinationChannelId) return;
         saveStateToHistory();
+
+        // Guardar asignación aprendida: el nombre del canal destino → el ID EPG asignado
+        const destChannel = channels.find(ch => ch.id === destinationChannelId);
+        if (destChannel) {
+            saveLearnedMapping(destChannel.name, sourceEpg.id);
+        }
+
         setChannels((prev) =>
             prev.map((dest) => {
                 if (dest.id === destinationChannelId) {
@@ -251,9 +331,21 @@ export const useAsignarEpg = (
 
         // Primero, calcular coincidencias para contar correctamente
         const matches = new Map<string, EpgChannel>();
+
+        // Índice por ID para lookups O(1) al resolver asignaciones aprendidas
+        const epgById = new Map(epgChannels.map(ch => [ch.id, ch]));
         
         channelsWithoutEpg.forEach((channel) => {
             let exactMatch: EpgChannel | undefined;
+
+            // Intento 0: Diccionario de asignaciones aprendidas (máxima prioridad)
+            // Lookup O(1) en Map en memoria — sin parsear JSON en cada iteración
+            const learnedEpgId =
+                learnedMappingsMap.current.get(channel.name) ??
+                learnedMappingsMap.current.get(normalizeChannelName(channel.name).toLowerCase());
+            if (learnedEpgId) {
+                exactMatch = epgById.get(learnedEpgId);
+            }
 
             // Prioridad 1: si el otro campo ya contiene un channel id válido del EPG,
             // reutilizarlo para rellenar el campo objetivo seleccionado.
@@ -520,5 +612,9 @@ export const useAsignarEpg = (
         // Umbral de autoasignación EPG
         autoAssignEpgThreshold,
         setAutoAssignEpgThreshold,
+        // Diccionario de asignaciones aprendidas
+        learnedMappings,
+        deleteLearnedMapping,
+        clearLearnedMappings,
     };
 };
