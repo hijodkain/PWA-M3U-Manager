@@ -32,13 +32,15 @@ function getQualityFromResolution(width: number, height: number): QualityLevel {
 }
 
 /**
- * Detecta calidad basándose en el bitrate (en bps)
+ * Detecta calidad basándose en el bitrate (en bps).
+ * Umbrales ajustados para streaming moderno con H.264/H.265:
+ * un FHD con buena compresión puede ir a 1.5-3 Mbps.
  */
 function getQualityFromBitrate(bitrate: number): QualityLevel {
-    if (bitrate >= 20000000) return '4K';
-    if (bitrate >= 8000000) return 'FHD';
-    if (bitrate >= 3000000) return 'HD';
-    if (bitrate >= 1000000) return 'SD';
+    if (bitrate >= 10000000) return '4K';   // >= 10 Mbps
+    if (bitrate >= 2000000) return 'FHD';   // >= 2 Mbps
+    if (bitrate >= 900000) return 'HD';     // >= 900 Kbps
+    if (bitrate >= 200000) return 'SD';     // >= 200 Kbps
     return 'SD';
 }
 
@@ -346,7 +348,7 @@ async function detectMediaPlaylistQuality(url: string): Promise<{
             return { quality: getQualityFromBitrate(bitrateBps), bitrate: bitrateBps };
         }
 
-        // 2. Buscar #EXT-X-STREAM-INF dentro de la variante (poco común, pero existe)
+        // 2. Buscar resolución embebida (raro pero posible)
         const resMatch = content.match(/RESOLUTION=(\d+)x(\d+)/i);
         if (resMatch) {
             const w = parseInt(resMatch[1]);
@@ -354,13 +356,37 @@ async function detectMediaPlaylistQuality(url: string): Promise<{
             return { quality: getQualityFromResolution(w, h), resolution: `${w}x${h}` };
         }
 
-        // 3. Intentar descargar el primer segmento para confirmar reproducibilidad
+        // 3. Calcular bitrate real: (Content-Length del segmento * 8) / duración #EXTINF
+        // Esto es lo más fiable para media playlists en vivo sin metadatos de calidad
+        const extinf = content.match(/#EXTINF:(\d+\.?\d*),/);
+        const segmentDuration = extinf ? parseFloat(extinf[1]) : null;
+
         const segmentUrl = await getFirstSegmentUrl(url);
-        if (segmentUrl) {
-            const segResult = await verifyHLSSegment(segmentUrl);
-            if (segResult.isPlayable) {
-                // Reproducible pero sin datos de calidad suficientes
-                return { quality: 'unknown' };
+        if (segmentUrl && segmentDuration && segmentDuration > 0) {
+            try {
+                const headResp = await fetch(segmentUrl, {
+                    method: 'HEAD',
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    },
+                    signal: AbortSignal.timeout(8000),
+                });
+                const contentLength = headResp.headers.get('content-length');
+                if (headResp.ok && contentLength) {
+                    const bytes = parseInt(contentLength);
+                    const bitrateBps = Math.round((bytes * 8) / segmentDuration);
+                    return { quality: getQualityFromBitrate(bitrateBps), bitrate: bitrateBps };
+                }
+                // HEAD sin Content-Length → stream reproducible, calidad desconocida
+                if (headResp.ok) {
+                    return { quality: 'unknown' };
+                }
+            } catch (_) {
+                // Si HEAD del segmento falla (CORS, timeout), intentar confirmar reproducibilidad con GET parcial
+                const segResult = await verifyHLSSegment(segmentUrl);
+                if (segResult.isPlayable) {
+                    return { quality: 'unknown' };
+                }
             }
         }
 
@@ -529,23 +555,6 @@ async function verifyChannel(url: string): Promise<VerificationResponse> {
 
             const bestStream = sortedStreams[0];
 
-            // Bug F: verificar el primer segmento real de la mejor variante
-            // para detectar falsos positivos (playlist OK pero segmentos bloqueados con 403)
-            if (bestStream.url) {
-                const segmentUrl = await getFirstSegmentUrl(bestStream.url);
-                if (segmentUrl) {
-                    const segResult = await verifyHLSSegment(segmentUrl);
-                    if (!segResult.isPlayable) {
-                        return {
-                            status: 'ok',
-                            quality: 'unknown',
-                            warning: 'segments-blocked',
-                            message: 'Playlist accesible pero segmentos bloqueados (posible 403)',
-                        };
-                    }
-                }
-            }
-            
             // Usar los datos del manifest directamente
             if (bestStream.height) {
                 const quality = getQualityFromResolution(bestStream.width || 0, bestStream.height);
