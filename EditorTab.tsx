@@ -9,6 +9,7 @@ import { useAppMode } from './AppModeContext';
 import { useColumnResizing } from './useColumnResizing';
 import ResizableHeader from './ResizableHeader';
 import SortableChannelRow from './SortableChannelRow';
+import SaveLogoModal from './SaveLogoModal';
 import { Channel } from './index';
 
 interface EditorTabProps {
@@ -16,13 +17,14 @@ interface EditorTabProps {
     settingsHook: ReturnType<typeof useSettings>;
 }
 
-type ColumnKey = 'status' | 'tvgId' | 'tvgName' | 'tvgLogo' | 'groupTitle' | 'name' | 'url' | 'play';
+type ColumnKey = 'status' | 'tvgId' | 'tvgName' | 'tvgLogo' | 'saveLogo' | 'groupTitle' | 'name' | 'url' | 'play';
 
 const ALL_EDITOR_COLUMNS: { key: ColumnKey; label: string; onlyPro?: boolean }[] = [
     { key: 'status', label: 'Estado', onlyPro: true },
     { key: 'tvgId', label: 'tvg-id', onlyPro: true },
     { key: 'tvgName', label: 'tvg-name', onlyPro: true },
     { key: 'tvgLogo', label: 'Logo' },
+    { key: 'saveLogo', label: 'Guardar Logo', onlyPro: true },
     { key: 'groupTitle', label: 'Grupo' },
     { key: 'name', label: 'Nombre del canal' },
     { key: 'url', label: 'URL del stream', onlyPro: true },
@@ -34,6 +36,7 @@ const DEFAULT_VISIBLE_COLUMNS: Record<ColumnKey, boolean> = {
     tvgId: true,
     tvgName: true,
     tvgLogo: true,
+    saveLogo: true,
     groupTitle: true,
     name: true,
     url: true,
@@ -46,6 +49,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showTutorialModal, setShowTutorialModal] = useState(false);
     const [webPlayerUrl, setWebPlayerUrl] = useState<string | null>(null);
+    const [saveLogoChannel, setSaveLogoChannel] = useState<Channel | null>(null);
     const [newChannelData, setNewChannelData] = useState({
         order: '',
         name: '',
@@ -156,7 +160,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
     }, [filterGroup, mainDomainFilter, statusFilter, nameSearch]);
 
     const isColumnVisible = (key: ColumnKey) => {
-        if (isSencillo && (key === 'status' || key === 'tvgId' || key === 'tvgName' || key === 'url')) {
+        if (isSencillo && (key === 'status' || key === 'tvgId' || key === 'tvgName' || key === 'url' || key === 'saveLogo')) {
             return false;
         }
         return visibleColumns[key];
@@ -193,6 +197,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         if (isColumnVisible('tvgId')) width += columnWidths.tvgId;
         if (isColumnVisible('tvgName')) width += columnWidths.tvgName;
         if (isColumnVisible('tvgLogo')) width += columnWidths.tvgLogo;
+        if (isColumnVisible('saveLogo')) width += columnWidths.saveLogo;
         if (isColumnVisible('groupTitle')) width += columnWidths.groupTitle;
         if (isColumnVisible('name')) width += columnWidths.name;
         if (isColumnVisible('url')) width += columnWidths.url;
@@ -628,6 +633,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         if (isColumnVisible('tvgId')) cols.push(`${columnWidths.tvgId}px`);
         if (isColumnVisible('tvgName')) cols.push(`${columnWidths.tvgName}px`);
         if (isColumnVisible('tvgLogo')) cols.push(`${columnWidths.tvgLogo}px`);
+        if (isColumnVisible('saveLogo')) cols.push(`${columnWidths.saveLogo}px`);
         if (isColumnVisible('groupTitle')) cols.push(`${columnWidths.groupTitle}px`);
         if (isColumnVisible('name')) cols.push(`${columnWidths.name}px`);
         if (isColumnVisible('url')) cols.push(`${columnWidths.url}px`);
@@ -1027,6 +1033,15 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                 </button>
                             </ResizableHeader>
                         )}
+                        {isColumnVisible('saveLogo') && (
+                            <div
+                                className="px-1 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider"
+                                style={{ width: `${columnWidths.saveLogo}px` }}
+                                title="Guardar logo en Dropbox"
+                            >
+                                💾
+                            </div>
+                        )}
                         {isColumnVisible('groupTitle') && (
                             <ResizableHeader width={columnWidths.groupTitle} onResize={(w) => handleResize('groupTitle', w)} align="left">
                                 Grupo
@@ -1101,6 +1116,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                         measureRef={rowVirtualizer.measureElement}
                                         suggestions={{ groupTitle: uniqueGroups }}
                                         onPlayWebClick={(url) => setWebPlayerUrl(url)}
+                                        onSaveLogo={(ch) => setSaveLogoChannel(ch)}
                                         style={{
                                             position: 'absolute',
                                             top: `${virtualItem.start}px`, // Use top instead of transform for virtualization
@@ -1179,6 +1195,16 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                         />
                     </div>
                 </div>
+            )}
+
+            {/* Modal Guardar Logo en Dropbox */}
+            {saveLogoChannel && (
+                <SaveLogoModal
+                    channel={saveLogoChannel}
+                    dropboxAppKey={settingsHook.dropboxAppKey}
+                    dropboxRefreshToken={settingsHook.dropboxRefreshToken}
+                    onClose={() => setSaveLogoChannel(null)}
+                />
             )}
 
             {/* Modal Crear Canal */}

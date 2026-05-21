@@ -7,6 +7,7 @@ const defaultWidths = {
     tvgId: 200,
     tvgName: 200,
     tvgLogo: 100,
+    saveLogo: 50,
     groupTitle: 180,
     name: 250,
     url: 300,
