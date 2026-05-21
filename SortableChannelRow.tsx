@@ -1,12 +1,12 @@
 import React, { useRef, useEffect } from 'react';
 import { useSortable, defaultAnimateLayoutChanges } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Globe } from 'lucide-react';
+import { GripVertical, Globe, Save } from 'lucide-react';
 import { useAppMode } from './AppModeContext';
 import EditableCell from './EditableCell';
 import { Channel } from './index';
 
-type ColumnKey = 'status' | 'tvgId' | 'tvgName' | 'tvgLogo' | 'groupTitle' | 'name' | 'url' | 'play';
+type ColumnKey = 'status' | 'tvgId' | 'tvgName' | 'tvgLogo' | 'saveLogo' | 'groupTitle' | 'name' | 'url' | 'play';
 
 interface SortableChannelRowProps {
     id: string;
@@ -27,6 +27,7 @@ interface SortableChannelRowProps {
         // Add more suggestion types later if needed
     };
     onPlayWebClick?: (url: string) => void;
+    onSaveLogo?: (channel: Channel) => void;
 }
 
 const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
@@ -44,6 +45,7 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
     relativeOrder,
     suggestions,
     onPlayWebClick,
+    onSaveLogo,
 }) => {
     const { isSencillo } = useAppMode();
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -237,6 +239,23 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
             {isColumnVisible('url') && (
                 <div className="px-2 py-2 text-sm text-gray-400 overflow-hidden">
                      <MarqueeCell value={channel.url} onSave={(val) => onUpdate(channel.id, 'url', val)} />
+                </div>
+            )}
+
+            {/* Guardar Logo en Dropbox (solo Pro) */}
+            {!isSencillo && isColumnVisible('saveLogo') && (
+                <div className="px-1 py-2 flex items-center justify-center">
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (onSaveLogo) onSaveLogo(channel);
+                        }}
+                        disabled={!channel.tvgLogo}
+                        className="bg-green-900/60 hover:bg-green-800 disabled:opacity-30 disabled:cursor-not-allowed text-green-300 p-1.5 rounded-full transition-colors"
+                        title={channel.tvgLogo ? 'Guardar logo en Dropbox' : 'Este canal no tiene logo'}
+                    >
+                        <Save size={14} />
+                    </button>
                 </div>
             )}
 
