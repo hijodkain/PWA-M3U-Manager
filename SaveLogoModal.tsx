@@ -6,7 +6,10 @@ interface ExistingEpgChannel {
     id: string;
     displayName: string;
     iconSrc: string;
+    group: string;
 }
+
+const LAST_GROUP_KEY = 'saveLogo_lastGroup';
 
 interface SaveLogoModalProps {
     channel: Channel;
@@ -31,9 +34,12 @@ const SaveLogoModal: React.FC<SaveLogoModalProps> = ({
     const [channelId, setChannelId] = useState(channel.tvgId || '');
     const [displayName, setDisplayName] = useState(channel.name || '');
     const [tvgName, setTvgName] = useState(channel.tvgName || '');
-    const [groupName, setGroupName] = useState('');
+    const [groupName, setGroupName] = useState(() => {
+        try { return localStorage.getItem(LAST_GROUP_KEY) || ''; } catch { return ''; }
+    });
     const [selectedExistingId, setSelectedExistingId] = useState('');
     const [existingChannels, setExistingChannels] = useState<ExistingEpgChannel[]>([]);
+    const [existingGroups, setExistingGroups] = useState<string[]>([]);
     const [step, setStep] = useState<Step>('form');
     const [statusMsg, setStatusMsg] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
@@ -81,8 +87,11 @@ const SaveLogoModal: React.FC<SaveLogoModalProps> = ({
                     id: ch.getAttribute('id') || '',
                     displayName: ch.querySelector('display-name')?.textContent || '',
                     iconSrc: ch.querySelector('icon')?.getAttribute('src') || '',
+                    group: ch.getAttribute('group') || '',
                 }));
                 setExistingChannels(channels);
+                const groups = [...new Set(channels.map(ch => ch.group).filter(Boolean))];
+                setExistingGroups(groups);
             }
         } catch {
             // El XML no existe todavía — se creará al guardar el primer logo
@@ -338,6 +347,9 @@ const SaveLogoModal: React.FC<SaveLogoModalProps> = ({
                 throw new Error(`Error al guardar el XML: ${errText}`);
             }
 
+            if (groupName.trim()) {
+                try { localStorage.setItem(LAST_GROUP_KEY, groupName.trim()); } catch { /* ignore */ }
+            }
             setResultUrl(logoShareUrl || channel.tvgLogo);
             setStep('success');
 
@@ -498,11 +510,21 @@ const SaveLogoModal: React.FC<SaveLogoModalProps> = ({
                                         type="text"
                                         value={groupName}
                                         onChange={(e) => setGroupName(e.target.value)}
+                                        list="saveLogo-group-suggestions"
                                         placeholder="ej: Deportes, Noticias, Entretenimiento..."
                                         className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:ring-green-500 focus:border-green-500 outline-none"
                                     />
+                                    {existingGroups.length > 0 && (
+                                        <datalist id="saveLogo-group-suggestions">
+                                            {existingGroups.map(g => (
+                                                <option key={g} value={g} />
+                                            ))}
+                                        </datalist>
+                                    )}
                                     <p className="text-xs text-gray-500 mt-1">
-                                        Facilita localizar el canal en el XML
+                                        {existingGroups.length > 0
+                                            ? `${existingGroups.length} categoría${existingGroups.length !== 1 ? 's' : ''} existente${existingGroups.length !== 1 ? 's' : ''} — escribe o selecciona`
+                                            : 'Facilita localizar el canal en el XML'}
                                     </p>
                                 </div>
                             </div>
