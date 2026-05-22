@@ -184,7 +184,9 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
     const [newEpgName, setNewEpgName] = useState('');
     const [isUploadingXml, setIsUploadingXml] = useState(false);
     const [xmlUploadStatus, setXmlUploadStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-    
+    const [isSearchingLogosXml, setIsSearchingLogosXml] = useState(false);
+    const [logosXmlStatus, setLogosXmlStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
     // Cloudflare Worker local state
     const [localCfVerifyUrl, setLocalCfVerifyUrl] = useState(cfVerifyApiUrl);
     const [localCfProxyUrl, setLocalCfProxyUrl] = useState(cfProxyApiUrl);
@@ -361,6 +363,75 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
             setXmlUploadStatus({ type: 'error', message: err instanceof Error ? err.message : 'Error desconocido al subir el archivo.' });
         } finally {
             setIsUploadingXml(false);
+        }
+    };
+
+    const handleAddLogosXmlAsEpg = async () => {
+        if (!dropboxRefreshToken || !dropboxAppKey) {
+            setLogosXmlStatus({ type: 'error', message: 'Debes conectar Dropbox primero.' });
+            return;
+        }
+        // Comprobar si ya está añadida
+        const LOGOS_XML_PATH = '/Logos/logos.xml';
+        const LOGOS_EPG_NAME = 'Logos Dropbox';
+        if (savedEpgUrls.some(e => e.name === LOGOS_EPG_NAME)) {
+            setLogosXmlStatus({ type: 'error', message: 'El archivo logos.xml ya está añadido como fuente EPG.' });
+            return;
+        }
+        setIsSearchingLogosXml(true);
+        setLogosXmlStatus(null);
+        try {
+            const accessToken = await getDropboxAccessToken();
+            // Verificar que el archivo existe
+            const metaRes = await fetch('https://api.dropboxapi.com/2/files/get_metadata', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ path: LOGOS_XML_PATH }),
+            });
+            if (!metaRes.ok) {
+                throw new Error('No se encontró el archivo /Logos/logos.xml en Dropbox. Guarda al menos un logo primero desde el Editor.');
+            }
+            // Crear o recuperar enlace compartido
+            let sharedUrl = '';
+            const shareRes = await fetch('https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ path: LOGOS_XML_PATH }),
+            });
+            if (shareRes.ok) {
+                const shareData = await shareRes.json();
+                sharedUrl = convertDropboxUrl(shareData.url);
+            } else {
+                const listRes = await fetch('https://api.dropboxapi.com/2/sharing/list_shared_links', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ path: LOGOS_XML_PATH }),
+                });
+                if (listRes.ok) {
+                    const listData = await listRes.json();
+                    if (listData.links?.length > 0) {
+                        sharedUrl = convertDropboxUrl(listData.links[0].url);
+                    }
+                }
+            }
+            if (!sharedUrl) {
+                throw new Error('No se pudo generar el enlace compartido para logos.xml.');
+            }
+            addSavedEpgUrl(LOGOS_EPG_NAME, sharedUrl);
+            setLogosXmlStatus({ type: 'success', message: '"Logos Dropbox" añadido como fuente EPG correctamente.' });
+        } catch (err) {
+            setLogosXmlStatus({ type: 'error', message: err instanceof Error ? err.message : 'Error desconocido.' });
+        } finally {
+            setIsSearchingLogosXml(false);
         }
     };
 
@@ -600,6 +671,29 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
                                 {xmlUploadStatus && (
                                     <p className={`text-xs mt-2 ${xmlUploadStatus.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>
                                         {xmlUploadStatus.type === 'success' ? '✓' : '✗'} {xmlUploadStatus.message}
+                                    </p>
+                                )}
+                            </div>
+                            <div className="border-t border-gray-700 pt-4">
+                                <p className="text-sm text-gray-400 mb-3">
+                                    O añade tu archivo <span className="text-white font-medium">logos.xml</span> de Dropbox como fuente EPG (contiene los logos guardados desde el Editor):
+                                </p>
+                                <button
+                                    onClick={handleAddLogosXmlAsEpg}
+                                    disabled={isSearchingLogosXml || !dropboxRefreshToken}
+                                    className="flex items-center gap-2 bg-green-800/60 hover:bg-green-700/70 disabled:opacity-50 disabled:cursor-not-allowed border border-green-700/50 text-green-300 px-4 py-2 rounded-lg transition-colors text-sm"
+                                >
+                                    {isSearchingLogosXml
+                                        ? <><span className="animate-spin inline-block w-4 h-4 border-2 border-green-300 border-t-transparent rounded-full" /> Buscando logos.xml...</>
+                                        : <><Cloud size={16} /> Añadir logos.xml de Dropbox como fuente EPG</>
+                                    }
+                                </button>
+                                {!dropboxRefreshToken && (
+                                    <p className="text-yellow-400 text-xs mt-2">⚠️ Conecta Dropbox primero para usar esta función.</p>
+                                )}
+                                {logosXmlStatus && (
+                                    <p className={`text-xs mt-2 ${logosXmlStatus.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>
+                                        {logosXmlStatus.type === 'success' ? '✓' : '✗'} {logosXmlStatus.message}
                                     </p>
                                 )}
                             </div>
