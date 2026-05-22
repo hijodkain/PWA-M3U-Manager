@@ -92,9 +92,12 @@ const SaveLogoModal: React.FC<SaveLogoModalProps> = ({
     };
 
     const downloadLogoBlob = async (url: string): Promise<{ blob: Blob; ext: string }> => {
-        let res = await fetch(url);
-        // Si falla por CORS, intentar via proxy interno
-        if (!res.ok) {
+        let res: Response;
+        try {
+            res = await fetch(url);
+            if (!res.ok) throw new Error('not ok');
+        } catch {
+            // Si falla por CORS o error de red, intentar via proxy interno
             res = await fetch(`/api/proxy?url=${encodeURIComponent(url)}`);
         }
         if (!res.ok) throw new Error(`No se pudo descargar el logo (${res.status})`);
