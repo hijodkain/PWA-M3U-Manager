@@ -597,6 +597,11 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         channelsHook.saveStateToHistory();
     };
 
+    const escapeRegexForWildcard = (value: string) =>
+        value
+            .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+            .replace(/\\\*/g, '.*');
+
     const handleRemovePrefix = () => {
         if (!prefixInput.trim()) {
             alert('Por favor, introduce un prefijo');
@@ -646,14 +651,16 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             return;
         }
 
+        const suffixPattern = escapeRegexForWildcard(suffixInput.trim());
+        const suffixRegex = new RegExp(`${suffixPattern}$`);
+
         channelsHook.setChannels(prev =>
             prev.map(ch => {
                 if (!selectedChannels.includes(ch.id)) return ch;
                 
-                // Si el nombre termina con el sufijo, eliminarlo
-                if (ch.name.endsWith(suffixInput)) {
-                    const newName = ch.name.substring(0, ch.name.length - suffixInput.length).trim();
-                    return { ...ch, name: newName };
+                // Si el nombre termina con el patrón del sufijo, eliminarlo
+                if (suffixRegex.test(ch.name)) {
+                    return { ...ch, name: ch.name.replace(suffixRegex, '').trim() };
                 }
                 return ch;
             })
