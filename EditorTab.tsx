@@ -45,11 +45,22 @@ const DEFAULT_VISIBLE_COLUMNS: Record<ColumnKey, boolean> = {
 
 type TmdbMediaType = 'movie' | 'tv';
 
+const TMDB_SKIP_CONFIRM_SESSION_KEY = 'tmdb_skip_confirm_session';
+
 interface TmdbSearchItem {
     id: number;
     name: string;
     popularity: number;
     voteCount: number;
+}
+
+interface TmdbRunSummary {
+    groupName: string;
+    mediaTypeLabel: string;
+    updated: number;
+    noQuery: number;
+    notFound: number;
+    errors: number;
 }
 
 const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => {
@@ -82,6 +93,18 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
     const [isAssigningTmdbIds, setIsAssigningTmdbIds] = useState(false);
     const [tmdbProgress, setTmdbProgress] = useState<{ processed: number; total: number } | null>(null);
     const [showTmdbTypeModal, setShowTmdbTypeModal] = useState(false);
+    const [showTmdbConfirmModal, setShowTmdbConfirmModal] = useState(false);
+    const [pendingTmdbMediaType, setPendingTmdbMediaType] = useState<TmdbMediaType | null>(null);
+    const [pendingTmdbCount, setPendingTmdbCount] = useState(0);
+    const [skipTmdbConfirmInSession, setSkipTmdbConfirmInSession] = useState(() => {
+        try {
+            return sessionStorage.getItem(TMDB_SKIP_CONFIRM_SESSION_KEY) === '1';
+        } catch {
+            return false;
+        }
+    });
+    const [tmdbRunSummary, setTmdbRunSummary] = useState<TmdbRunSummary | null>(null);
+    const [showTmdbResultModal, setShowTmdbResultModal] = useState(false);
     const columnsDropdownRef = useRef<HTMLDivElement>(null);
     const nameSearchRef = useRef<HTMLInputElement>(null);
     
@@ -147,6 +170,14 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             // Si localStorage falla, no bloqueamos el uso de la tabla.
         }
     }, [visibleColumns]);
+
+    useEffect(() => {
+        try {
+            sessionStorage.setItem(TMDB_SKIP_CONFIRM_SESSION_KEY, skipTmdbConfirmInSession ? '1' : '0');
+        } catch {
+            // Si sessionStorage falla, no bloqueamos la app.
+        }
+    }, [skipTmdbConfirmInSession]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -659,8 +690,31 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         let title = value.trim();
         title = title.replace(/[\u2018\u2019]/g, "'");
         title = title.replace(/[\u201C\u201D]/g, '"');
+        title = title.replace(/[._]/g, ' ');
         title = title.replace(/\s+/g, ' ');
         return title.trim();
+    };
+
+    const stripTmdbNoiseTokens = (value: string) => {
+        let title = normalizeTmdbTitle(value);
+
+        title = title.replace(
+            /\[(?:[^\]]*(?:1080p|720p|2160p|4k|latino|castellano|dual|sub(?:titulado)?|vose|x264|x265|h264|h265|hevc|hdr|webrip|web-dl|bluray|brrip|dvdrip)[^\]]*)\]/gi,
+            ' '
+        );
+        title = title.replace(
+            /\((?:[^)]*(?:extended|remastered|unrated|uncut|director'?s cut|1080p|720p|2160p|4k|latino|castellano|dual|sub(?:titulado)?|vose|x264|x265|h264|h265|hevc|hdr|webrip|web-dl|bluray|brrip|dvdrip)[^)]*)\)/gi,
+            ' '
+        );
+
+        title = title.replace(
+            /\b(1080p|720p|2160p|480p|4k|uhd|fhd|hd|sd|hdr|hdr10|dv|dolby\s*vision|web[- ]?dl|webrip|bluray|brrip|dvdrip|x264|x265|h264|h265|hevc|aac|ac3|ddp\s*5\.1|latino|castellano|espa[ñn]ol|sub(?:titulado)?|multi(?:audio)?|dual(?:\s*audio)?|vose|vose?l?at|remastered|extended|uncut|unrated|director'?s\s*cut)\b/gi,
+            ' '
+        );
+
+        title = title.replace(/\s*\|\s*.*$/, ' ');
+        title = title.replace(/\s+/g, ' ').trim();
+        return title;
     };
 
     const extractYearFromTitle = (value: string): { title: string; year: number | null } => {
@@ -682,21 +736,45 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         const candidates = new Set<string>();
         const normalized = normalizeTmdbTitle(rawTitle);
         const clean = normalizeTmdbTitle(title);
+        const strippedRaw = stripTmdbNoiseTokens(rawTitle);
+        const strippedClean = stripTmdbNoiseTokens(clean);
+        const strippedNoYear = extractYearFromTitle(strippedRaw).title;
 
-        if (clean) candidates.add(clean);
-        if (normalized) candidates.add(normalized);
+        const addCandidate = (candidate: string) => {
+            const normalizedCandidate = normalizeTmdbTitle(candidate);
+            if (normalizedCandidate) {
+                candidates.add(normalizedCandidate);
+                candidates.add(normalizedCandidate.replace(/'/g, ''));
+            }
+        };
+
+        addCandidate(clean);
+        addCandidate(normalized);
+        addCandidate(strippedRaw);
+        addCandidate(strippedClean);
+        addCandidate(strippedNoYear);
 
         if (clean.includes(':')) {
             const beforeColon = clean.split(':')[0].trim();
-            if (beforeColon.length >= 3) candidates.add(beforeColon);
+            if (beforeColon.length >= 3) addCandidate(beforeColon);
         }
 
         if (clean.includes('-')) {
             const beforeDash = clean.split('-')[0].trim();
-            if (beforeDash.length >= 3) candidates.add(beforeDash);
+            if (beforeDash.length >= 3) addCandidate(beforeDash);
         }
 
-        return Array.from(candidates).filter(Boolean);
+        if (strippedClean.includes(':')) {
+            const beforeColon = strippedClean.split(':')[0].trim();
+            if (beforeColon.length >= 3) addCandidate(beforeColon);
+        }
+
+        if (strippedClean.includes('-')) {
+            const beforeDash = strippedClean.split('-')[0].trim();
+            if (beforeDash.length >= 3) addCandidate(beforeDash);
+        }
+
+        return Array.from(candidates).filter((candidate) => candidate.length >= 2);
     };
 
     const searchTmdbWithFallbacks = async (
@@ -771,11 +849,6 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
 
         const mediaTypeLabel = mediaType === 'movie' ? 'Películas' : 'Series';
         const tmdbApiKey = settingsHook.tmdbApiKey.trim();
-        const shouldContinue = confirm(
-            `Se procesarán ${targetChannels.length} canales del grupo "${filterGroup}" buscando solo en ${mediaTypeLabel}.\n\n¿Continuar?`
-        );
-
-        if (!shouldContinue) return;
 
         setIsAssigningTmdbIds(true);
         setTmdbProgress({ processed: 0, total: targetChannels.length });
@@ -832,15 +905,15 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                 channelsHook.saveStateToHistory();
             }
 
-            alert(
-                [
-                    `Asignación TMDB completada para el grupo "${filterGroup}" (${mediaTypeLabel}).`,
-                    `Actualizados: ${updates.size}`,
-                    `Sin búsqueda (sin nombre): ${noQueryCount}`,
-                    `Sin coincidencia: ${notFoundCount}`,
-                    `Con error: ${errorCount}`,
-                ].join('\n')
-            );
+            setTmdbRunSummary({
+                groupName: filterGroup,
+                mediaTypeLabel,
+                updated: updates.size,
+                noQuery: noQueryCount,
+                notFound: notFoundCount,
+                errors: errorCount,
+            });
+            setShowTmdbResultModal(true);
         } finally {
             setIsAssigningTmdbIds(false);
             setTmdbProgress(null);
@@ -871,7 +944,38 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
 
     const handleSelectTmdbMediaType = (mediaType: TmdbMediaType) => {
         setShowTmdbTypeModal(false);
-        void runAssignTmdbIdsByGroup(mediaType);
+        const targetChannels = getTmdbTargetChannels();
+        if (targetChannels.length === 0) {
+            alert('No hay canales en el grupo seleccionado.');
+            return;
+        }
+
+        setPendingTmdbMediaType(mediaType);
+        setPendingTmdbCount(targetChannels.length);
+
+        if (skipTmdbConfirmInSession) {
+            void runAssignTmdbIdsByGroup(mediaType);
+            return;
+        }
+
+        setShowTmdbConfirmModal(true);
+    };
+
+    const handleCancelTmdbConfirmation = () => {
+        setShowTmdbConfirmModal(false);
+        setPendingTmdbMediaType(null);
+        setPendingTmdbCount(0);
+    };
+
+    const handleConfirmTmdbAssign = () => {
+        if (!pendingTmdbMediaType) {
+            handleCancelTmdbConfirmation();
+            return;
+        }
+
+        const selectedType = pendingTmdbMediaType;
+        handleCancelTmdbConfirmation();
+        void runAssignTmdbIdsByGroup(selectedType);
     };
 
     const gridTemplateColumns = useMemo(() => {
@@ -1501,6 +1605,80 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                 className="bg-blue-700 hover:bg-blue-600 text-white px-4 py-2 rounded-md border border-blue-500"
                             >
                                 Series
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showTmdbConfirmModal && (
+                <div
+                    className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
+                    onClick={handleCancelTmdbConfirmation}
+                >
+                    <div
+                        className="bg-gray-800 border border-indigo-700 rounded-lg p-5 w-full max-w-md"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h3 className="text-lg font-bold text-white mb-2">Confirmar asignación TMDB</h3>
+                        <p className="text-sm text-gray-300 mb-5">
+                            Se procesarán {pendingTmdbCount} canales del grupo "{filterGroup}" buscando solo en{' '}
+                            {pendingTmdbMediaType === 'movie' ? 'Películas' : 'Series'}.
+                        </p>
+                        <label className="flex items-center gap-2 mb-4 text-sm text-gray-300 cursor-pointer select-none">
+                            <input
+                                type="checkbox"
+                                checked={skipTmdbConfirmInSession}
+                                onChange={(e) => setSkipTmdbConfirmInSession(e.target.checked)}
+                                className="form-checkbox h-4 w-4 text-indigo-600 bg-gray-700 border-gray-600 rounded focus:ring-indigo-500"
+                            />
+                            No volver a preguntar en esta sesión
+                        </label>
+                        <div className="flex flex-wrap gap-2 justify-end">
+                            <button
+                                onClick={handleCancelTmdbConfirmation}
+                                className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-md border border-gray-600"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleConfirmTmdbAssign}
+                                className="bg-green-700 hover:bg-green-600 text-white px-4 py-2 rounded-md border border-green-500"
+                            >
+                                Continuar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showTmdbResultModal && tmdbRunSummary && (
+                <div
+                    className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
+                    onClick={() => setShowTmdbResultModal(false)}
+                >
+                    <div
+                        className="bg-gray-800 border border-green-700 rounded-lg p-5 w-full max-w-md"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h3 className="text-lg font-bold text-white mb-2">Asignación TMDB completada</h3>
+                        <p className="text-sm text-gray-300 mb-4">
+                            Grupo "{tmdbRunSummary.groupName}" ({tmdbRunSummary.mediaTypeLabel})
+                        </p>
+
+                        <div className="space-y-2 text-sm mb-5">
+                            <p className="text-green-300">Actualizados: {tmdbRunSummary.updated}</p>
+                            <p className="text-gray-300">Sin búsqueda (sin nombre): {tmdbRunSummary.noQuery}</p>
+                            <p className="text-yellow-300">Sin coincidencia: {tmdbRunSummary.notFound}</p>
+                            <p className="text-red-300">Con error: {tmdbRunSummary.errors}</p>
+                        </div>
+
+                        <div className="flex justify-end">
+                            <button
+                                onClick={() => setShowTmdbResultModal(false)}
+                                className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-md border border-gray-600"
+                            >
+                                Cerrar
                             </button>
                         </div>
                     </div>
