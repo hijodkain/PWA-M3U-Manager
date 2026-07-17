@@ -44,6 +44,7 @@ const DEFAULT_VISIBLE_COLUMNS: Record<ColumnKey, boolean> = {
 };
 
 type TmdbMediaType = 'movie' | 'tv';
+type TmdbGroupClassification = TmdbMediaType | 'live';
 
 const TMDB_SKIP_CONFIRM_SESSION_KEY = 'tmdb_skip_confirm_session';
 
@@ -61,6 +62,17 @@ interface TmdbRunSummary {
     noQuery: number;
     notFound: number;
     errors: number;
+}
+
+interface TmdbExecutionGroup {
+    groupName: string;
+    mediaType: TmdbMediaType;
+}
+
+interface PendingTmdbPlan {
+    groups: TmdbExecutionGroup[];
+    totalChannels: number;
+    label: string;
 }
 
 const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => {
@@ -94,8 +106,9 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
     const [tmdbProgress, setTmdbProgress] = useState<{ processed: number; total: number } | null>(null);
     const [showTmdbTypeModal, setShowTmdbTypeModal] = useState(false);
     const [showTmdbConfirmModal, setShowTmdbConfirmModal] = useState(false);
-    const [pendingTmdbMediaType, setPendingTmdbMediaType] = useState<TmdbMediaType | null>(null);
-    const [pendingTmdbCount, setPendingTmdbCount] = useState(0);
+    const [showTmdbAllGroupsModal, setShowTmdbAllGroupsModal] = useState(false);
+    const [pendingTmdbPlan, setPendingTmdbPlan] = useState<PendingTmdbPlan | null>(null);
+    const [allGroupsClassification, setAllGroupsClassification] = useState<Record<string, TmdbGroupClassification>>({});
     const [skipTmdbConfirmInSession, setSkipTmdbConfirmInSession] = useState(() => {
         try {
             return sessionStorage.getItem(TMDB_SKIP_CONFIRM_SESSION_KEY) === '1';
@@ -686,6 +699,20 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         return sorted[0];
     };
 
+    const detectGroupClassification = (groupName: string): TmdbGroupClassification => {
+        const normalized = groupName.toLowerCase();
+
+        if (/(^|\W)(live|directo|directos|channels?|canales?|tv en vivo|en vivo)(\W|$)/i.test(normalized)) {
+            return 'live';
+        }
+
+        if (/(^|\W)(series|tv series|shows?|temporadas?|anime)(\W|$)/i.test(normalized)) {
+            return 'tv';
+        }
+
+        return 'movie';
+    };
+
     const normalizeTmdbTitle = (value: string) => {
         let title = value.trim();
         title = title.replace(/[\u2018\u2019]/g, "'");
@@ -844,14 +871,52 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
 
     const getTmdbTargetChannels = () => channels.filter((ch) => ch.groupTitle === filterGroup);
 
-    const runAssignTmdbIdsByGroup = async (mediaType: TmdbMediaType) => {
-        const targetChannels = getTmdbTargetChannels();
+    const getChannelsForGroup = (groupName: string) => channels.filter((ch) => ch.groupTitle === groupName);
 
-        const mediaTypeLabel = mediaType === 'movie' ? 'Películas' : 'Series';
+    const buildTmdbPlanForAllGroups = (classification: Record<string, TmdbGroupClassification>): PendingTmdbPlan | null => {
+        const allRealGroups = uniqueGroups.filter((group) => group !== 'Todos los canales');
+        const seriesGroups = allRealGroups
+            .filter((group) => classification[group] === 'tv')
+            .map((groupName) => ({ groupName, mediaType: 'tv' as const }));
+        const movieGroups = allRealGroups
+            .filter((group) => !classification[group] || classification[group] === 'movie')
+            .map((groupName) => ({ groupName, mediaType: 'movie' as const }));
+
+        const executionGroups = [...seriesGroups, ...movieGroups].filter(
+            ({ groupName }) => getChannelsForGroup(groupName).length > 0
+        );
+
+        if (executionGroups.length === 0) {
+            return null;
+        }
+
+        const totalChannels = executionGroups.reduce((sum, group) => sum + getChannelsForGroup(group.groupName).length, 0);
+
+        return {
+            groups: executionGroups,
+            totalChannels,
+            label: 'todos los grupos seleccionados',
+        };
+    };
+
+    const buildTmdbPlanForSingleGroup = (groupName: string, mediaType: TmdbMediaType): PendingTmdbPlan | null => {
+        const targetChannels = getChannelsForGroup(groupName);
+        if (targetChannels.length === 0) {
+            return null;
+        }
+
+        return {
+            groups: [{ groupName, mediaType }],
+            totalChannels: targetChannels.length,
+            label: `el grupo "${groupName}"`,
+        };
+    };
+
+    const runAssignTmdbPlan = async (plan: PendingTmdbPlan) => {
         const tmdbApiKey = settingsHook.tmdbApiKey.trim();
 
         setIsAssigningTmdbIds(true);
-        setTmdbProgress({ processed: 0, total: targetChannels.length });
+        setTmdbProgress({ processed: 0, total: plan.totalChannels });
 
         const updates = new Map<string, string>();
         let processed = 0;
@@ -861,37 +926,41 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         const concurrency = 3;
 
         try {
-            for (let i = 0; i < targetChannels.length; i += concurrency) {
-                const batch = targetChannels.slice(i, i + concurrency);
+            for (const executionGroup of plan.groups) {
+                const targetChannels = getChannelsForGroup(executionGroup.groupName);
 
-                await Promise.all(
-                    batch.map(async (channel) => {
-                        const query = (channel.tvgName || channel.name || '').trim();
+                for (let i = 0; i < targetChannels.length; i += concurrency) {
+                    const batch = targetChannels.slice(i, i + concurrency);
 
-                        if (!query) {
-                            noQueryCount += 1;
-                            processed += 1;
-                            setTmdbProgress({ processed, total: targetChannels.length });
-                            return;
-                        }
+                    await Promise.all(
+                        batch.map(async (channel) => {
+                            const query = (channel.tvgName || channel.name || '').trim();
 
-                        try {
-                            const normalizedResults = await searchTmdbWithFallbacks(query, mediaType, tmdbApiKey);
-                            const bestResult = getBestTmdbResult(normalizedResults, query);
-
-                            if (bestResult?.id) {
-                                updates.set(channel.id, String(bestResult.id));
-                            } else {
-                                notFoundCount += 1;
+                            if (!query) {
+                                noQueryCount += 1;
+                                processed += 1;
+                                setTmdbProgress({ processed, total: plan.totalChannels });
+                                return;
                             }
-                        } catch {
-                            errorCount += 1;
-                        } finally {
-                            processed += 1;
-                            setTmdbProgress({ processed, total: targetChannels.length });
-                        }
-                    })
-                );
+
+                            try {
+                                const normalizedResults = await searchTmdbWithFallbacks(query, executionGroup.mediaType, tmdbApiKey);
+                                const bestResult = getBestTmdbResult(normalizedResults, query);
+
+                                if (bestResult?.id) {
+                                    updates.set(channel.id, String(bestResult.id));
+                                } else {
+                                    notFoundCount += 1;
+                                }
+                            } catch {
+                                errorCount += 1;
+                            } finally {
+                                processed += 1;
+                                setTmdbProgress({ processed, total: plan.totalChannels });
+                            }
+                        })
+                    );
+                }
             }
 
             if (updates.size > 0) {
@@ -906,8 +975,10 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             }
 
             setTmdbRunSummary({
-                groupName: filterGroup,
-                mediaTypeLabel,
+                groupName: plan.label,
+                mediaTypeLabel: plan.groups.length === 1
+                    ? (plan.groups[0].mediaType === 'movie' ? 'Películas' : 'Series')
+                    : 'Series y Películas',
                 updated: updates.size,
                 noQuery: noQueryCount,
                 notFound: notFoundCount,
@@ -920,6 +991,17 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         }
     };
 
+    const openTmdbConfirmOrRun = (plan: PendingTmdbPlan) => {
+        setPendingTmdbPlan(plan);
+
+        if (skipTmdbConfirmInSession) {
+            void runAssignTmdbPlan(plan);
+            return;
+        }
+
+        setShowTmdbConfirmModal(true);
+    };
+
     const handleAssignTmdbIdsByGroup = () => {
         if (isAssigningTmdbIds) return;
 
@@ -928,8 +1010,21 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             return;
         }
 
-        if (!filterGroup || filterGroup === 'Todos los canales') {
-            alert('Selecciona un grupo específico en el filtro de grupo antes de usar esta acción.');
+        if (!filterGroup) {
+            alert('Selecciona un grupo válido antes de usar esta acción.');
+            return;
+        }
+
+        if (filterGroup === 'Todos los canales') {
+            const initialClassification = uniqueGroups
+                .filter((group) => group !== 'Todos los canales')
+                .reduce<Record<string, TmdbGroupClassification>>((acc, group) => {
+                    acc[group] = allGroupsClassification[group] || detectGroupClassification(group);
+                    return acc;
+                }, {});
+
+            setAllGroupsClassification(initialClassification);
+            setShowTmdbAllGroupsModal(true);
             return;
         }
 
@@ -944,38 +1039,47 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
 
     const handleSelectTmdbMediaType = (mediaType: TmdbMediaType) => {
         setShowTmdbTypeModal(false);
-        const targetChannels = getTmdbTargetChannels();
-        if (targetChannels.length === 0) {
+        const plan = buildTmdbPlanForSingleGroup(filterGroup, mediaType);
+        if (!plan) {
             alert('No hay canales en el grupo seleccionado.');
             return;
         }
 
-        setPendingTmdbMediaType(mediaType);
-        setPendingTmdbCount(targetChannels.length);
-
-        if (skipTmdbConfirmInSession) {
-            void runAssignTmdbIdsByGroup(mediaType);
-            return;
-        }
-
-        setShowTmdbConfirmModal(true);
+        openTmdbConfirmOrRun(plan);
     };
 
     const handleCancelTmdbConfirmation = () => {
         setShowTmdbConfirmModal(false);
-        setPendingTmdbMediaType(null);
-        setPendingTmdbCount(0);
+        setPendingTmdbPlan(null);
     };
 
     const handleConfirmTmdbAssign = () => {
-        if (!pendingTmdbMediaType) {
+        if (!pendingTmdbPlan) {
             handleCancelTmdbConfirmation();
             return;
         }
 
-        const selectedType = pendingTmdbMediaType;
+        const plan = pendingTmdbPlan;
         handleCancelTmdbConfirmation();
-        void runAssignTmdbIdsByGroup(selectedType);
+        void runAssignTmdbPlan(plan);
+    };
+
+    const handleAllGroupsClassificationChange = (groupName: string, classification: TmdbGroupClassification) => {
+        setAllGroupsClassification((prev) => ({
+            ...prev,
+            [groupName]: classification,
+        }));
+    };
+
+    const handleConfirmAllGroupsTmdb = () => {
+        const plan = buildTmdbPlanForAllGroups(allGroupsClassification);
+        if (!plan) {
+            alert('No hay grupos configurados para procesar. Marca grupos como Películas o Series y deja fuera los Live.');
+            return;
+        }
+
+        setShowTmdbAllGroupsModal(false);
+        openTmdbConfirmOrRun(plan);
     };
 
     const gridTemplateColumns = useMemo(() => {
@@ -1617,6 +1721,90 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                 </div>
             )}
 
+            {showTmdbAllGroupsModal && (
+                <div
+                    className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
+                    onClick={() => setShowTmdbAllGroupsModal(false)}
+                >
+                    <div
+                        className="bg-gray-800 border border-indigo-700 rounded-lg p-5 w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h3 className="text-lg font-bold text-white mb-2">Clasificar grupos para TMDB</h3>
+                        <p className="text-sm text-gray-300 mb-4">
+                            Marca cada grupo como Películas, Series o Live. Los grupos detectados con “series” se marcan como Series y los que parezcan directos se marcan como Live.
+                        </p>
+
+                        <div className="flex items-center gap-2 mb-4 flex-wrap">
+                            <button
+                                onClick={() => setAllGroupsClassification(uniqueGroups.filter((group) => group !== 'Todos los canales').reduce<Record<string, TmdbGroupClassification>>((acc, group) => {
+                                    acc[group] = 'movie';
+                                    return acc;
+                                }, {}))}
+                                className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded-md border border-gray-600 text-sm"
+                            >
+                                Todo Películas
+                            </button>
+                            <button
+                                onClick={() => setAllGroupsClassification(uniqueGroups.filter((group) => group !== 'Todos los canales').reduce<Record<string, TmdbGroupClassification>>((acc, group) => {
+                                    acc[group] = 'tv';
+                                    return acc;
+                                }, {}))}
+                                className="bg-blue-800 hover:bg-blue-700 text-white px-3 py-2 rounded-md border border-blue-600 text-sm"
+                            >
+                                Todo Series
+                            </button>
+                            <button
+                                onClick={() => setAllGroupsClassification(uniqueGroups.filter((group) => group !== 'Todos los canales').reduce<Record<string, TmdbGroupClassification>>((acc, group) => {
+                                    acc[group] = detectGroupClassification(group);
+                                    return acc;
+                                }, {}))}
+                                className="bg-indigo-800 hover:bg-indigo-700 text-white px-3 py-2 rounded-md border border-indigo-600 text-sm"
+                            >
+                                Restaurar detección
+                            </button>
+                        </div>
+
+                        <div className="overflow-y-auto pr-1 space-y-2">
+                            {uniqueGroups.filter((group) => group !== 'Todos los canales').map((group) => (
+                                <div key={group} className="flex items-center gap-3 justify-between bg-gray-900/70 border border-gray-700 rounded-lg px-3 py-2">
+                                    <div className="min-w-0">
+                                        <p className="text-sm text-white truncate">{group}</p>
+                                        <p className="text-[11px] text-gray-400">
+                                            {getChannelsForGroup(group).length} canales
+                                        </p>
+                                    </div>
+                                    <select
+                                        value={allGroupsClassification[group] || 'movie'}
+                                        onChange={(e) => handleAllGroupsClassificationChange(group, e.target.value as TmdbGroupClassification)}
+                                        className="bg-gray-800 border border-gray-600 rounded-lg px-3 py-1.5 text-sm text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                    >
+                                        <option value="movie">Películas</option>
+                                        <option value="tv">Series</option>
+                                        <option value="live">Live</option>
+                                    </select>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="flex flex-wrap gap-2 justify-end mt-5 pt-4 border-t border-gray-700">
+                            <button
+                                onClick={() => setShowTmdbAllGroupsModal(false)}
+                                className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-md border border-gray-600"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleConfirmAllGroupsTmdb}
+                                className="bg-green-700 hover:bg-green-600 text-white px-4 py-2 rounded-md border border-green-500"
+                            >
+                                Continuar con TMDB
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {showTmdbConfirmModal && (
                 <div
                     className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
@@ -1628,8 +1816,17 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                     >
                         <h3 className="text-lg font-bold text-white mb-2">Confirmar asignación TMDB</h3>
                         <p className="text-sm text-gray-300 mb-5">
-                            Se procesarán {pendingTmdbCount} canales del grupo "{filterGroup}" buscando solo en{' '}
-                            {pendingTmdbMediaType === 'movie' ? 'Películas' : 'Series'}.
+                            {pendingTmdbPlan?.groups.length === 1 ? (
+                                <>
+                                    Se procesarán {pendingTmdbPlan.totalChannels} canales del grupo "{pendingTmdbPlan.groups[0].groupName}" buscando solo en{' '}
+                                    {pendingTmdbPlan.groups[0].mediaType === 'movie' ? 'Películas' : 'Series'}.
+                                </>
+                            ) : (
+                                <>
+                                    Se procesarán {pendingTmdbPlan?.totalChannels || 0} canales repartidos en {pendingTmdbPlan?.groups.length || 0} grupos.
+                                    Primero se validarán los grupos marcados como Series, después los de Películas. Los Live quedan descartados.
+                                </>
+                            )}
                         </p>
                         <label className="flex items-center gap-2 mb-4 text-sm text-gray-300 cursor-pointer select-none">
                             <input
