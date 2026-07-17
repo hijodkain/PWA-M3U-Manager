@@ -50,7 +50,6 @@ interface TmdbSearchItem {
     name: string;
     popularity: number;
     voteCount: number;
-    releaseDate: string | null;
 }
 
 const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => {
@@ -656,12 +655,122 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         return sorted[0];
     };
 
+    const normalizeTmdbTitle = (value: string) => {
+        let title = value.trim();
+        title = title.replace(/[\u2018\u2019]/g, "'");
+        title = title.replace(/[\u201C\u201D]/g, '"');
+        title = title.replace(/\s+/g, ' ');
+        return title.trim();
+    };
+
+    const extractYearFromTitle = (value: string): { title: string; year: number | null } => {
+        const normalized = normalizeTmdbTitle(value);
+        const yearMatch = normalized.match(/(?:\(|\[)?(19\d{2}|20\d{2})(?:\)|\])?\s*$/);
+        const year = yearMatch ? parseInt(yearMatch[1], 10) : null;
+        const title = normalized
+            .replace(/\s*(?:\(|\[)?(?:19\d{2}|20\d{2})(?:\)|\])?\s*$/, '')
+            .trim();
+
+        return {
+            title: title || normalized,
+            year,
+        };
+    };
+
+    const generateTmdbQueryCandidates = (rawTitle: string): string[] => {
+        const { title } = extractYearFromTitle(rawTitle);
+        const candidates = new Set<string>();
+        const normalized = normalizeTmdbTitle(rawTitle);
+        const clean = normalizeTmdbTitle(title);
+
+        if (clean) candidates.add(clean);
+        if (normalized) candidates.add(normalized);
+
+        if (clean.includes(':')) {
+            const beforeColon = clean.split(':')[0].trim();
+            if (beforeColon.length >= 3) candidates.add(beforeColon);
+        }
+
+        if (clean.includes('-')) {
+            const beforeDash = clean.split('-')[0].trim();
+            if (beforeDash.length >= 3) candidates.add(beforeDash);
+        }
+
+        return Array.from(candidates).filter(Boolean);
+    };
+
+    const searchTmdbWithFallbacks = async (
+        rawQuery: string,
+        mediaType: TmdbMediaType,
+        apiKey: string
+    ): Promise<TmdbSearchItem[]> => {
+        const { year } = extractYearFromTitle(rawQuery);
+        const candidates = generateTmdbQueryCandidates(rawQuery);
+        const languageAttempts: Array<'en-US' | 'es-ES'> = ['en-US', 'es-ES'];
+
+        for (const candidate of candidates) {
+            for (const language of languageAttempts) {
+                const params = new URLSearchParams({
+                    api_key: apiKey,
+                    query: candidate,
+                    language,
+                    page: '1',
+                    include_adult: 'false',
+                });
+
+                if (year) {
+                    if (mediaType === 'movie') {
+                        params.set('year', String(year));
+                    } else {
+                        params.set('first_air_date_year', String(year));
+                    }
+                }
+
+                const tmdbUrl = `https://api.themoviedb.org/3/search/${mediaType}?${params.toString()}`;
+                const response = await fetch(tmdbUrl, {
+                    method: 'GET',
+                    headers: {
+                        Accept: 'application/json',
+                    },
+                });
+
+                if (!response.ok) {
+                    continue;
+                }
+
+                const data = (await response.json()) as {
+                    results?: Array<{
+                        id: number;
+                        title?: string;
+                        name?: string;
+                        popularity?: number;
+                        vote_count?: number;
+                    }>;
+                };
+
+                const normalizedResults: TmdbSearchItem[] = (data.results || []).map((item) => ({
+                    id: item.id,
+                    name: item.title || item.name || '',
+                    popularity: item.popularity || 0,
+                    voteCount: item.vote_count || 0,
+                }));
+
+                if (normalizedResults.length > 0) {
+                    return normalizedResults;
+                }
+            }
+        }
+
+        return [];
+    };
+
     const getTmdbTargetChannels = () => channels.filter((ch) => ch.groupTitle === filterGroup);
 
     const runAssignTmdbIdsByGroup = async (mediaType: TmdbMediaType) => {
         const targetChannels = getTmdbTargetChannels();
 
         const mediaTypeLabel = mediaType === 'movie' ? 'Películas' : 'Series';
+        const tmdbApiKey = settingsHook.tmdbApiKey.trim();
         const shouldContinue = confirm(
             `Se procesarán ${targetChannels.length} canales del grupo "${filterGroup}" buscando solo en ${mediaTypeLabel}.\n\n¿Continuar?`
         );
@@ -694,42 +803,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                         }
 
                         try {
-                            const tmdbUrl = `https://api.themoviedb.org/3/search/${mediaType}?api_key=${encodeURIComponent(
-                                settingsHook.tmdbApiKey.trim()
-                            )}&query=${encodeURIComponent(query)}&language=es-ES&page=1&include_adult=false`;
-
-                            const response = await fetch(tmdbUrl, {
-                                method: 'GET',
-                                headers: {
-                                    Accept: 'application/json',
-                                },
-                            });
-
-                            if (!response.ok) {
-                                errorCount += 1;
-                                processed += 1;
-                                setTmdbProgress({ processed, total: targetChannels.length });
-                                return;
-                            }
-
-                            const data = (await response.json()) as {
-                                results?: Array<{
-                                    id: number;
-                                    title?: string;
-                                    name?: string;
-                                    popularity?: number;
-                                    vote_count?: number;
-                                }>;
-                            };
-
-                            const normalizedResults: TmdbSearchItem[] = (data.results || []).map((item) => ({
-                                id: item.id,
-                                name: item.title || item.name || '',
-                                popularity: item.popularity || 0,
-                                voteCount: item.vote_count || 0,
-                                releaseDate: null,
-                            }));
-
+                            const normalizedResults = await searchTmdbWithFallbacks(query, mediaType, tmdbApiKey);
                             const bestResult = getBestTmdbResult(normalizedResults, query);
 
                             if (bestResult?.id) {
