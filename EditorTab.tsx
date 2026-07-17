@@ -1189,34 +1189,8 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                         </div>
 
                         {/* Right Side: Actions */}
-                        <div className="flex items-center gap-3 ml-auto">
-                            {!isSencillo && (
-                                <div className="flex flex-col items-end gap-1">
-                                    <button
-                                        onClick={handleAssignTmdbIdsByGroup}
-                                        disabled={isAssigningTmdbIds || filterGroup === 'Todos los canales' || channels.length === 0}
-                                        className="relative h-10 w-[190px] overflow-hidden rounded-full border border-cyan-500/40 bg-gray-900 shadow-lg shadow-cyan-900/20 transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40"
-                                        title="Pregunta tipo (películas/series) y asigna tvg-id con TMDB a todo el grupo filtrado"
-                                    >
-                                        <img
-                                            src="/the-movie-database-logo.svg"
-                                            alt="TMDB"
-                                            className="h-full w-full object-cover"
-                                        />
-                                        {isAssigningTmdbIds && (
-                                            <span className="absolute inset-0 flex items-center justify-center bg-gray-950/65 text-[11px] font-semibold text-white">
-                                                Buscando...
-                                            </span>
-                                        )}
-                                    </button>
-                                    {tmdbProgress && (
-                                        <p className="text-[11px] text-cyan-300">
-                                            TMDB: {tmdbProgress.processed} / {tmdbProgress.total}
-                                        </p>
-                                    )}
-                                </div>
-                            )}
-
+                        <div className="flex items-center justify-between gap-3 ml-auto flex-1 min-w-[320px]">
+                            <div className="flex items-center gap-3 flex-wrap">
                             <button
                                 onClick={handleOpenCreateModal}
                                 className="bg-gray-700 hover:bg-gray-600 text-white font-medium py-1.5 px-3 rounded-md flex items-center text-sm border border-gray-600"
@@ -1286,13 +1260,44 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                             >
                                 <Search size={20} />
                             </button>
-                             <button
+                            </div>
+
+                            <div className="flex items-center gap-3 flex-wrap ml-auto justify-end">
+                                {!isSencillo && (
+                                    <div className="flex flex-col items-end gap-1">
+                                        <button
+                                            onClick={handleAssignTmdbIdsByGroup}
+                                            disabled={isAssigningTmdbIds || filterGroup === 'Todos los canales' || channels.length === 0}
+                                            className="relative flex h-10 w-[198px] items-center overflow-hidden rounded-full border border-cyan-500/40 bg-gray-900 shadow-lg shadow-cyan-900/20 transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40"
+                                            title="Pregunta tipo (películas/series) y asigna tvg-id con TMDB a todo el grupo filtrado"
+                                        >
+                                            <img
+                                                src="/the-movie-database-logo.svg"
+                                                alt="TMDB"
+                                                className="pointer-events-none absolute left-1/2 top-1/2 h-[126%] w-full max-w-none -translate-x-1/2 -translate-y-1/2 object-contain"
+                                            />
+                                            {isAssigningTmdbIds && (
+                                                <span className="absolute inset-0 flex items-center justify-center bg-gray-950/65 text-[11px] font-semibold text-white">
+                                                    Buscando...
+                                                </span>
+                                            )}
+                                        </button>
+                                        {tmdbProgress && (
+                                            <p className="text-[11px] text-cyan-300">
+                                                TMDB: {tmdbProgress.processed} / {tmdbProgress.total}
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+
+                                <button
                                 onClick={() => setShowTutorialModal(true)}
                                 className="text-gray-400 hover:text-blue-400 p-2 rounded-full hover:bg-gray-700 transition-colors"
                                 title="¿Cómo ordenar los canales?"
                             >
                                 <HelpCircle size={20} />
                             </button>
+                            </div>
                         </div>
                     </div>
 
