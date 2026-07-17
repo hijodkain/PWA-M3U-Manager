@@ -82,6 +82,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
     const [tableSortMode, setTableSortMode] = useState<'none' | 'tvgId' | 'tvgName' | 'status' | 'tvgLogo'>('none');
     const [isAssigningTmdbIds, setIsAssigningTmdbIds] = useState(false);
     const [tmdbProgress, setTmdbProgress] = useState<{ processed: number; total: number } | null>(null);
+    const [showTmdbTypeModal, setShowTmdbTypeModal] = useState(false);
     const columnsDropdownRef = useRef<HTMLDivElement>(null);
     const nameSearchRef = useRef<HTMLInputElement>(null);
     
@@ -639,14 +640,6 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         setSuffixInput('');
     };
 
-    const parseTmdbMediaType = (value: string | null): TmdbMediaType | null => {
-        if (!value) return null;
-        const normalized = value.trim().toLowerCase();
-        if (['pelicula', 'peliculas', 'movie', 'movies'].includes(normalized)) return 'movie';
-        if (['serie', 'series', 'tv'].includes(normalized)) return 'tv';
-        return null;
-    };
-
     const getBestTmdbResult = (items: TmdbSearchItem[], query: string) => {
         if (items.length === 0) return null;
         const queryNormalized = query.trim().toLowerCase();
@@ -663,31 +656,10 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         return sorted[0];
     };
 
-    const handleAssignTmdbIdsByGroup = async () => {
-        if (isAssigningTmdbIds) return;
+    const getTmdbTargetChannels = () => channels.filter((ch) => ch.groupTitle === filterGroup);
 
-        if (!settingsHook.tmdbApiKey?.trim()) {
-            alert('Configura primero la API key de TMDB en Ajustes > Verificación.');
-            return;
-        }
-
-        if (!filterGroup || filterGroup === 'Todos los canales') {
-            alert('Selecciona un grupo específico en el filtro de grupo antes de usar esta acción.');
-            return;
-        }
-
-        const targetChannels = channels.filter((ch) => ch.groupTitle === filterGroup);
-        if (targetChannels.length === 0) {
-            alert('No hay canales en el grupo seleccionado.');
-            return;
-        }
-
-        const mediaTypeInput = prompt('¿Este grupo es de Películas o Series?\nEscribe: peliculas o series');
-        const mediaType = parseTmdbMediaType(mediaTypeInput);
-        if (!mediaType) {
-            alert('Operación cancelada. Debes indicar "peliculas" o "series".');
-            return;
-        }
+    const runAssignTmdbIdsByGroup = async (mediaType: TmdbMediaType) => {
+        const targetChannels = getTmdbTargetChannels();
 
         const mediaTypeLabel = mediaType === 'movie' ? 'Películas' : 'Series';
         const shouldContinue = confirm(
@@ -799,6 +771,33 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             setIsAssigningTmdbIds(false);
             setTmdbProgress(null);
         }
+    };
+
+    const handleAssignTmdbIdsByGroup = () => {
+        if (isAssigningTmdbIds) return;
+
+        if (!settingsHook.tmdbApiKey?.trim()) {
+            alert('Configura primero la API key de TMDB en Ajustes > Verificación.');
+            return;
+        }
+
+        if (!filterGroup || filterGroup === 'Todos los canales') {
+            alert('Selecciona un grupo específico en el filtro de grupo antes de usar esta acción.');
+            return;
+        }
+
+        const targetChannels = getTmdbTargetChannels();
+        if (targetChannels.length === 0) {
+            alert('No hay canales en el grupo seleccionado.');
+            return;
+        }
+
+        setShowTmdbTypeModal(true);
+    };
+
+    const handleSelectTmdbMediaType = (mediaType: TmdbMediaType) => {
+        setShowTmdbTypeModal(false);
+        void runAssignTmdbIdsByGroup(mediaType);
     };
 
     const gridTemplateColumns = useMemo(() => {
@@ -1393,6 +1392,43 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                             allow="autoplay; fullscreen"
                             allowFullScreen
                         />
+                    </div>
+                </div>
+            )}
+
+            {showTmdbTypeModal && (
+                <div
+                    className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
+                    onClick={() => setShowTmdbTypeModal(false)}
+                >
+                    <div
+                        className="bg-gray-800 border border-indigo-700 rounded-lg p-5 w-full max-w-md"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h3 className="text-lg font-bold text-white mb-2">Tipo de contenido</h3>
+                        <p className="text-sm text-gray-300 mb-5">
+                            Elige si el grupo "{filterGroup}" corresponde a películas o series.
+                        </p>
+                        <div className="flex flex-wrap gap-2 justify-end">
+                            <button
+                                onClick={() => setShowTmdbTypeModal(false)}
+                                className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-md border border-gray-600"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={() => handleSelectTmdbMediaType('movie')}
+                                className="bg-indigo-700 hover:bg-indigo-600 text-white px-4 py-2 rounded-md border border-indigo-500"
+                            >
+                                Películas
+                            </button>
+                            <button
+                                onClick={() => handleSelectTmdbMediaType('tv')}
+                                className="bg-blue-700 hover:bg-blue-600 text-white px-4 py-2 rounded-md border border-blue-500"
+                            >
+                                Series
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
