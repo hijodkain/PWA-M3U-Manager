@@ -64,6 +64,15 @@ interface TmdbRunSummary {
     errors: number;
 }
 
+interface TmdbMetadataRunSummary {
+    scopeLabel: string;
+    updated: number;
+    noTmdbId: number;
+    notFound: number;
+    skippedLive: number;
+    errors: number;
+}
+
 interface TmdbExecutionGroup {
     groupName: string;
     mediaType: TmdbMediaType;
@@ -119,6 +128,10 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
     });
     const [tmdbRunSummary, setTmdbRunSummary] = useState<TmdbRunSummary | null>(null);
     const [showTmdbResultModal, setShowTmdbResultModal] = useState(false);
+    const [isSyncingTmdbMetadata, setIsSyncingTmdbMetadata] = useState(false);
+    const [tmdbMetadataProgress, setTmdbMetadataProgress] = useState<{ processed: number; total: number } | null>(null);
+    const [tmdbMetadataRunSummary, setTmdbMetadataRunSummary] = useState<TmdbMetadataRunSummary | null>(null);
+    const [showTmdbMetadataResultModal, setShowTmdbMetadataResultModal] = useState(false);
     const columnsDropdownRef = useRef<HTMLDivElement>(null);
     const nameSearchRef = useRef<HTMLInputElement>(null);
     
@@ -894,6 +907,167 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         return [];
     };
 
+    const extractTmdbIdFromTvgId = (tvgId: string): number | null => {
+        const value = (tvgId || '').trim();
+        if (!value) return null;
+
+        if (/^\d+$/.test(value)) {
+            const numeric = Number.parseInt(value, 10);
+            return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+        }
+
+        const match = value.match(/(?:^|\D)(\d{2,})(?:\D|$)/);
+        if (!match) return null;
+
+        const numeric = Number.parseInt(match[1], 10);
+        return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+    };
+
+    const fetchTmdbDetail = async (id: number, mediaType: TmdbMediaType, apiKey: string) => {
+        const params = new URLSearchParams({
+            api_key: apiKey,
+            language: 'es-ES',
+        });
+
+        const response = await fetch(`https://api.themoviedb.org/3/${mediaType}/${id}?${params.toString()}`, {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+            },
+        });
+
+        if (!response.ok) {
+            return null;
+        }
+
+        const data = (await response.json()) as {
+            title?: string;
+            name?: string;
+            poster_path?: string;
+            backdrop_path?: string;
+        };
+
+        const localizedName = (data.title || data.name || '').trim();
+        const imagePath = data.poster_path || data.backdrop_path || '';
+        const logoUrl = imagePath ? `https://image.tmdb.org/t/p/w500${imagePath}` : '';
+
+        return {
+            localizedName,
+            logoUrl,
+        };
+    };
+
+    const handleSyncFilteredChannelsWithTmdb = async () => {
+        if (isSyncingTmdbMetadata) return;
+
+        const tmdbApiKey = settingsHook.tmdbApiKey.trim();
+        if (!tmdbApiKey) {
+            alert('Configura primero la API key de TMDB en Ajustes > Verificación.');
+            return;
+        }
+
+        if (displayChannels.length === 0) {
+            alert('No hay canales filtrados para procesar en este momento.');
+            return;
+        }
+
+        const targetChannels = [...displayChannels];
+        const total = targetChannels.length;
+        const updates = new Map<string, { name?: string; tvgLogo?: string }>();
+
+        let processed = 0;
+        let noTmdbId = 0;
+        let notFound = 0;
+        let skippedLive = 0;
+        let errors = 0;
+
+        const concurrency = 3;
+
+        setIsSyncingTmdbMetadata(true);
+        setTmdbMetadataProgress({ processed: 0, total });
+
+        try {
+            for (let i = 0; i < targetChannels.length; i += concurrency) {
+                const batch = targetChannels.slice(i, i + concurrency);
+
+                await Promise.all(
+                    batch.map(async (channel) => {
+                        try {
+                            const tmdbId = extractTmdbIdFromTvgId(channel.tvgId || '');
+                            if (!tmdbId) {
+                                noTmdbId += 1;
+                                return;
+                            }
+
+                            const classification = detectGroupClassification(channel.groupTitle || '');
+                            if (classification === 'live') {
+                                skippedLive += 1;
+                                return;
+                            }
+
+                            const primaryType: TmdbMediaType = classification === 'tv' ? 'tv' : 'movie';
+                            const secondaryType: TmdbMediaType = primaryType === 'movie' ? 'tv' : 'movie';
+
+                            const primaryResult = await fetchTmdbDetail(tmdbId, primaryType, tmdbApiKey);
+                            const result = primaryResult || await fetchTmdbDetail(tmdbId, secondaryType, tmdbApiKey);
+
+                            if (!result) {
+                                notFound += 1;
+                                return;
+                            }
+
+                            const nextName = result.localizedName?.trim();
+                            const nextLogo = result.logoUrl?.trim();
+
+                            if (nextName || nextLogo) {
+                                updates.set(channel.id, {
+                                    ...(nextName ? { name: nextName } : {}),
+                                    ...(nextLogo ? { tvgLogo: nextLogo } : {}),
+                                });
+                            } else {
+                                notFound += 1;
+                            }
+                        } catch {
+                            errors += 1;
+                        } finally {
+                            processed += 1;
+                            setTmdbMetadataProgress({ processed, total });
+                        }
+                    })
+                );
+            }
+
+            if (updates.size > 0) {
+                channelsHook.setChannels((prev) =>
+                    prev.map((ch) => {
+                        const channelUpdate = updates.get(ch.id);
+                        if (!channelUpdate) return ch;
+
+                        return {
+                            ...ch,
+                            ...(channelUpdate.name ? { name: channelUpdate.name } : {}),
+                            ...(channelUpdate.tvgLogo ? { tvgLogo: channelUpdate.tvgLogo } : {}),
+                        };
+                    })
+                );
+                channelsHook.saveStateToHistory();
+            }
+
+            setTmdbMetadataRunSummary({
+                scopeLabel: 'canales filtrados',
+                updated: updates.size,
+                noTmdbId,
+                notFound,
+                skippedLive,
+                errors,
+            });
+            setShowTmdbMetadataResultModal(true);
+        } finally {
+            setIsSyncingTmdbMetadata(false);
+            setTmdbMetadataProgress(null);
+        }
+    };
+
     const getTmdbTargetChannels = () => channels.filter((ch) => ch.groupTitle === filterGroup);
 
     const getChannelsForGroup = (groupName: string) => channels.filter((ch) => ch.groupTitle === groupName);
@@ -1439,6 +1613,24 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                     </div>
                                 )}
 
+                                {!isSencillo && (
+                                    <div className="flex flex-col items-end gap-1">
+                                        <button
+                                            onClick={() => void handleSyncFilteredChannelsWithTmdb()}
+                                            disabled={isSyncingTmdbMetadata || displayChannels.length === 0}
+                                            className="flex h-10 items-center rounded-full border border-emerald-500/40 bg-gray-900 px-4 text-[12px] font-semibold text-emerald-200 shadow-lg shadow-emerald-900/20 transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40"
+                                            title="Usa tvg-id como ID TMDB y actualiza nombre (es-ES) + cover/logo en los canales filtrados"
+                                        >
+                                            {isSyncingTmdbMetadata ? 'TMDB sincronizando...' : 'TMDB nombre+cover (filtrados)'}
+                                        </button>
+                                        {tmdbMetadataProgress && (
+                                            <p className="text-[11px] text-emerald-300">
+                                                TMDB meta: {tmdbMetadataProgress.processed} / {tmdbMetadataProgress.total}
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+
                                 <button
                                 onClick={() => setShowTutorialModal(true)}
                                 className="text-gray-400 hover:text-blue-400 p-2 rounded-full hover:bg-gray-700 transition-colors"
@@ -1924,6 +2116,40 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                         <div className="flex justify-end">
                             <button
                                 onClick={() => setShowTmdbResultModal(false)}
+                                className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-md border border-gray-600"
+                            >
+                                Cerrar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showTmdbMetadataResultModal && tmdbMetadataRunSummary && (
+                <div
+                    className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
+                    onClick={() => setShowTmdbMetadataResultModal(false)}
+                >
+                    <div
+                        className="bg-gray-800 border border-emerald-700 rounded-lg p-5 w-full max-w-md"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h3 className="text-lg font-bold text-white mb-2">Sincronización TMDB completada</h3>
+                        <p className="text-sm text-gray-300 mb-4">
+                            Alcance: {tmdbMetadataRunSummary.scopeLabel}
+                        </p>
+
+                        <div className="space-y-2 text-sm mb-5">
+                            <p className="text-emerald-300">Actualizados (nombre/logo): {tmdbMetadataRunSummary.updated}</p>
+                            <p className="text-gray-300">Sin tvg-id TMDB válido: {tmdbMetadataRunSummary.noTmdbId}</p>
+                            <p className="text-yellow-300">Sin coincidencia en TMDB: {tmdbMetadataRunSummary.notFound}</p>
+                            <p className="text-sky-300">Omitidos por grupo Live: {tmdbMetadataRunSummary.skippedLive}</p>
+                            <p className="text-red-300">Con error: {tmdbMetadataRunSummary.errors}</p>
+                        </div>
+
+                        <div className="flex justify-end">
+                            <button
+                                onClick={() => setShowTmdbMetadataResultModal(false)}
                                 className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-md border border-gray-600"
                             >
                                 Cerrar
