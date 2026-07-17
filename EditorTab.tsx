@@ -43,6 +43,16 @@ const DEFAULT_VISIBLE_COLUMNS: Record<ColumnKey, boolean> = {
     play: true,
 };
 
+type TmdbMediaType = 'movie' | 'tv';
+
+interface TmdbSearchItem {
+    id: number;
+    name: string;
+    popularity: number;
+    voteCount: number;
+    releaseDate: string | null;
+}
+
 const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => {
     const { isSencillo } = useAppMode();
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -70,6 +80,8 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
     const [urlSortMode, setUrlSortMode] = useState<'none' | 'alpha' | 'domain-cycle'>('none');
     const [domainCycleStep, setDomainCycleStep] = useState(0);
     const [tableSortMode, setTableSortMode] = useState<'none' | 'tvgId' | 'tvgName' | 'status' | 'tvgLogo'>('none');
+    const [isAssigningTmdbIds, setIsAssigningTmdbIds] = useState(false);
+    const [tmdbProgress, setTmdbProgress] = useState<{ processed: number; total: number } | null>(null);
     const columnsDropdownRef = useRef<HTMLDivElement>(null);
     const nameSearchRef = useRef<HTMLInputElement>(null);
     
@@ -627,6 +639,168 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         setSuffixInput('');
     };
 
+    const parseTmdbMediaType = (value: string | null): TmdbMediaType | null => {
+        if (!value) return null;
+        const normalized = value.trim().toLowerCase();
+        if (['pelicula', 'peliculas', 'movie', 'movies'].includes(normalized)) return 'movie';
+        if (['serie', 'series', 'tv'].includes(normalized)) return 'tv';
+        return null;
+    };
+
+    const getBestTmdbResult = (items: TmdbSearchItem[], query: string) => {
+        if (items.length === 0) return null;
+        const queryNormalized = query.trim().toLowerCase();
+        const sorted = [...items].sort((a, b) => {
+            const aName = (a.name || '').toLowerCase();
+            const bName = (b.name || '').toLowerCase();
+            const aExact = aName === queryNormalized;
+            const bExact = bName === queryNormalized;
+
+            if (aExact !== bExact) return aExact ? -1 : 1;
+            if (a.popularity !== b.popularity) return b.popularity - a.popularity;
+            return b.voteCount - a.voteCount;
+        });
+        return sorted[0];
+    };
+
+    const handleAssignTmdbIdsByGroup = async () => {
+        if (isAssigningTmdbIds) return;
+
+        if (!settingsHook.tmdbApiKey?.trim()) {
+            alert('Configura primero la API key de TMDB en Ajustes > Verificación.');
+            return;
+        }
+
+        if (!filterGroup || filterGroup === 'Todos los canales') {
+            alert('Selecciona un grupo específico en el filtro de grupo antes de usar esta acción.');
+            return;
+        }
+
+        const targetChannels = channels.filter((ch) => ch.groupTitle === filterGroup);
+        if (targetChannels.length === 0) {
+            alert('No hay canales en el grupo seleccionado.');
+            return;
+        }
+
+        const mediaTypeInput = prompt('¿Este grupo es de Películas o Series?\nEscribe: peliculas o series');
+        const mediaType = parseTmdbMediaType(mediaTypeInput);
+        if (!mediaType) {
+            alert('Operación cancelada. Debes indicar "peliculas" o "series".');
+            return;
+        }
+
+        const mediaTypeLabel = mediaType === 'movie' ? 'Películas' : 'Series';
+        const shouldContinue = confirm(
+            `Se procesarán ${targetChannels.length} canales del grupo "${filterGroup}" buscando solo en ${mediaTypeLabel}.\n\n¿Continuar?`
+        );
+
+        if (!shouldContinue) return;
+
+        setIsAssigningTmdbIds(true);
+        setTmdbProgress({ processed: 0, total: targetChannels.length });
+
+        const updates = new Map<string, string>();
+        let processed = 0;
+        let noQueryCount = 0;
+        let notFoundCount = 0;
+        let errorCount = 0;
+        const concurrency = 3;
+
+        try {
+            for (let i = 0; i < targetChannels.length; i += concurrency) {
+                const batch = targetChannels.slice(i, i + concurrency);
+
+                await Promise.all(
+                    batch.map(async (channel) => {
+                        const query = (channel.tvgName || channel.name || '').trim();
+
+                        if (!query) {
+                            noQueryCount += 1;
+                            processed += 1;
+                            setTmdbProgress({ processed, total: targetChannels.length });
+                            return;
+                        }
+
+                        try {
+                            const tmdbUrl = `https://api.themoviedb.org/3/search/${mediaType}?api_key=${encodeURIComponent(
+                                settingsHook.tmdbApiKey.trim()
+                            )}&query=${encodeURIComponent(query)}&language=es-ES&page=1&include_adult=false`;
+
+                            const response = await fetch(tmdbUrl, {
+                                method: 'GET',
+                                headers: {
+                                    Accept: 'application/json',
+                                },
+                            });
+
+                            if (!response.ok) {
+                                errorCount += 1;
+                                processed += 1;
+                                setTmdbProgress({ processed, total: targetChannels.length });
+                                return;
+                            }
+
+                            const data = (await response.json()) as {
+                                results?: Array<{
+                                    id: number;
+                                    title?: string;
+                                    name?: string;
+                                    popularity?: number;
+                                    vote_count?: number;
+                                }>;
+                            };
+
+                            const normalizedResults: TmdbSearchItem[] = (data.results || []).map((item) => ({
+                                id: item.id,
+                                name: item.title || item.name || '',
+                                popularity: item.popularity || 0,
+                                voteCount: item.vote_count || 0,
+                                releaseDate: null,
+                            }));
+
+                            const bestResult = getBestTmdbResult(normalizedResults, query);
+
+                            if (bestResult?.id) {
+                                updates.set(channel.id, String(bestResult.id));
+                            } else {
+                                notFoundCount += 1;
+                            }
+                        } catch {
+                            errorCount += 1;
+                        } finally {
+                            processed += 1;
+                            setTmdbProgress({ processed, total: targetChannels.length });
+                        }
+                    })
+                );
+            }
+
+            if (updates.size > 0) {
+                channelsHook.setChannels((prev) =>
+                    prev.map((ch) =>
+                        updates.has(ch.id)
+                            ? { ...ch, tvgId: updates.get(ch.id) || ch.tvgId }
+                            : ch
+                    )
+                );
+                channelsHook.saveStateToHistory();
+            }
+
+            alert(
+                [
+                    `Asignación TMDB completada para el grupo "${filterGroup}" (${mediaTypeLabel}).`,
+                    `Actualizados: ${updates.size}`,
+                    `Sin búsqueda (sin nombre): ${noQueryCount}`,
+                    `Sin coincidencia: ${notFoundCount}`,
+                    `Con error: ${errorCount}`,
+                ].join('\n')
+            );
+        } finally {
+            setIsAssigningTmdbIds(false);
+            setTmdbProgress(null);
+        }
+    };
+
     const gridTemplateColumns = useMemo(() => {
         const cols: string[] = [`${columnWidths.select}px`, `${columnWidths.order}px`];
         if (isColumnVisible('status')) cols.push(`${columnWidths.status}px`);
@@ -747,6 +921,32 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {!isSencillo && (
+                        <div className="bg-indigo-900/20 p-3 rounded-lg border border-indigo-800/70">
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div>
+                                    <span className="text-xs text-indigo-300 font-semibold uppercase tracking-wider block">TMDB por grupo</span>
+                                    <p className="text-xs text-gray-400 mt-1">
+                                        Procesa todos los canales del grupo seleccionado en el filtro y sobrescribe su tvg-id con TMDB.
+                                    </p>
+                                    {tmdbProgress && (
+                                        <p className="text-xs text-indigo-200 mt-1">
+                                            Procesando TMDB: {tmdbProgress.processed} / {tmdbProgress.total}
+                                        </p>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={handleAssignTmdbIdsByGroup}
+                                    disabled={isAssigningTmdbIds || filterGroup === 'Todos los canales' || channels.length === 0}
+                                    className="bg-indigo-700 hover:bg-indigo-600 text-white font-medium py-2 px-4 rounded text-sm border border-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed"
+                                    title="Pregunta tipo (películas/series) y asigna tvg-id con TMDB a todo el grupo filtrado"
+                                >
+                                    {isAssigningTmdbIds ? 'Buscando en TMDB...' : 'Asignar tvg-id TMDB al grupo'}
+                                </button>
                             </div>
                         </div>
                     )}

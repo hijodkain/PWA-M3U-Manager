@@ -3,7 +3,7 @@
 ## 📌 VERSIÓN ACTUAL: v1.4.1
 
 ### 🔢 Política de Versionado Semántico
-La versión se muestra en el header de la app (`PWAM3UManager.tsx`) y debe actualizarse con cada subida a main o rama feature significativa.
+La versión se muestra en el header de la app (`PWAM3UManager.tsx`) y **solo debe actualizarse al hacer merge a main**. No se actualiza en commits intermedios dentro de una rama feature.
 
 | Tipo de cambio | Acción | Ejemplo |
 |---|---|---|
@@ -11,9 +11,13 @@ La versión se muestra en el header de la app (`PWAM3UManager.tsx`) y debe actua
 | Nueva funcionalidad añadida | +0.1 (minor) | v1.0 → v1.1 |
 | Corrección de bug, mejora menor, optimización | +0.0.1 (patch) | v1.0 → v1.0.1 |
 
-**Regla obligatoria**: Al hacer cualquier commit a main (o merge de rama feature), actualizar:
+**Regla de múltiples tipos**: Cuando un único commit/merge incluye cambios de varios tipos, aplica solo el bump de mayor magnitud (major > minor > patch).
+
+**Regla obligatoria**: Al hacer merge de una rama feature a main, actualizar:
 1. La versión en `PWAM3UManager.tsx`: `<span className="text-xs text-gray-500 font-normal ml-1">vX.Y.Z</span>`
 2. La línea `## 📌 VERSIÓN ACTUAL` en este archivo
+
+**Si no es posible ejecutar el comando git** (repositorio inaccesible o rama inexistente), listar los comandos exactos que el usuario debe ejecutar manualmente y no asumir que la operación tuvo éxito.
 
 ## �🗣️ IDIOMA Y COMUNICACIÓN
 **SIEMPRE responde en ESPAÑOL**. Este proyecto es en español, los commits deben ser en español, los comentarios de código en español, y toda comunicación con el desarrollador en español.
@@ -177,25 +181,20 @@ channels[0].name = newName; setChannels(channels);
 
 ### 📋 Sistema de Seguimiento de Cambios con Checklists
 
-**REGLAS OBLIGATORIAS:**
+**TABLA DE DECISIÓN — aplicar según el disparador:**
 
-1. **Al subir cambios a una rama feature:**
-   - SIEMPRE terminar la respuesta con un **checklist numerado** de TODOS los cambios realizados en esa rama
-   - Formato: `## 📋 CHECKLIST DE CAMBIOS (Rama: feature/nombre)`
-   - Cada cambio debe ser verificable con pasos claros
-   - Incluir checkboxes vacíos `[ ]` para que el usuario pueda marcar
+| Disparador | Acción | Formato |
+|---|---|---|
+| Respuesta que incluye commit/push a rama feature | Añadir checklist completo al final | Detallado: título + pasos verificables con `[ ]` |
+| Respuesta posterior dentro de la misma rama | Volver a imprimir el checklist completo acumulado (todos los ítems, incluidos los anteriores) | Detallado completo |
+| Merge confirmado a main | Añadir checklist abreviado al final | Compacto: título + descripción breve (1 línea) + enlace al commit |
 
-2. **Persistencia del checklist:**
-   - Mantener el checklist completo en memoria durante toda la conversación sobre esa rama
-   - Si el usuario menciona un cambio específico (ej: "cambio 3"), los cambios NO revisados (4, 5, etc.) se DEBEN seguir mencionando
-   - NO eliminar cambios del checklist hasta que se haga merge a main
+**Reglas adicionales:**
+- Nunca eliminar ítems del checklist hasta que se confirme el merge a main.
+- Al final de cada respuesta durante el trabajo en una rama feature, reimprimir el checklist completo en ejecución con todos los ítems (incluidos los listados previamente), para que siempre sea visible en el último mensaje.
+- Si el usuario menciona un cambio específico (ej: "cambio 3"), los cambios NO revisados deben seguir apareciendo en el checklist.
 
-3. **Al hacer merge a main:**
-   - Presentar un **checklist abreviado** de TODOS los cambios de la rama mergeada
-   - Formato más compacto: título + descripción breve (1 línea por cambio)
-   - Incluir enlace al commit en GitHub
-
-**Ejemplo de checklist en rama:**
+**Ejemplo de checklist detallado (rama feature):**
 ```markdown
 ## 📋 CHECKLIST DE CAMBIOS (Rama: feature/mejoras-epg-settings)
 
@@ -209,7 +208,7 @@ channels[0].name = newName; setChannels(channels);
 - [ ] Hacer clic y confirmar navegación
 ```
 
-**Ejemplo de checklist abreviado al merge:**
+**Ejemplo de checklist abreviado (tras merge a main):**
 ```markdown
 ## ✅ CAMBIOS MERGEADOS A MAIN
 
