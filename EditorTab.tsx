@@ -1199,7 +1199,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                         title="Pregunta tipo (películas/series) y asigna tvg-id con TMDB a todo el grupo filtrado"
                                     >
                                         <img
-                                            src="/tmdb-logo.svg"
+                                            src="/the-movie-database-logo.svg"
                                             alt="TMDB"
                                             className="h-full w-full object-cover"
                                         />
