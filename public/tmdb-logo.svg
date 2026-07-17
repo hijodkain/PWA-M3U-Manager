@@ -1,0 +1,14 @@
+<svg width="520" height="68" viewBox="0 0 520 68" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="tmdbText" x1="0" y1="0" x2="520" y2="68" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#9AD3AA"/>
+      <stop offset="0.45" stop-color="#45C0D1"/>
+      <stop offset="1" stop-color="#06B6F0"/>
+    </linearGradient>
+  </defs>
+  <rect x="334" y="0" width="186" height="68" rx="34" fill="#06B6F0"/>
+  <path d="M0 0H72V13.5H43V68H29V13.5H0V0Z" fill="url(#tmdbText)"/>
+  <path d="M87 0H108L129 37L149 0H170V68H156V21L132 68H126L101 21V68H87V0Z" fill="url(#tmdbText)"/>
+  <path d="M193 0H233C254 0 270 6 282 17C294 28 300 42 300 58C300 61 300 64 299 68H193V0ZM207 13V55H233C248 55 260 52 268 46C277 40 281 31 281 20C281 18 281 16 280 13H207Z" fill="url(#tmdbText)"/>
+  <path d="M316 0H370C384 0 395 3 402 9C410 15 414 23 414 33C414 44 409 52 398 57C406 59 412 63 416 68H316V0ZM330 13V28H369C376 28 382 27 385 25C389 23 391 19 391 13H330ZM330 41V55H372C379 55 384 54 388 52C391 50 393 46 393 41H330Z" fill="url(#tmdbText)"/>
+</svg>

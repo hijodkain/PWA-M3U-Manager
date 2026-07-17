@@ -15,6 +15,7 @@ const SAVED_URLS_KEY = 'saved_urls';
 const SAVED_EPG_URLS_KEY = 'saved_epg_urls';
 const CHANNEL_PREFIXES_KEY = 'channel_prefixes';
 const CHANNEL_SUFFIXES_KEY = 'channel_suffixes';
+const TMDB_API_KEY = 'tmdb_api_key';
 
 // Cloudflare Worker settings keys
 const CF_VERIFY_API_URL_KEY = 'cf_verify_api_url';
@@ -39,6 +40,7 @@ const DEFAULT_SUFFIXES = [
 export const useSettings = () => {
     const [dropboxAppKey, setDropboxAppKey] = useState('');
     const [dropboxRefreshToken, setDropboxRefreshToken] = useState('');
+    const [tmdbApiKey, setTmdbApiKey] = useState('');
     const [savedUrls, setSavedUrls] = useState<SavedUrl[]>([]);
     const [savedEpgUrls, setSavedEpgUrls] = useState<SavedUrl[]>([]);
     const [channelPrefixes, setChannelPrefixes] = useState<string[]>(DEFAULT_PREFIXES);
@@ -53,6 +55,7 @@ export const useSettings = () => {
         try {
             setDropboxAppKey(getStorageItem(DB_APP_KEY) || '');
             setDropboxRefreshToken(getStorageItem(DB_REFRESH_TOKEN_KEY) || '');
+            setTmdbApiKey(getStorageItem(TMDB_API_KEY) || '');
 
             const savedUrlsJson = getStorageItem(SAVED_URLS_KEY);
             if (savedUrlsJson) {
@@ -102,6 +105,15 @@ export const useSettings = () => {
             setDropboxRefreshToken('');
         } catch (error) {
             console.error("Error clearing Dropbox settings from localStorage", error);
+        }
+    }, []);
+
+    const saveTmdbSettings = useCallback((apiKey: string) => {
+        try {
+            setStorageItem(TMDB_API_KEY, apiKey);
+            setTmdbApiKey(apiKey);
+        } catch (error) {
+            console.error("Error saving TMDB settings to localStorage", error);
         }
     }, []);
 
@@ -220,7 +232,9 @@ export const useSettings = () => {
     return {
         dropboxAppKey,
         dropboxRefreshToken,
+        tmdbApiKey,
         saveDropboxSettings,
+        saveTmdbSettings,
         clearDropboxSettings,
         savedUrls,
         addSavedUrl,

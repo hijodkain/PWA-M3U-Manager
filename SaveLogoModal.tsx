@@ -90,7 +90,7 @@ const SaveLogoModal: React.FC<SaveLogoModalProps> = ({
                     group: ch.getAttribute('group') || '',
                 }));
                 setExistingChannels(channels);
-                const groups = [...new Set(channels.map(ch => ch.group).filter(Boolean))];
+                const groups = Array.from(new Set(channels.map(ch => ch.group).filter(Boolean)));
                 setExistingGroups(groups);
             }
         } catch {

@@ -152,7 +152,9 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
     const {
         dropboxAppKey,
         dropboxRefreshToken,
+        tmdbApiKey,
         saveDropboxSettings,
+        saveTmdbSettings,
         clearDropboxSettings,
         savedEpgUrls,
         addSavedEpgUrl,
@@ -191,6 +193,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
     const [localCfVerifyUrl, setLocalCfVerifyUrl] = useState(cfVerifyApiUrl);
     const [localCfProxyUrl, setLocalCfProxyUrl] = useState(cfProxyApiUrl);
     const [localUseCf, setLocalUseCf] = useState(useCfWorker);
+    const [localTmdbApiKey, setLocalTmdbApiKey] = useState(tmdbApiKey);
 
     const SUGGESTED_EPGS = [
         { name: 'David_DobleM', url: 'https://raw.githubusercontent.com/davidmuma/EPG_dobleM/master/guiaiptv.xml' },
@@ -217,6 +220,10 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
         setLocalCfProxyUrl(cfProxyApiUrl);
         setLocalUseCf(useCfWorker);
     }, [cfVerifyApiUrl, cfProxyApiUrl, useCfWorker]);
+
+    useEffect(() => {
+        setLocalTmdbApiKey(tmdbApiKey);
+    }, [tmdbApiKey]);
 
     useEffect(() => {
         const targetSubTab = getStorageItem('settings_target_subtab');
@@ -816,6 +823,33 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ settingsHook }) => {
                         <UsageWidget />
 
                         <div className="bg-gray-800 rounded-xl p-8 border border-gray-700 shadow-xl space-y-6">
+                            <div className="p-4 bg-gray-900 rounded-lg border border-gray-700 space-y-3">
+                                <h3 className="text-white font-medium">API de TMDB (películas/series)</h3>
+                                <p className="text-gray-400 text-sm">
+                                    Esta clave se usa para buscar IDs y asignarlos al campo tvg-id desde la pestaña Editor.
+                                </p>
+                                <input
+                                    type="password"
+                                    value={localTmdbApiKey}
+                                    onChange={(e) => setLocalTmdbApiKey(e.target.value)}
+                                    placeholder="Pega tu API key de TMDB"
+                                    className="w-full bg-gray-900 border border-gray-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                />
+                                <button
+                                    onClick={() => {
+                                        if (!localTmdbApiKey.trim()) {
+                                            alert('Introduce una API key de TMDB válida');
+                                            return;
+                                        }
+                                        saveTmdbSettings(localTmdbApiKey.trim());
+                                        alert('API key de TMDB guardada correctamente');
+                                    }}
+                                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                                >
+                                    Guardar API key TMDB
+                                </button>
+                            </div>
+
                             {/* Toggle para usar Cloudflare */}
                             <div className="flex items-center justify-between p-4 bg-gray-900 rounded-lg">
                                 <div>
