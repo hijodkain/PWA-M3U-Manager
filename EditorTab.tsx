@@ -1417,13 +1417,13 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                         <button
                                             onClick={handleAssignTmdbIdsByGroup}
                                             disabled={isAssigningTmdbIds || channels.length === 0}
-                                            className="relative flex h-10 w-[198px] items-center overflow-hidden rounded-full border border-cyan-500/40 bg-gray-900 shadow-lg shadow-cyan-900/20 transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40"
+                                            className="relative flex h-10 w-[198px] items-center overflow-hidden rounded-full border border-cyan-500/40 bg-gray-900 p-1.5 shadow-lg shadow-cyan-900/20 transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40"
                                             title="Pregunta tipo (películas/series) y asigna tvg-id con TMDB a todo el grupo filtrado"
                                         >
                                             <img
                                                 src="/icons8-the-movie-database.svg"
                                                 alt="TMDB"
-                                                className="pointer-events-none absolute left-1/2 top-1/2 h-[126%] w-full max-w-none -translate-x-1/2 -translate-y-1/2 object-contain"
+                                                className="pointer-events-none absolute inset-1.5 h-auto w-auto object-contain"
                                             />
                                             {isAssigningTmdbIds && (
                                                 <span className="absolute inset-0 flex items-center justify-center bg-gray-950/65 text-[11px] font-semibold text-white">
