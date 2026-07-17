@@ -94,6 +94,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
     const [filteredGroups, setFilteredGroups] = useState<string[]>([]);
     const [prefixInput, setPrefixInput] = useState('');
     const [suffixInput, setSuffixInput] = useState('');
+    const [nameModifierTarget, setNameModifierTarget] = useState<'name' | 'groupTitle'>('name');
     const [showColumnsDropdown, setShowColumnsDropdown] = useState(false);
     const [visibleColumns, setVisibleColumns] = useState<Record<ColumnKey, boolean>>(DEFAULT_VISIBLE_COLUMNS);
     const [showRelativeOrder, setShowRelativeOrder] = useState(false);
@@ -611,11 +612,15 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         channelsHook.setChannels(prev =>
             prev.map(ch => {
                 if (!selectedChannels.includes(ch.id)) return ch;
+
+                const targetValue = nameModifierTarget === 'name' ? ch.name : ch.groupTitle;
                 
-                // Si el nombre empieza con el prefijo, eliminarlo
-                if (ch.name.startsWith(prefixInput)) {
-                    const newName = ch.name.substring(prefixInput.length).trim();
-                    return { ...ch, name: newName };
+                // Si el campo empieza con el prefijo, eliminarlo
+                if (targetValue.startsWith(prefixInput)) {
+                    const newValue = targetValue.substring(prefixInput.length).trim();
+                    return nameModifierTarget === 'name'
+                        ? { ...ch, name: newValue }
+                        : { ...ch, groupTitle: newValue };
                 }
                 return ch;
             })
@@ -633,10 +638,14 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         channelsHook.setChannels(prev =>
             prev.map(ch => {
                 if (!selectedChannels.includes(ch.id)) return ch;
+
+                const targetValue = nameModifierTarget === 'name' ? ch.name : ch.groupTitle;
                 
                 // Añadir prefijo solo si no lo tiene ya
-                if (!ch.name.startsWith(prefixInput)) {
-                    return { ...ch, name: `${prefixInput}${ch.name}` };
+                if (!targetValue.startsWith(prefixInput)) {
+                    return nameModifierTarget === 'name'
+                        ? { ...ch, name: `${prefixInput}${targetValue}` }
+                        : { ...ch, groupTitle: `${prefixInput}${targetValue}` };
                 }
                 return ch;
             })
@@ -657,10 +666,15 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         channelsHook.setChannels(prev =>
             prev.map(ch => {
                 if (!selectedChannels.includes(ch.id)) return ch;
+
+                const targetValue = nameModifierTarget === 'name' ? ch.name : ch.groupTitle;
                 
                 // Si el nombre termina con el patrón del sufijo, eliminarlo
-                if (suffixRegex.test(ch.name)) {
-                    return { ...ch, name: ch.name.replace(suffixRegex, '').trim() };
+                if (suffixRegex.test(targetValue)) {
+                    const newValue = targetValue.replace(suffixRegex, '').trim();
+                    return nameModifierTarget === 'name'
+                        ? { ...ch, name: newValue }
+                        : { ...ch, groupTitle: newValue };
                 }
                 return ch;
             })
@@ -678,10 +692,14 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         channelsHook.setChannels(prev =>
             prev.map(ch => {
                 if (!selectedChannels.includes(ch.id)) return ch;
+
+                const targetValue = nameModifierTarget === 'name' ? ch.name : ch.groupTitle;
                 
                 // Añadir sufijo solo si no lo tiene ya
-                if (!ch.name.endsWith(suffixInput)) {
-                    return { ...ch, name: `${ch.name}${suffixInput}` };
+                if (!targetValue.endsWith(suffixInput)) {
+                    return nameModifierTarget === 'name'
+                        ? { ...ch, name: `${targetValue}${suffixInput}` }
+                        : { ...ch, groupTitle: `${targetValue}${suffixInput}` };
                 }
                 return ch;
             })
@@ -1154,7 +1172,27 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
 
                             {/* Col 2: Name Modifiers */}
                             <div className="bg-gray-700/50 p-3 rounded-lg border border-gray-600">
-                                <span className="text-xs text-gray-400 font-semibold mb-2 block uppercase tracking-wider">Modificar Nombres</span>
+                                <div className="flex items-center justify-between gap-2 mb-2">
+                                    <span className="text-xs text-gray-400 font-semibold block uppercase tracking-wider">
+                                        Modificar {nameModifierTarget === 'name' ? 'Nombres' : 'Grupos'}
+                                    </span>
+                                    <div className="inline-flex rounded-md border border-gray-600 bg-gray-800 p-0.5 text-[11px] font-semibold">
+                                        <button
+                                            type="button"
+                                            onClick={() => setNameModifierTarget('name')}
+                                            className={`px-2.5 py-1 rounded ${nameModifierTarget === 'name' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                                        >
+                                            Nombre
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setNameModifierTarget('groupTitle')}
+                                            className={`px-2.5 py-1 rounded ${nameModifierTarget === 'groupTitle' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                                        >
+                                            Grupo
+                                        </button>
+                                    </div>
+                                </div>
                                 <div className="space-y-2">
                                     {/* Prefijos */}
                                     <div className="flex items-center gap-2">
@@ -1162,7 +1200,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                             type="text"
                                             value={prefixInput}
                                             onChange={(e) => setPrefixInput(e.target.value)}
-                                            placeholder="Prefijo (ej: HD )"
+                                            placeholder={nameModifierTarget === 'name' ? 'Prefijo (ej: HD )' : 'Prefijo para grupo (ej: NETFLIX )'}
                                             className="bg-gray-800 border border-gray-600 rounded px-2 py-1 text-white text-xs flex-grow focus:ring-blue-500 focus:border-blue-500 h-7"
                                         />
                                         <div className="flex gap-1">
@@ -1188,7 +1226,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                             type="text"
                                             value={suffixInput}
                                             onChange={(e) => setSuffixInput(e.target.value)}
-                                            placeholder="Sufijo (ej: 4K)"
+                                            placeholder={nameModifierTarget === 'name' ? 'Sufijo (ej: 4K)' : 'Sufijo para grupo (ej: SERIES)'}
                                             className="bg-gray-800 border border-gray-600 rounded px-2 py-1 text-white text-xs flex-grow focus:ring-blue-500 focus:border-blue-500 h-7"
                                         />
                                          <div className="flex gap-1">
