@@ -103,7 +103,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
     const [filteredGroups, setFilteredGroups] = useState<string[]>([]);
     const [prefixInput, setPrefixInput] = useState('');
     const [suffixInput, setSuffixInput] = useState('');
-    const [nameModifierTarget, setNameModifierTarget] = useState<'name' | 'groupTitle'>('name');
+    const [nameModifierTarget, setNameModifierTarget] = useState<'name' | 'groupTitle' | 'tvgName'>('name');
     const [showColumnsDropdown, setShowColumnsDropdown] = useState(false);
     const [visibleColumns, setVisibleColumns] = useState<Record<ColumnKey, boolean>>(DEFAULT_VISIBLE_COLUMNS);
     const [showRelativeOrder, setShowRelativeOrder] = useState(false);
@@ -117,6 +117,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
     const [showTmdbTypeModal, setShowTmdbTypeModal] = useState(false);
     const [showTmdbConfirmModal, setShowTmdbConfirmModal] = useState(false);
     const [showTmdbAllGroupsModal, setShowTmdbAllGroupsModal] = useState(false);
+    const [showTmdbNoSelectionModal, setShowTmdbNoSelectionModal] = useState(false);
     const [pendingTmdbPlan, setPendingTmdbPlan] = useState<PendingTmdbPlan | null>(null);
     const [allGroupsClassification, setAllGroupsClassification] = useState<Record<string, TmdbGroupClassification>>({});
     const [skipTmdbConfirmInSession, setSkipTmdbConfirmInSession] = useState(() => {
@@ -616,6 +617,18 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
             .replace(/\\\*/g, '.*');
 
+    const getModifierFieldValue = (ch: Channel) => {
+        if (nameModifierTarget === 'name') return ch.name;
+        if (nameModifierTarget === 'groupTitle') return ch.groupTitle;
+        return ch.tvgName;
+    };
+
+    const setModifierFieldValue = (ch: Channel, value: string): Channel => {
+        if (nameModifierTarget === 'name') return { ...ch, name: value };
+        if (nameModifierTarget === 'groupTitle') return { ...ch, groupTitle: value };
+        return { ...ch, tvgName: value };
+    };
+
     const handleRemovePrefix = () => {
         if (!prefixInput.trim()) {
             alert('Por favor, introduce un prefijo');
@@ -626,14 +639,12 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             prev.map(ch => {
                 if (!selectedChannels.includes(ch.id)) return ch;
 
-                const targetValue = nameModifierTarget === 'name' ? ch.name : ch.groupTitle;
+                const targetValue = getModifierFieldValue(ch);
                 
                 // Si el campo empieza con el prefijo, eliminarlo
                 if (targetValue.startsWith(prefixInput)) {
                     const newValue = targetValue.substring(prefixInput.length).trim();
-                    return nameModifierTarget === 'name'
-                        ? { ...ch, name: newValue }
-                        : { ...ch, groupTitle: newValue };
+                    return setModifierFieldValue(ch, newValue);
                 }
                 return ch;
             })
@@ -652,13 +663,11 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             prev.map(ch => {
                 if (!selectedChannels.includes(ch.id)) return ch;
 
-                const targetValue = nameModifierTarget === 'name' ? ch.name : ch.groupTitle;
+                const targetValue = getModifierFieldValue(ch);
                 
                 // Añadir prefijo solo si no lo tiene ya
                 if (!targetValue.startsWith(prefixInput)) {
-                    return nameModifierTarget === 'name'
-                        ? { ...ch, name: `${prefixInput}${targetValue}` }
-                        : { ...ch, groupTitle: `${prefixInput}${targetValue}` };
+                    return setModifierFieldValue(ch, `${prefixInput}${targetValue}`);
                 }
                 return ch;
             })
@@ -680,14 +689,12 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             prev.map(ch => {
                 if (!selectedChannels.includes(ch.id)) return ch;
 
-                const targetValue = nameModifierTarget === 'name' ? ch.name : ch.groupTitle;
+                const targetValue = getModifierFieldValue(ch);
                 
                 // Si el nombre termina con el patrón del sufijo, eliminarlo
                 if (suffixRegex.test(targetValue)) {
                     const newValue = targetValue.replace(suffixRegex, '').trim();
-                    return nameModifierTarget === 'name'
-                        ? { ...ch, name: newValue }
-                        : { ...ch, groupTitle: newValue };
+                    return setModifierFieldValue(ch, newValue);
                 }
                 return ch;
             })
@@ -706,13 +713,11 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             prev.map(ch => {
                 if (!selectedChannels.includes(ch.id)) return ch;
 
-                const targetValue = nameModifierTarget === 'name' ? ch.name : ch.groupTitle;
+                const targetValue = getModifierFieldValue(ch);
                 
                 // Añadir sufijo solo si no lo tiene ya
                 if (!targetValue.endsWith(suffixInput)) {
-                    return nameModifierTarget === 'name'
-                        ? { ...ch, name: `${targetValue}${suffixInput}` }
-                        : { ...ch, groupTitle: `${targetValue}${suffixInput}` };
+                    return setModifierFieldValue(ch, `${targetValue}${suffixInput}`);
                 }
                 return ch;
             })
@@ -1068,9 +1073,9 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         }
     };
 
-    const getTmdbTargetChannels = () => channels.filter((ch) => ch.groupTitle === filterGroup);
+    const getTmdbTargetChannels = () => channels.filter((ch) => ch.groupTitle === filterGroup && selectedChannels.includes(ch.id));
 
-    const getChannelsForGroup = (groupName: string) => channels.filter((ch) => ch.groupTitle === groupName);
+    const getChannelsForGroup = (groupName: string) => channels.filter((ch) => ch.groupTitle === groupName && selectedChannels.includes(ch.id));
 
     const buildTmdbPlanForAllGroups = (classification: Record<string, TmdbGroupClassification>): PendingTmdbPlan | null => {
         const allRealGroups = uniqueGroups.filter((group) => group !== 'Todos los canales');
@@ -1214,6 +1219,11 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             return;
         }
 
+        if (selectedChannels.length === 0) {
+            setShowTmdbNoSelectionModal(true);
+            return;
+        }
+
         if (filterGroup === 'Todos los canales') {
             const initialClassification = uniqueGroups
                 .filter((group) => group !== 'Todos los canales')
@@ -1229,7 +1239,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
 
         const targetChannels = getTmdbTargetChannels();
         if (targetChannels.length === 0) {
-            alert('No hay canales en el grupo seleccionado.');
+            alert('No hay canales seleccionados en el grupo filtrado.');
             return;
         }
 
@@ -1348,7 +1358,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                             <div className="bg-gray-700/50 p-3 rounded-lg border border-gray-600">
                                 <div className="flex items-center justify-between gap-2 mb-2">
                                     <span className="text-xs text-gray-400 font-semibold block uppercase tracking-wider">
-                                        Modificar {nameModifierTarget === 'name' ? 'Nombres' : 'Grupos'}
+                                        Modificar {nameModifierTarget === 'name' ? 'Nombres' : nameModifierTarget === 'groupTitle' ? 'Grupos' : 'TVG-Name'}
                                     </span>
                                     <div className="inline-flex rounded-md border border-gray-600 bg-gray-800 p-0.5 text-[11px] font-semibold">
                                         <button
@@ -1365,6 +1375,13 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                         >
                                             Grupo
                                         </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setNameModifierTarget('tvgName')}
+                                            className={`px-2.5 py-1 rounded ${nameModifierTarget === 'tvgName' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                                        >
+                                            TVG-Name
+                                        </button>
                                     </div>
                                 </div>
                                 <div className="space-y-2">
@@ -1374,7 +1391,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                             type="text"
                                             value={prefixInput}
                                             onChange={(e) => setPrefixInput(e.target.value)}
-                                            placeholder={nameModifierTarget === 'name' ? 'Prefijo (ej: HD )' : 'Prefijo para grupo (ej: NETFLIX )'}
+                                            placeholder={nameModifierTarget === 'name' ? 'Prefijo (ej: HD )' : nameModifierTarget === 'groupTitle' ? 'Prefijo para grupo (ej: NETFLIX )' : 'Prefijo para TVG-Name (ej: HD )'}
                                             className="bg-gray-800 border border-gray-600 rounded px-2 py-1 text-white text-xs flex-grow focus:ring-blue-500 focus:border-blue-500 h-7"
                                         />
                                         <div className="flex gap-1">
@@ -1400,7 +1417,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                             type="text"
                                             value={suffixInput}
                                             onChange={(e) => setSuffixInput(e.target.value)}
-                                            placeholder={nameModifierTarget === 'name' ? 'Sufijo (ej: 4K)' : 'Sufijo para grupo (ej: SERIES)'}
+                                            placeholder={nameModifierTarget === 'name' ? 'Sufijo (ej: 4K)' : nameModifierTarget === 'groupTitle' ? 'Sufijo para grupo (ej: SERIES)' : 'Sufijo para TVG-Name (ej: 4K)'}
                                             className="bg-gray-800 border border-gray-600 rounded px-2 py-1 text-white text-xs flex-grow focus:ring-blue-500 focus:border-blue-500 h-7"
                                         />
                                          <div className="flex gap-1">
@@ -1592,7 +1609,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                             onClick={handleAssignTmdbIdsByGroup}
                                             disabled={isAssigningTmdbIds || channels.length === 0}
                                             className="relative flex h-10 w-[198px] items-center overflow-hidden rounded-full border border-cyan-500/40 bg-gray-900 p-1.5 shadow-lg shadow-cyan-900/20 transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40"
-                                            title="Pregunta tipo (películas/series) y asigna tvg-id con TMDB a todo el grupo filtrado"
+                                            title="Pregunta tipo (películas/series) y asigna tvg-id con TMDB a los canales seleccionados"
                                         >
                                             <img
                                                 src="/icons8-the-movie-database.svg"
@@ -1921,6 +1938,31 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                 </div>
             )}
 
+            {showTmdbNoSelectionModal && (
+                <div
+                    className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
+                    onClick={() => setShowTmdbNoSelectionModal(false)}
+                >
+                    <div
+                        className="bg-gray-800 border border-yellow-700 rounded-lg p-5 w-full max-w-md"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h3 className="text-lg font-bold text-white mb-2">Selecciona canales</h3>
+                        <p className="text-sm text-gray-300 mb-5">
+                            Marca en la casilla de la izquierda los canales para los que quieres buscar el código TMDB antes de pulsar este botón.
+                        </p>
+                        <div className="flex justify-end">
+                            <button
+                                onClick={() => setShowTmdbNoSelectionModal(false)}
+                                className="bg-yellow-700 hover:bg-yellow-600 text-white px-4 py-2 rounded-md border border-yellow-500"
+                            >
+                                Entendido
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {showTmdbTypeModal && (
                 <div
                     className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
@@ -1932,7 +1974,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                     >
                         <h3 className="text-lg font-bold text-white mb-2">Tipo de contenido</h3>
                         <p className="text-sm text-gray-300 mb-5">
-                            Elige si el grupo "{filterGroup}" corresponde a películas o series.
+                            Elige si los {getTmdbTargetChannels().length} canales seleccionados del grupo "{filterGroup}" corresponden a películas o series.
                         </p>
                         <div className="flex flex-wrap gap-2 justify-end">
                             <button
