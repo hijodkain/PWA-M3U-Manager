@@ -1847,7 +1847,9 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                         onOrderChange={handleOrderChange}
                                         onUpdate={handleUpdateChannel}
                                         selectedChannels={selectedChannels}
-                                        toggleChannelSelection={toggleChannelSelection}
+                                        toggleChannelSelection={(id, isShiftClick) =>
+                                            toggleChannelSelection(id, isShiftClick, displayChannels.map((c) => c.id))
+                                        }
                                         statusIndicator={
                                             <StatusIndicator status={channel.status} />
                                         }

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useSortable, defaultAnimateLayoutChanges } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Globe, Save } from 'lucide-react';
@@ -7,6 +7,42 @@ import EditableCell from './EditableCell';
 import { Channel } from './index';
 
 type ColumnKey = 'status' | 'tvgId' | 'tvgName' | 'tvgLogo' | 'saveLogo' | 'groupTitle' | 'name' | 'url' | 'play';
+
+// Celda con marquee al pasar el ratón, solo si el texto realmente desborda su ancho.
+// Definida fuera de SortableChannelRow para no perder el estado de edición en cada re-render de la fila.
+const MarqueeCell: React.FC<{ value: string; onSave: (val: string) => void; suggestionsList?: string[] }> = ({ value, onSave, suggestionsList }) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [isOverflowing, setIsOverflowing] = useState(false);
+    const textRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const el = textRef.current;
+        if (!el) return;
+
+        const checkOverflow = () => setIsOverflowing(el.scrollWidth > el.clientWidth + 1);
+        checkOverflow();
+
+        const observer = new ResizeObserver(checkOverflow);
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, [value]);
+
+    return (
+        <div className="w-full overflow-hidden group relative" title={value || 'Doble clic para editar'}>
+            <div ref={textRef} className="w-full truncate group-hover:overflow-visible">
+                <div className={`w-full ${isOverflowing && !isEditing ? 'group-hover:animate-marquee' : ''}`}>
+                    <EditableCell
+                        value={value}
+                        onSave={onSave}
+                        className="w-full"
+                        suggestions={suggestionsList}
+                        onEditingChange={setIsEditing}
+                    />
+                </div>
+            </div>
+        </div>
+    );
+};
 
 interface SortableChannelRowProps {
     id: string;
@@ -99,33 +135,6 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
         setLogoError(false);
     }, [channel.tvgLogo]);
 
-    // Marquee helper: container with overflow hidden, child with animation on hover
-    // Using simple truncate for now as base, and hover effect via CSS classes defined globally or locally.
-    // To enable the "marquee on hover", we wrap EditableCell in a container that handles the hover trigger.
-    const MarqueeCell = ({ value, onSave, suggestionsList }: { value: string, onSave: (val: string) => void, suggestionsList?: string[] }) => (
-        <div className="w-full overflow-hidden group relative" title={value || 'Doble clic para editar'}>
-             <div className="w-full truncate group-hover:overflow-visible">
-                <div className={`w-full ${value.length > 20 ? 'group-hover:animate-marquee' : ''}`}>
-                    <EditableCell 
-                        value={value} 
-                        onSave={onSave} 
-                        className="w-full"
-                        suggestions={suggestionsList}
-                    />
-                </div>
-             </div>
-        </div>
-    );
-    // Note: The structure above is a bit experimental for marquee. 
-    // Pure CSS Marquee is tricky. The "unhide and animate" approach:
-    // When hovering parent, child animates.
-    // But EditableCell needs to be clickable. Marquee moving target is hard to click.
-    // User requested: "se desplace ... para poder leerlo completo".
-    
-    // Improved Marquee Strategy:
-    // Only animate if hovered. 
-    // Double click to edit might pause animation? 'group-hover:pause' (custom class needed).
-    
     return (
         <div 
             ref={combinedRef} 

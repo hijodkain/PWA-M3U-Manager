@@ -408,16 +408,25 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
 
     const activeChannel = useMemo(() => channels.find((c) => c.id === activeId), [activeId, channels]);
 
-    const toggleChannelSelection = (id: string, isShiftClick: boolean) => {
+    const toggleChannelSelection = (id: string, isShiftClick: boolean, orderedIds?: string[]) => {
+        // orderedIds permite usar el orden visual actual (p.ej. tras ordenar por cabecera)
+        const orderReference = orderedIds || filteredChannels.map((c) => c.id);
+
         if (isShiftClick && lastSelectedId) {
-            const lastIndex = filteredChannels.findIndex((c) => c.id === lastSelectedId);
-            const currentIndex = filteredChannels.findIndex((c) => c.id === id);
+            const lastIndex = orderReference.indexOf(lastSelectedId);
+            const currentIndex = orderReference.indexOf(id);
             if (lastIndex === -1 || currentIndex === -1) return;
 
             const start = Math.min(lastIndex, currentIndex);
             const end = Math.max(lastIndex, currentIndex);
-            const rangeIds = filteredChannels.slice(start, end + 1).map((c) => c.id);
-            setSelectedChannels((prev) => Array.from(new Set([...prev, ...rangeIds])));
+            const rangeIds = orderReference.slice(start, end + 1);
+            // El estado del canal pulsado marca si el rango se selecciona o se deselecciona
+            const shouldSelect = !selectedChannels.includes(id);
+            setSelectedChannels((prev) =>
+                shouldSelect
+                    ? Array.from(new Set([...prev, ...rangeIds]))
+                    : prev.filter((channelId) => !rangeIds.includes(channelId))
+            );
         } else {
             setSelectedChannels((prev) =>
                 prev.includes(id) ? prev.filter((channelId) => channelId !== id) : [...prev, id]
