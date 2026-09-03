@@ -62,6 +62,7 @@ interface TmdbRunSummary {
     noQuery: number;
     notFound: number;
     errors: number;
+    recoveredFromLogo: number;
 }
 
 interface TmdbMetadataRunSummary {
@@ -928,6 +929,40 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
     };
 
+    // Recupera un posible ID de TMDB embebido en la URL del logo (p.ej. "tmdb-12345" o ".../12345.jpg")
+    const extractTmdbIdFromLogoUrl = (logoUrl: string): number | null => {
+        const value = (logoUrl || '').trim();
+        if (!value) return null;
+
+        const explicitMatch = value.match(/tmdb[^0-9]{0,3}(\d{2,8})/i);
+        if (explicitMatch) {
+            const numeric = Number.parseInt(explicitMatch[1], 10);
+            if (Number.isFinite(numeric) && numeric > 0) return numeric;
+        }
+
+        try {
+            const { pathname } = new URL(value);
+            const fileName = pathname.split('/').filter(Boolean).pop() || '';
+            const baseName = fileName.replace(/\.[a-z0-9]+$/i, '');
+            if (/^\d{2,8}$/.test(baseName)) {
+                const numeric = Number.parseInt(baseName, 10);
+                if (Number.isFinite(numeric) && numeric > 0) return numeric;
+            }
+        } catch {
+            // URL inválida, se ignora
+        }
+
+        return null;
+    };
+
+    // Comprueba de forma laxa si el título recuperado coincide con el nombre del canal
+    const isLikelyTmdbTitleMatch = (candidateTitle: string, rawQuery: string): boolean => {
+        const normalizedCandidate = stripTmdbNoiseTokens(candidateTitle).toLowerCase();
+        const normalizedQuery = stripTmdbNoiseTokens(rawQuery).toLowerCase();
+        if (!normalizedCandidate || !normalizedQuery) return false;
+        return normalizedCandidate.includes(normalizedQuery) || normalizedQuery.includes(normalizedCandidate);
+    };
+
     const fetchTmdbDetail = async (id: number, mediaType: TmdbMediaType, apiKey: string) => {
         const params = new URLSearchParams({
             api_key: apiKey,
@@ -976,7 +1011,16 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             return;
         }
 
-        const targetChannels = [...displayChannels];
+        if (selectedChannels.length === 0) {
+            setShowTmdbNoSelectionModal(true);
+            return;
+        }
+
+        const targetChannels = displayChannels.filter((ch) => selectedChannels.includes(ch.id));
+        if (targetChannels.length === 0) {
+            alert('No hay canales seleccionados en el listado filtrado.');
+            return;
+        }
         const total = targetChannels.length;
         const updates = new Map<string, { name?: string; tvgLogo?: string }>();
 
@@ -1059,7 +1103,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             }
 
             setTmdbMetadataRunSummary({
-                scopeLabel: 'canales filtrados',
+                scopeLabel: 'canales seleccionados',
                 updated: updates.size,
                 noTmdbId,
                 notFound,
@@ -1123,10 +1167,12 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         setTmdbProgress({ processed: 0, total: plan.totalChannels });
 
         const updates = new Map<string, string>();
+        const pendingLogoRetry: { channel: Channel; mediaType: TmdbMediaType }[] = [];
         let processed = 0;
         let noQueryCount = 0;
         let notFoundCount = 0;
         let errorCount = 0;
+        let recoveredFromLogoCount = 0;
         const concurrency = 3;
 
         try {
@@ -1155,6 +1201,9 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                     updates.set(channel.id, String(bestResult.id));
                                 } else {
                                     notFoundCount += 1;
+                                    if (channel.tvgLogo?.trim()) {
+                                        pendingLogoRetry.push({ channel, mediaType: executionGroup.mediaType });
+                                    }
                                 }
                             } catch {
                                 errorCount += 1;
@@ -1164,6 +1213,27 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                             }
                         })
                     );
+                }
+            }
+
+            // Segunda pasada: para los no encontrados, intenta recuperar el ID desde la URL del logo (suele ser de TMDB)
+            for (const { channel, mediaType } of pendingLogoRetry) {
+                const candidateId = extractTmdbIdFromLogoUrl(channel.tvgLogo || '');
+                if (!candidateId) continue;
+
+                try {
+                    const secondaryType: TmdbMediaType = mediaType === 'movie' ? 'tv' : 'movie';
+                    const detail = (await fetchTmdbDetail(candidateId, mediaType, tmdbApiKey))
+                        || (await fetchTmdbDetail(candidateId, secondaryType, tmdbApiKey));
+
+                    const query = (channel.tvgName || channel.name || '').trim();
+                    if (detail?.localizedName && isLikelyTmdbTitleMatch(detail.localizedName, query)) {
+                        updates.set(channel.id, String(candidateId));
+                        notFoundCount -= 1;
+                        recoveredFromLogoCount += 1;
+                    }
+                } catch {
+                    // Si falla la verificación por logo, el canal se mantiene como "sin coincidencia"
                 }
             }
 
@@ -1187,6 +1257,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                 noQuery: noQueryCount,
                 notFound: notFoundCount,
                 errors: errorCount,
+                recoveredFromLogo: recoveredFromLogoCount,
             });
             setShowTmdbResultModal(true);
         } finally {
@@ -1636,9 +1707,9 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                             onClick={() => void handleSyncFilteredChannelsWithTmdb()}
                                             disabled={isSyncingTmdbMetadata || displayChannels.length === 0}
                                             className="flex h-10 items-center rounded-full border border-emerald-500/40 bg-gray-900 px-4 text-[12px] font-semibold text-emerald-200 shadow-lg shadow-emerald-900/20 transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40"
-                                            title="Usa tvg-id como ID TMDB y actualiza nombre (es-ES) + cover/logo en los canales filtrados"
+                                            title="Usa tvg-id como ID TMDB y actualiza nombre (es-ES) + cover/logo en los canales seleccionados"
                                         >
-                                            {isSyncingTmdbMetadata ? 'TMDB sincronizando...' : 'TMDB nombre+cover (filtrados)'}
+                                            {isSyncingTmdbMetadata ? 'TMDB sincronizando...' : 'TMDB nombre+cover (seleccionados)'}
                                         </button>
                                         {tmdbMetadataProgress && (
                                             <p className="text-[11px] text-emerald-300">
@@ -2152,6 +2223,9 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
 
                         <div className="space-y-2 text-sm mb-5">
                             <p className="text-green-300">Actualizados: {tmdbRunSummary.updated}</p>
+                            {tmdbRunSummary.recoveredFromLogo > 0 && (
+                                <p className="text-cyan-300">↳ Recuperados por logo: {tmdbRunSummary.recoveredFromLogo}</p>
+                            )}
                             <p className="text-gray-300">Sin búsqueda (sin nombre): {tmdbRunSummary.noQuery}</p>
                             <p className="text-yellow-300">Sin coincidencia: {tmdbRunSummary.notFound}</p>
                             <p className="text-red-300">Con error: {tmdbRunSummary.errors}</p>
