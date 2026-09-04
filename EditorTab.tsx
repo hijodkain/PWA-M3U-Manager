@@ -993,7 +993,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         const localizedName = (data.title || data.name || '').trim();
         const imagePath = data.poster_path || data.backdrop_path || '';
         const logoUrl = imagePath ? `https://image.tmdb.org/t/p/w500${imagePath}` : '';
-        const rating = typeof (data as any).vote_average === 'number' ? String((data as any).vote_average) : '';
+        const rating = typeof (data as any).vote_average === 'number' ? (data as any).vote_average.toFixed(1) : '';
 
         return {
             localizedName,
