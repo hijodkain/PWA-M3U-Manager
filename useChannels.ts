@@ -187,6 +187,7 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
             if (channel.tvgId) attributes += ` tvg-id="${channel.tvgId}"`;
             if (channel.tvgName) attributes += ` tvg-name="${channel.tvgName}"`;
             if (channel.tvgLogo) attributes += ` tvg-logo="${channel.tvgLogo}"`;
+            if (channel.rating) attributes += ` rating="${channel.rating}"`;
             if (channel.groupTitle) attributes += ` group-title="${channel.groupTitle}"`;
             content += `#EXTINF:-1${attributes},${channel.name}\n${channel.url}\n`;
         });

@@ -7,6 +7,7 @@ export interface Channel {
   tvgId: string;
   tvgName: string;
   tvgLogo: string;
+  rating?: string;
   groupTitle: string;
   name: string;
   url: string;

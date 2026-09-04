@@ -17,13 +17,14 @@ interface EditorTabProps {
     settingsHook: ReturnType<typeof useSettings>;
 }
 
-type ColumnKey = 'status' | 'tvgId' | 'tvgName' | 'tvgLogo' | 'saveLogo' | 'groupTitle' | 'name' | 'url' | 'play';
+type ColumnKey = 'status' | 'tvgId' | 'tvgName' | 'tvgLogo' | 'rating' | 'saveLogo' | 'groupTitle' | 'name' | 'url' | 'play';
 
 const ALL_EDITOR_COLUMNS: { key: ColumnKey; label: string; onlyPro?: boolean }[] = [
     { key: 'status', label: 'Estado', onlyPro: true },
     { key: 'tvgId', label: 'tvg-id', onlyPro: true },
     { key: 'tvgName', label: 'tvg-name', onlyPro: true },
     { key: 'tvgLogo', label: 'Logo' },
+    { key: 'rating', label: 'Rating' },
     { key: 'saveLogo', label: 'Guardar Logo', onlyPro: true },
     { key: 'groupTitle', label: 'Grupo' },
     { key: 'name', label: 'Nombre del canal' },
@@ -36,6 +37,7 @@ const DEFAULT_VISIBLE_COLUMNS: Record<ColumnKey, boolean> = {
     tvgId: true,
     tvgName: true,
     tvgLogo: true,
+    rating: false,
     saveLogo: true,
     groupTitle: true,
     name: true,
@@ -269,6 +271,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         if (isColumnVisible('tvgId')) width += columnWidths.tvgId;
         if (isColumnVisible('tvgName')) width += columnWidths.tvgName;
         if (isColumnVisible('tvgLogo')) width += columnWidths.tvgLogo;
+        if (isColumnVisible('rating')) width += columnWidths.rating;
         if (isColumnVisible('saveLogo')) width += columnWidths.saveLogo;
         if (isColumnVisible('groupTitle')) width += columnWidths.groupTitle;
         if (isColumnVisible('name')) width += columnWidths.name;
@@ -990,10 +993,12 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         const localizedName = (data.title || data.name || '').trim();
         const imagePath = data.poster_path || data.backdrop_path || '';
         const logoUrl = imagePath ? `https://image.tmdb.org/t/p/w500${imagePath}` : '';
+        const rating = typeof (data as any).vote_average === 'number' ? String((data as any).vote_average) : '';
 
         return {
             localizedName,
             logoUrl,
+            rating,
         };
     };
 
@@ -1022,7 +1027,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             return;
         }
         const total = targetChannels.length;
-        const updates = new Map<string, { name?: string; tvgLogo?: string }>();
+        const updates = new Map<string, { name?: string; tvgLogo?: string; rating?: string }>();
 
         let processed = 0;
         let noTmdbId = 0;
@@ -1068,10 +1073,13 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                             const nextName = result.localizedName?.trim();
                             const nextLogo = result.logoUrl?.trim();
 
-                            if (nextName || nextLogo) {
+                            const nextRating = result.rating?.trim();
+
+                            if (nextName || nextLogo || nextRating) {
                                 updates.set(channel.id, {
                                     ...(nextName ? { name: nextName } : {}),
                                     ...(nextLogo ? { tvgLogo: nextLogo } : {}),
+                                    ...(nextRating ? { rating: nextRating } : {}),
                                 });
                             } else {
                                 notFound += 1;
@@ -1096,6 +1104,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                             ...ch,
                             ...(channelUpdate.name ? { name: channelUpdate.name } : {}),
                             ...(channelUpdate.tvgLogo ? { tvgLogo: channelUpdate.tvgLogo } : {}),
+                            ...(channelUpdate.rating ? { rating: channelUpdate.rating } : {}),
                         };
                     })
                 );
@@ -1166,7 +1175,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         setIsAssigningTmdbIds(true);
         setTmdbProgress({ processed: 0, total: plan.totalChannels });
 
-        const updates = new Map<string, string>();
+        const updates = new Map<string, { tvgId: string; rating?: string }>();
         const pendingLogoRetry: { channel: Channel; mediaType: TmdbMediaType }[] = [];
         let processed = 0;
         let noQueryCount = 0;
@@ -1198,7 +1207,11 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                 const bestResult = getBestTmdbResult(normalizedResults, query);
 
                                 if (bestResult?.id) {
-                                    updates.set(channel.id, String(bestResult.id));
+                                    const tmdbRating = await fetchTmdbDetail(bestResult.id, executionGroup.mediaType, tmdbApiKey);
+                                    updates.set(channel.id, {
+                                        tvgId: String(bestResult.id),
+                                        rating: tmdbRating?.rating || undefined,
+                                    });
                                 } else {
                                     notFoundCount += 1;
                                     if (channel.tvgLogo?.trim()) {
@@ -1228,7 +1241,10 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
 
                     const query = (channel.tvgName || channel.name || '').trim();
                     if (detail?.localizedName && isLikelyTmdbTitleMatch(detail.localizedName, query)) {
-                        updates.set(channel.id, String(candidateId));
+                        updates.set(channel.id, {
+                            tvgId: String(candidateId),
+                            rating: detail.rating || undefined,
+                        });
                         notFoundCount -= 1;
                         recoveredFromLogoCount += 1;
                     }
@@ -1239,11 +1255,15 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
 
             if (updates.size > 0) {
                 channelsHook.setChannels((prev) =>
-                    prev.map((ch) =>
-                        updates.has(ch.id)
-                            ? { ...ch, tvgId: updates.get(ch.id) || ch.tvgId }
-                            : ch
-                    )
+                    prev.map((ch) => {
+                        if (!updates.has(ch.id)) return ch;
+                        const update = updates.get(ch.id)!;
+                        return {
+                            ...ch,
+                            tvgId: update.tvgId || ch.tvgId,
+                            ...(update.rating ? { rating: update.rating } : {}),
+                        };
+                    })
                 );
                 channelsHook.saveStateToHistory();
             }
@@ -1368,6 +1388,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         if (isColumnVisible('tvgId')) cols.push(`${columnWidths.tvgId}px`);
         if (isColumnVisible('tvgName')) cols.push(`${columnWidths.tvgName}px`);
         if (isColumnVisible('tvgLogo')) cols.push(`${columnWidths.tvgLogo}px`);
+        if (isColumnVisible('rating')) cols.push(`${columnWidths.rating}px`);
         if (isColumnVisible('saveLogo')) cols.push(`${columnWidths.saveLogo}px`);
         if (isColumnVisible('groupTitle')) cols.push(`${columnWidths.groupTitle}px`);
         if (isColumnVisible('name')) cols.push(`${columnWidths.name}px`);
@@ -1843,6 +1864,13 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                         <span className="ml-1 text-[9px] text-blue-400 font-bold">(sin logo)</span>
                                     )}
                                 </button>
+                            </ResizableHeader>
+                        )}
+                        {isColumnVisible('rating') && (
+                            <ResizableHeader width={columnWidths.rating} onResize={(w) => handleResize('rating', w)} align="center">
+                                <div className="w-full h-full cursor-default select-none text-center text-xs font-semibold uppercase tracking-wider text-gray-400">
+                                    Rating
+                                </div>
                             </ResizableHeader>
                         )}
                         {isColumnVisible('saveLogo') && (

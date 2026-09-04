@@ -6,7 +6,7 @@ import { useAppMode } from './AppModeContext';
 import EditableCell from './EditableCell';
 import { Channel } from './index';
 
-type ColumnKey = 'status' | 'tvgId' | 'tvgName' | 'tvgLogo' | 'saveLogo' | 'groupTitle' | 'name' | 'url' | 'play';
+type ColumnKey = 'status' | 'tvgId' | 'tvgName' | 'tvgLogo' | 'rating' | 'saveLogo' | 'groupTitle' | 'name' | 'url' | 'play';
 
 // Celda con marquee al pasar el ratón, solo si el texto realmente desborda su ancho.
 // Definida fuera de SortableChannelRow para no perder el estado de edición en cada re-render de la fila.
@@ -223,6 +223,13 @@ const SortableChannelRow: React.FC<SortableChannelRowProps> = ({
                     ) : (
                         <span className="text-gray-500 text-xs cursor-text select-text">Sin Logo</span>
                     )}
+                </div>
+            )}
+
+            {/* Rating */}
+            {isColumnVisible('rating') && (
+                <div className="px-2 py-2 text-sm text-gray-300 overflow-hidden">
+                    <MarqueeCell value={channel.rating || ''} onSave={(val) => onUpdate(channel.id, 'rating', val)} />
                 </div>
             )}
 
