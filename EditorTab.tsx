@@ -766,7 +766,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         let title = value.trim();
         title = title.replace(/[\u2018\u2019]/g, "'");
         title = title.replace(/[\u201C\u201D]/g, '"');
-        title = title.replace(/[._]/g, ' ');
+        title = title.replace(/[._-]/g, ' ');
         title = title.replace(/\s+/g, ' ');
         return title.trim();
     };
@@ -791,6 +791,28 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         title = title.replace(/\s*\|\s*.*$/, ' ');
         title = title.replace(/\s+/g, ' ').trim();
         return title;
+    };
+
+    const getDeepTmdbQuery = (value: string) => {
+        let title = value
+            .replace(/^\s*(?:\|+\s*)?(?:SP|ES)(?:\s*\|+)?\s*/i, '')
+            .replace(/^\s*\|+\s*(?:SP|ES)\s*\|+\s*/i, '');
+        title = getSeriesEpisodeTitle(title).title;
+        title = stripTmdbNoiseTokens(title);
+        title = title.replace(/(?:^|\s)[\[(]?(?:19\d{2}|20\d{2})[\])]?\b/g, ' ');
+        return title.replace(/\s+/g, ' ').trim();
+    };
+
+    const hasMatchingTmdbLogo = (channelLogo: string, tmdbLogo: string) => {
+        if (!channelLogo || !tmdbLogo) return false;
+
+        try {
+            const sourceFile = new URL(channelLogo).pathname.split('/').pop();
+            const tmdbFile = new URL(tmdbLogo).pathname.split('/').pop();
+            return Boolean(sourceFile && tmdbFile && sourceFile === tmdbFile);
+        } catch {
+            return false;
+        }
     };
 
     const getSeriesEpisodeTitle = (value: string) => {
@@ -1038,6 +1060,112 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             logoUrl,
             rating,
         };
+    };
+
+    const handleDeepTmdbReview = async () => {
+        if (isSyncingTmdbMetadata) return;
+
+        const tmdbApiKey = settingsHook.tmdbApiKey.trim();
+        if (!tmdbApiKey) {
+            alert('Configura primero la API key de TMDB en Ajustes > Verificación.');
+            return;
+        }
+
+        const selectedChannelSet = new Set(selectedChannels);
+        const targets = channels.filter((channel) => (
+            selectedChannelSet.has(channel.id) && !extractTmdbIdFromTvgId(channel.tvgId || '')
+        ));
+
+        if (targets.length === 0) {
+            alert('Selecciona al menos un canal sin tvg-id TMDB para revisar.');
+            return;
+        }
+
+        const updates = new Map<string, { tvgId: string; rating?: string }>();
+        let processed = 0;
+        let noQuery = 0;
+        let notFound = 0;
+        let errors = 0;
+        const concurrency = 3;
+
+        setIsSyncingTmdbMetadata(true);
+        setTmdbMetadataProgress({ processed: 0, total: targets.length });
+
+        try {
+            for (let index = 0; index < targets.length; index += concurrency) {
+                const batch = targets.slice(index, index + concurrency);
+
+                await Promise.all(batch.map(async (channel) => {
+                    try {
+                        const classification = detectGroupClassification(channel.groupTitle || '');
+                        if (classification === 'live') {
+                            notFound += 1;
+                            return;
+                        }
+
+                        const mediaType: TmdbMediaType = classification === 'tv' ? 'tv' : 'movie';
+                        const sourceTitle = channel.tvgName || channel.name || '';
+                        const query = getDeepTmdbQuery(sourceTitle);
+                        if (!query) {
+                            noQuery += 1;
+                            return;
+                        }
+
+                        const results = await searchTmdbWithFallbacks(query, mediaType, tmdbApiKey);
+                        const bestResult = getBestTmdbResult(results, query);
+                        if (!bestResult?.id || !isLikelyTmdbTitleMatch(bestResult.name, query)) {
+                            notFound += 1;
+                            return;
+                        }
+
+                        const detail = await fetchTmdbDetail(bestResult.id, mediaType, tmdbApiKey);
+                        const hasTmdbSourceLogo = /^https:\/\/image\.tmdb\.org\//i.test(channel.tvgLogo || '');
+                        if (!detail || (hasTmdbSourceLogo && !hasMatchingTmdbLogo(channel.tvgLogo, detail.logoUrl))) {
+                            notFound += 1;
+                            return;
+                        }
+
+                        updates.set(channel.id, {
+                            tvgId: String(bestResult.id),
+                            rating: detail.rating || bestResult.rating,
+                        });
+                    } catch {
+                        errors += 1;
+                    } finally {
+                        processed += 1;
+                        setTmdbMetadataProgress({ processed, total: targets.length });
+                    }
+                }));
+            }
+
+            if (updates.size > 0) {
+                channelsHook.setChannels((previous) => previous.map((channel) => {
+                    const update = updates.get(channel.id);
+                    if (!update) return channel;
+
+                    return {
+                        ...channel,
+                        tvgId: update.tvgId,
+                        ...(update.rating ? { rating: update.rating } : {}),
+                    };
+                }));
+                channelsHook.saveStateToHistory();
+            }
+
+            setTmdbRunSummary({
+                groupName: 'canales seleccionados sin tvg-id',
+                mediaTypeLabel: 'revisión profunda',
+                updated: updates.size,
+                noQuery,
+                notFound,
+                errors,
+                recoveredFromLogo: 0,
+            });
+            setShowTmdbResultModal(true);
+        } finally {
+            setIsSyncingTmdbMetadata(false);
+            setTmdbMetadataProgress(null);
+        }
     };
 
     const handleSyncFilteredChannelsWithTmdb = async () => {
@@ -1885,10 +2013,10 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                 {!isSencillo && (
                                     <div className="flex flex-col items-end gap-1">
                                         <button
-                                            onClick={handleAssignTmdbIdsByGroup}
-                                            disabled={isAssigningTmdbIds || channels.length === 0}
+                                            onClick={() => void handleQuickAssignTmdbIdAndRating()}
+                                            disabled={isAssigningTmdbIds || selectedChannels.length === 0}
                                             className="relative flex h-10 w-[198px] items-center overflow-hidden rounded-full border border-cyan-500/40 bg-gray-900 p-1.5 shadow-lg shadow-cyan-900/20 transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40"
-                                            title="Pregunta tipo (películas/series) y asigna tvg-id con TMDB a los canales seleccionados"
+                                            title="Busca y asigna tvg-id y rating TMDB a los canales seleccionados"
                                         >
                                             <img
                                                 src="/icons8-the-movie-database.svg"
@@ -1912,29 +2040,16 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                 {!isSencillo && (
                                     <div className="flex flex-col items-end gap-1">
                                         <button
-                                            onClick={() => void handleQuickAssignTmdbIdAndRating()}
-                                            disabled={isAssigningTmdbIds || selectedChannels.length === 0}
-                                            className="flex h-10 items-center rounded-full border border-sky-500/40 bg-gray-900 px-4 text-[12px] font-semibold text-sky-200 shadow-lg shadow-sky-900/20 transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40"
-                                            title="Busca y asigna tvg-id y rating TMDB con detección automática. En series, aplica el resultado a los episodios consecutivos."
-                                        >
-                                            {isAssigningTmdbIds ? 'TMDB buscando...' : 'TMDB ID + rating rápido'}
-                                        </button>
-                                    </div>
-                                )}
-
-                                {!isSencillo && (
-                                    <div className="flex flex-col items-end gap-1">
-                                        <button
-                                            onClick={() => void handleSyncFilteredChannelsWithTmdb()}
-                                            disabled={isSyncingTmdbMetadata || displayChannels.length === 0}
+                                            onClick={() => void handleDeepTmdbReview()}
+                                            disabled={isSyncingTmdbMetadata || selectedChannels.length === 0}
                                             className="flex h-10 items-center rounded-full border border-emerald-500/40 bg-gray-900 px-4 text-[12px] font-semibold text-emerald-200 shadow-lg shadow-emerald-900/20 transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40"
-                                            title="Usa tvg-id como ID TMDB y actualiza nombre (es-ES) + cover/logo en los canales seleccionados"
+                                            title="Revisa a fondo canales seleccionados sin tvg-id, normaliza el título y valida el logo TMDB cuando esté disponible"
                                         >
-                                            {isSyncingTmdbMetadata ? 'TMDB sincronizando...' : 'TMDB nombre+cover (seleccionados)'}
+                                            {isSyncingTmdbMetadata ? 'TMDB revisando...' : 'TMDB revisión profunda'}
                                         </button>
                                         {tmdbMetadataProgress && (
                                             <p className="text-[11px] text-emerald-300">
-                                                TMDB meta: {tmdbMetadataProgress.processed} / {tmdbMetadataProgress.total}
+                                                TMDB revisión: {tmdbMetadataProgress.processed} / {tmdbMetadataProgress.total}
                                             </p>
                                         )}
                                     </div>
