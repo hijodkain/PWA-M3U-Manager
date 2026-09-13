@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Upload, Download, AlertCircle, Share2, Trash2, Link as LinkIcon, FileText, Settings, RefreshCw, Plus, Cloud, Database, FilePlus, List, Filter, Check, X, CheckSquare, Square, Search, Github } from 'lucide-react';
 import { useChannels } from './useChannels';
 import { useSettings } from './useSettings';
@@ -155,6 +155,171 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
         const data = await response.json();
         return data.access_token;
     };
+
+    const listDropboxFolderFiles = async (
+        accessToken: string,
+        folderPath: string
+    ): Promise<{ success: boolean; files: Array<{ name: string; path_lower: string }> }> => {
+        try {
+            let res = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ path: folderPath, recursive: false }),
+            });
+
+            if (res.status === 409) {
+                const err = await res.json().catch(() => ({}));
+                const summary = err.error_summary || '';
+                if (summary.includes('not_found') || err.error?.path?.['.tag'] === 'not_found') {
+                    return { success: true, files: [] };
+                }
+                return { success: false, files: [] };
+            }
+
+            if (!res.ok) {
+                return { success: false, files: [] };
+            }
+
+            let data = await res.json();
+            let entries = (data.entries || []).filter((e: any) => e['.tag'] === 'file');
+
+            while (data.has_more && data.cursor) {
+                const continueRes = await fetch('https://api.dropboxapi.com/2/files/list_folder/continue', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ cursor: data.cursor }),
+                });
+                if (!continueRes.ok) break;
+                data = await continueRes.json();
+                entries = entries.concat((data.entries || []).filter((e: any) => e['.tag'] === 'file'));
+            }
+
+            return {
+                success: true,
+                files: entries.map((e: any) => ({
+                    name: e.name,
+                    path_lower: e.path_lower,
+                })),
+            };
+        } catch {
+            return { success: false, files: [] };
+        }
+    };
+
+    const isDropboxListStillPresent = (
+        list: { name: string; url?: string },
+        dropboxFiles: Array<{ name: string; path_lower: string }>
+    ): boolean => {
+        if (!dropboxFiles || dropboxFiles.length === 0) return false;
+
+        const normalize = (val: string) => (val || '').trim().toLowerCase();
+        const getBase = (val: string) => normalize(val).replace(/\.m3u8?$/i, '');
+
+        const extractFromUrl = (urlStr: string): string => {
+            if (!urlStr) return '';
+            try {
+                const u = new URL(urlStr);
+                const parts = u.pathname.split('/').filter(Boolean);
+                let fn = parts.pop() || '';
+                if (fn.includes('?')) fn = fn.split('?')[0];
+                return decodeURIComponent(fn);
+            } catch {
+                return '';
+            }
+        };
+
+        const listNameLower = normalize(list.name);
+        const listBaseName = getBase(list.name);
+
+        const urlFileName = extractFromUrl(list.url || '');
+        const urlNameLower = normalize(urlFileName);
+        const urlBaseName = getBase(urlFileName);
+
+        return dropboxFiles.some(file => {
+            const fNameLower = normalize(file.name);
+            const fBaseName = getBase(file.name);
+
+            // Coincidencia exacta de nombre
+            if (fNameLower === listNameLower) return true;
+
+            // Coincidencia con .m3u implícito
+            if (!listNameLower.endsWith('.m3u') && !listNameLower.endsWith('.m3u8') && fNameLower === `${listNameLower}.m3u`) {
+                return true;
+            }
+
+            // Coincidencia de nombre base sin extensión
+            if (listBaseName && fBaseName === listBaseName) return true;
+
+            // Coincidencia a través de la URL de Dropbox
+            if (urlNameLower && fNameLower === urlNameLower) return true;
+            if (urlBaseName && fBaseName === urlBaseName) return true;
+
+            return false;
+        });
+    };
+
+    // Comprobación automática al abrir la app tras actualizarse el banner "Conectado a Dropbox"
+    const hasVerifiedDropboxListsOnStartupRef = useRef(false);
+
+    useEffect(() => {
+        if (!settingsHook.dropboxRefreshToken || !settingsHook.dropboxAppKey || hasVerifiedDropboxListsOnStartupRef.current) {
+            return;
+        }
+
+        hasVerifiedDropboxListsOnStartupRef.current = true;
+
+        const verifyDropboxListsOnStartup = async () => {
+            try {
+                const accessToken = await getDropboxAccessToken();
+                if (!accessToken) return;
+
+                // 1. Primero: comprobación de "Mis Listas de Dropbox" en /Listas Principales
+                const currentDropboxLists: Array<{ id: string; name: string; url: string; addedAt: string }> =
+                    JSON.parse(getStorageItem('dropboxLists') || '[]');
+
+                if (currentDropboxLists.length > 0) {
+                    const principalesResult = await listDropboxFolderFiles(accessToken, '/Listas Principales');
+                    if (principalesResult.success) {
+                        const validDropboxLists = currentDropboxLists.filter(list =>
+                            isDropboxListStillPresent(list, principalesResult.files)
+                        );
+                        if (validDropboxLists.length !== currentDropboxLists.length) {
+                            setSavedDropboxLists(validDropboxLists);
+                            setStorageItem('dropboxLists', JSON.stringify(validDropboxLists));
+                        }
+                    }
+                }
+
+                // 2. Luego: comprobación de "Mis listas reparadoras" en /Listas Reparadoras
+                const currentMedicinaLists: Array<{ id: string; name: string; url: string; content?: string }> =
+                    JSON.parse(getStorageItem('medicinaLists') || '[]');
+
+                if (currentMedicinaLists.length > 0) {
+                    const reparadorasResult = await listDropboxFolderFiles(accessToken, '/Listas Reparadoras');
+                    if (reparadorasResult.success) {
+                        const validMedicinaLists = currentMedicinaLists.filter(list => {
+                            if (list.url === 'local' && list.content) return true;
+                            return isDropboxListStillPresent(list, reparadorasResult.files);
+                        });
+                        if (validMedicinaLists.length !== currentMedicinaLists.length) {
+                            setSavedMedicinaLists(validMedicinaLists);
+                            setStorageItem('medicinaLists', JSON.stringify(validMedicinaLists));
+                        }
+                    }
+                }
+            } catch {
+                // Silencioso: en caso de error de conexión/token el usuario no nota nada y no se alteran las listas
+            }
+        };
+
+        verifyDropboxListsOnStartup();
+    }, [settingsHook.dropboxRefreshToken, settingsHook.dropboxAppKey]);
 
     const handleUploadSelectionToDropbox = async (onlySelectedGroups: boolean) => {
         if (!previewContent || !settingsHook.dropboxRefreshToken) return;

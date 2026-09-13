@@ -17,13 +17,14 @@ interface EditorTabProps {
     settingsHook: ReturnType<typeof useSettings>;
 }
 
-type ColumnKey = 'status' | 'tvgId' | 'tvgName' | 'tvgLogo' | 'saveLogo' | 'groupTitle' | 'name' | 'url' | 'play';
+type ColumnKey = 'status' | 'tvgId' | 'tvgName' | 'tvgLogo' | 'rating' | 'saveLogo' | 'groupTitle' | 'name' | 'url' | 'play';
 
 const ALL_EDITOR_COLUMNS: { key: ColumnKey; label: string; onlyPro?: boolean }[] = [
     { key: 'status', label: 'Estado', onlyPro: true },
     { key: 'tvgId', label: 'tvg-id', onlyPro: true },
     { key: 'tvgName', label: 'tvg-name', onlyPro: true },
     { key: 'tvgLogo', label: 'Logo' },
+    { key: 'rating', label: 'Rating' },
     { key: 'saveLogo', label: 'Guardar Logo', onlyPro: true },
     { key: 'groupTitle', label: 'Grupo' },
     { key: 'name', label: 'Nombre del canal' },
@@ -36,6 +37,7 @@ const DEFAULT_VISIBLE_COLUMNS: Record<ColumnKey, boolean> = {
     tvgId: true,
     tvgName: true,
     tvgLogo: true,
+    rating: false,
     saveLogo: true,
     groupTitle: true,
     name: true,
@@ -53,15 +55,18 @@ interface TmdbSearchItem {
     name: string;
     popularity: number;
     voteCount: number;
+    rating?: string;
 }
 
 interface TmdbRunSummary {
     groupName: string;
     mediaTypeLabel: string;
     updated: number;
+    propagatedEpisodes?: number;
     noQuery: number;
     notFound: number;
     errors: number;
+    recoveredFromLogo: number;
 }
 
 interface TmdbMetadataRunSummary {
@@ -103,7 +108,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
     const [filteredGroups, setFilteredGroups] = useState<string[]>([]);
     const [prefixInput, setPrefixInput] = useState('');
     const [suffixInput, setSuffixInput] = useState('');
-    const [nameModifierTarget, setNameModifierTarget] = useState<'name' | 'groupTitle'>('name');
+    const [nameModifierTarget, setNameModifierTarget] = useState<'name' | 'groupTitle' | 'tvgName'>('name');
     const [showColumnsDropdown, setShowColumnsDropdown] = useState(false);
     const [visibleColumns, setVisibleColumns] = useState<Record<ColumnKey, boolean>>(DEFAULT_VISIBLE_COLUMNS);
     const [showRelativeOrder, setShowRelativeOrder] = useState(false);
@@ -117,6 +122,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
     const [showTmdbTypeModal, setShowTmdbTypeModal] = useState(false);
     const [showTmdbConfirmModal, setShowTmdbConfirmModal] = useState(false);
     const [showTmdbAllGroupsModal, setShowTmdbAllGroupsModal] = useState(false);
+    const [showTmdbNoSelectionModal, setShowTmdbNoSelectionModal] = useState(false);
     const [pendingTmdbPlan, setPendingTmdbPlan] = useState<PendingTmdbPlan | null>(null);
     const [allGroupsClassification, setAllGroupsClassification] = useState<Record<string, TmdbGroupClassification>>({});
     const [skipTmdbConfirmInSession, setSkipTmdbConfirmInSession] = useState(() => {
@@ -267,6 +273,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         if (isColumnVisible('tvgId')) width += columnWidths.tvgId;
         if (isColumnVisible('tvgName')) width += columnWidths.tvgName;
         if (isColumnVisible('tvgLogo')) width += columnWidths.tvgLogo;
+        if (isColumnVisible('rating')) width += columnWidths.rating;
         if (isColumnVisible('saveLogo')) width += columnWidths.saveLogo;
         if (isColumnVisible('groupTitle')) width += columnWidths.groupTitle;
         if (isColumnVisible('name')) width += columnWidths.name;
@@ -616,6 +623,18 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
             .replace(/\\\*/g, '.*');
 
+    const getModifierFieldValue = (ch: Channel) => {
+        if (nameModifierTarget === 'name') return ch.name;
+        if (nameModifierTarget === 'groupTitle') return ch.groupTitle;
+        return ch.tvgName;
+    };
+
+    const setModifierFieldValue = (ch: Channel, value: string): Channel => {
+        if (nameModifierTarget === 'name') return { ...ch, name: value };
+        if (nameModifierTarget === 'groupTitle') return { ...ch, groupTitle: value };
+        return { ...ch, tvgName: value };
+    };
+
     const handleRemovePrefix = () => {
         if (!prefixInput.trim()) {
             alert('Por favor, introduce un prefijo');
@@ -626,14 +645,12 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             prev.map(ch => {
                 if (!selectedChannels.includes(ch.id)) return ch;
 
-                const targetValue = nameModifierTarget === 'name' ? ch.name : ch.groupTitle;
+                const targetValue = getModifierFieldValue(ch);
                 
                 // Si el campo empieza con el prefijo, eliminarlo
                 if (targetValue.startsWith(prefixInput)) {
                     const newValue = targetValue.substring(prefixInput.length).trim();
-                    return nameModifierTarget === 'name'
-                        ? { ...ch, name: newValue }
-                        : { ...ch, groupTitle: newValue };
+                    return setModifierFieldValue(ch, newValue);
                 }
                 return ch;
             })
@@ -652,13 +669,11 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             prev.map(ch => {
                 if (!selectedChannels.includes(ch.id)) return ch;
 
-                const targetValue = nameModifierTarget === 'name' ? ch.name : ch.groupTitle;
+                const targetValue = getModifierFieldValue(ch);
                 
                 // Añadir prefijo solo si no lo tiene ya
                 if (!targetValue.startsWith(prefixInput)) {
-                    return nameModifierTarget === 'name'
-                        ? { ...ch, name: `${prefixInput}${targetValue}` }
-                        : { ...ch, groupTitle: `${prefixInput}${targetValue}` };
+                    return setModifierFieldValue(ch, `${prefixInput}${targetValue}`);
                 }
                 return ch;
             })
@@ -680,14 +695,12 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             prev.map(ch => {
                 if (!selectedChannels.includes(ch.id)) return ch;
 
-                const targetValue = nameModifierTarget === 'name' ? ch.name : ch.groupTitle;
+                const targetValue = getModifierFieldValue(ch);
                 
                 // Si el nombre termina con el patrón del sufijo, eliminarlo
                 if (suffixRegex.test(targetValue)) {
                     const newValue = targetValue.replace(suffixRegex, '').trim();
-                    return nameModifierTarget === 'name'
-                        ? { ...ch, name: newValue }
-                        : { ...ch, groupTitle: newValue };
+                    return setModifierFieldValue(ch, newValue);
                 }
                 return ch;
             })
@@ -706,13 +719,11 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             prev.map(ch => {
                 if (!selectedChannels.includes(ch.id)) return ch;
 
-                const targetValue = nameModifierTarget === 'name' ? ch.name : ch.groupTitle;
+                const targetValue = getModifierFieldValue(ch);
                 
                 // Añadir sufijo solo si no lo tiene ya
                 if (!targetValue.endsWith(suffixInput)) {
-                    return nameModifierTarget === 'name'
-                        ? { ...ch, name: `${targetValue}${suffixInput}` }
-                        : { ...ch, groupTitle: `${targetValue}${suffixInput}` };
+                    return setModifierFieldValue(ch, `${targetValue}${suffixInput}`);
                 }
                 return ch;
             })
@@ -755,7 +766,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         let title = value.trim();
         title = title.replace(/[\u2018\u2019]/g, "'");
         title = title.replace(/[\u201C\u201D]/g, '"');
-        title = title.replace(/[._]/g, ' ');
+        title = title.replace(/[._-]/g, ' ');
         title = title.replace(/\s+/g, ' ');
         return title.trim();
     };
@@ -780,6 +791,62 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         title = title.replace(/\s*\|\s*.*$/, ' ');
         title = title.replace(/\s+/g, ' ').trim();
         return title;
+    };
+
+    const getDeepTmdbQuery = (value: string) => {
+        let title = value
+            .replace(/^\s*(?:\|+\s*)?(?:SP|ES)(?:\s*\|+)?\s*/i, '')
+            .replace(/^\s*\|+\s*(?:SP|ES)\s*\|+\s*/i, '');
+        title = getSeriesEpisodeTitle(title).title;
+        title = stripTmdbNoiseTokens(title);
+        title = title.replace(/(?:^|\s)[\[(]?(?:19\d{2}|20\d{2})[\])]?\b/g, ' ');
+        return title.replace(/\s+/g, ' ').trim();
+    };
+
+    const hasMatchingTmdbLogo = (channelLogo: string, tmdbLogo: string) => {
+        if (!channelLogo || !tmdbLogo) return false;
+
+        try {
+            const sourceFile = new URL(channelLogo).pathname.split('/').pop();
+            const tmdbFile = new URL(tmdbLogo).pathname.split('/').pop();
+            return Boolean(sourceFile && tmdbFile && sourceFile === tmdbFile);
+        } catch {
+            return false;
+        }
+    };
+
+    const getSeriesEpisodeTitle = (value: string) => {
+        const normalized = normalizeTmdbTitle(value);
+        const match = normalized.match(/^(.*?)(?:\s*[-|:]\s*)?\bS\d{1,2}\s*E\d{1,3}\b\s*$/i);
+        const title = match?.[1]?.trim() || normalized;
+
+        return {
+            title,
+            isEpisode: Boolean(match && title),
+        };
+    };
+
+    const getConsecutiveSeriesEpisodes = (channel: Channel): Channel[] => {
+        const channelIndex = channels.findIndex((item) => item.id === channel.id);
+        const sourceTitle = channel.tvgName || channel.name || '';
+        const { title: seriesTitle, isEpisode } = getSeriesEpisodeTitle(sourceTitle);
+
+        if (channelIndex === -1 || !isEpisode) return [channel];
+
+        const belongsToSeries = (item: Channel) => {
+            const itemTitle = getSeriesEpisodeTitle(item.tvgName || item.name || '');
+            return item.groupTitle === channel.groupTitle
+                && itemTitle.isEpisode
+                && itemTitle.title.toLocaleLowerCase() === seriesTitle.toLocaleLowerCase();
+        };
+
+        let firstIndex = channelIndex;
+        let lastIndex = channelIndex;
+
+        while (firstIndex > 0 && belongsToSeries(channels[firstIndex - 1])) firstIndex -= 1;
+        while (lastIndex < channels.length - 1 && belongsToSeries(channels[lastIndex + 1])) lastIndex += 1;
+
+        return channels.slice(firstIndex, lastIndex + 1);
     };
 
     const extractYearFromTitle = (value: string): { title: string; year: number | null } => {
@@ -888,6 +955,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                         name?: string;
                         popularity?: number;
                         vote_count?: number;
+                        vote_average?: number;
                     }>;
                 };
 
@@ -896,6 +964,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                     name: item.title || item.name || '',
                     popularity: item.popularity || 0,
                     voteCount: item.vote_count || 0,
+                    rating: typeof item.vote_average === 'number' ? item.vote_average.toFixed(1) : undefined,
                 }));
 
                 if (normalizedResults.length > 0) {
@@ -921,6 +990,40 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
 
         const numeric = Number.parseInt(match[1], 10);
         return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+    };
+
+    // Recupera un posible ID de TMDB embebido en la URL del logo (p.ej. "tmdb-12345" o ".../12345.jpg")
+    const extractTmdbIdFromLogoUrl = (logoUrl: string): number | null => {
+        const value = (logoUrl || '').trim();
+        if (!value) return null;
+
+        const explicitMatch = value.match(/tmdb[^0-9]{0,3}(\d{2,8})/i);
+        if (explicitMatch) {
+            const numeric = Number.parseInt(explicitMatch[1], 10);
+            if (Number.isFinite(numeric) && numeric > 0) return numeric;
+        }
+
+        try {
+            const { pathname } = new URL(value);
+            const fileName = pathname.split('/').filter(Boolean).pop() || '';
+            const baseName = fileName.replace(/\.[a-z0-9]+$/i, '');
+            if (/^\d{2,8}$/.test(baseName)) {
+                const numeric = Number.parseInt(baseName, 10);
+                if (Number.isFinite(numeric) && numeric > 0) return numeric;
+            }
+        } catch {
+            // URL inválida, se ignora
+        }
+
+        return null;
+    };
+
+    // Comprueba de forma laxa si el título recuperado coincide con el nombre del canal
+    const isLikelyTmdbTitleMatch = (candidateTitle: string, rawQuery: string): boolean => {
+        const normalizedCandidate = stripTmdbNoiseTokens(candidateTitle).toLowerCase();
+        const normalizedQuery = stripTmdbNoiseTokens(rawQuery).toLowerCase();
+        if (!normalizedCandidate || !normalizedQuery) return false;
+        return normalizedCandidate.includes(normalizedQuery) || normalizedQuery.includes(normalizedCandidate);
     };
 
     const fetchTmdbDetail = async (id: number, mediaType: TmdbMediaType, apiKey: string) => {
@@ -950,11 +1053,119 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         const localizedName = (data.title || data.name || '').trim();
         const imagePath = data.poster_path || data.backdrop_path || '';
         const logoUrl = imagePath ? `https://image.tmdb.org/t/p/w500${imagePath}` : '';
+        const rating = typeof (data as any).vote_average === 'number' ? (data as any).vote_average.toFixed(1) : '';
 
         return {
             localizedName,
             logoUrl,
+            rating,
         };
+    };
+
+    const handleDeepTmdbReview = async () => {
+        if (isSyncingTmdbMetadata) return;
+
+        const tmdbApiKey = settingsHook.tmdbApiKey.trim();
+        if (!tmdbApiKey) {
+            alert('Configura primero la API key de TMDB en Ajustes > Verificación.');
+            return;
+        }
+
+        const selectedChannelSet = new Set(selectedChannels);
+        const targets = channels.filter((channel) => (
+            selectedChannelSet.has(channel.id) && !extractTmdbIdFromTvgId(channel.tvgId || '')
+        ));
+
+        if (targets.length === 0) {
+            alert('Selecciona al menos un canal sin tvg-id TMDB para revisar.');
+            return;
+        }
+
+        const updates = new Map<string, { tvgId: string; rating?: string }>();
+        let processed = 0;
+        let noQuery = 0;
+        let notFound = 0;
+        let errors = 0;
+        const concurrency = 3;
+
+        setIsSyncingTmdbMetadata(true);
+        setTmdbMetadataProgress({ processed: 0, total: targets.length });
+
+        try {
+            for (let index = 0; index < targets.length; index += concurrency) {
+                const batch = targets.slice(index, index + concurrency);
+
+                await Promise.all(batch.map(async (channel) => {
+                    try {
+                        const classification = detectGroupClassification(channel.groupTitle || '');
+                        if (classification === 'live') {
+                            notFound += 1;
+                            return;
+                        }
+
+                        const mediaType: TmdbMediaType = classification === 'tv' ? 'tv' : 'movie';
+                        const sourceTitle = channel.tvgName || channel.name || '';
+                        const query = getDeepTmdbQuery(sourceTitle);
+                        if (!query) {
+                            noQuery += 1;
+                            return;
+                        }
+
+                        const results = await searchTmdbWithFallbacks(query, mediaType, tmdbApiKey);
+                        const bestResult = getBestTmdbResult(results, query);
+                        if (!bestResult?.id || !isLikelyTmdbTitleMatch(bestResult.name, query)) {
+                            notFound += 1;
+                            return;
+                        }
+
+                        const detail = await fetchTmdbDetail(bestResult.id, mediaType, tmdbApiKey);
+                        const hasTmdbSourceLogo = /^https:\/\/image\.tmdb\.org\//i.test(channel.tvgLogo || '');
+                        if (!detail || (hasTmdbSourceLogo && !hasMatchingTmdbLogo(channel.tvgLogo, detail.logoUrl))) {
+                            notFound += 1;
+                            return;
+                        }
+
+                        updates.set(channel.id, {
+                            tvgId: String(bestResult.id),
+                            rating: detail.rating || bestResult.rating,
+                        });
+                    } catch {
+                        errors += 1;
+                    } finally {
+                        processed += 1;
+                        setTmdbMetadataProgress({ processed, total: targets.length });
+                    }
+                }));
+            }
+
+            if (updates.size > 0) {
+                channelsHook.setChannels((previous) => previous.map((channel) => {
+                    const update = updates.get(channel.id);
+                    if (!update) return channel;
+
+                    return {
+                        ...channel,
+                        tvgId: update.tvgId,
+                        ...(update.rating ? { rating: update.rating } : {}),
+                    };
+                }));
+                channelsHook.saveStateToHistory();
+            }
+
+            setTmdbRunSummary({
+                groupName: 'canales seleccionados sin tvg-id',
+                mediaTypeLabel: 'revisión profunda',
+                updated: updates.size,
+                noQuery,
+                notFound,
+                errors,
+                recoveredFromLogo: 0,
+            });
+            setShowTmdbResultModal(true);
+        } finally {
+            setIsSyncingTmdbMetadata(false);
+            setTmdbMetadataProgress(null);
+        }
     };
 
     const handleSyncFilteredChannelsWithTmdb = async () => {
@@ -971,9 +1182,18 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             return;
         }
 
-        const targetChannels = [...displayChannels];
+        if (selectedChannels.length === 0) {
+            setShowTmdbNoSelectionModal(true);
+            return;
+        }
+
+        const targetChannels = displayChannels.filter((ch) => selectedChannels.includes(ch.id));
+        if (targetChannels.length === 0) {
+            alert('No hay canales seleccionados en el listado filtrado.');
+            return;
+        }
         const total = targetChannels.length;
-        const updates = new Map<string, { name?: string; tvgLogo?: string }>();
+        const updates = new Map<string, { name?: string; tvgLogo?: string; rating?: string }>();
 
         let processed = 0;
         let noTmdbId = 0;
@@ -1019,10 +1239,13 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                             const nextName = result.localizedName?.trim();
                             const nextLogo = result.logoUrl?.trim();
 
-                            if (nextName || nextLogo) {
+                            const nextRating = result.rating?.trim();
+
+                            if (nextName || nextLogo || nextRating) {
                                 updates.set(channel.id, {
                                     ...(nextName ? { name: nextName } : {}),
                                     ...(nextLogo ? { tvgLogo: nextLogo } : {}),
+                                    ...(nextRating ? { rating: nextRating } : {}),
                                 });
                             } else {
                                 notFound += 1;
@@ -1047,6 +1270,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                             ...ch,
                             ...(channelUpdate.name ? { name: channelUpdate.name } : {}),
                             ...(channelUpdate.tvgLogo ? { tvgLogo: channelUpdate.tvgLogo } : {}),
+                            ...(channelUpdate.rating ? { rating: channelUpdate.rating } : {}),
                         };
                     })
                 );
@@ -1054,7 +1278,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             }
 
             setTmdbMetadataRunSummary({
-                scopeLabel: 'canales filtrados',
+                scopeLabel: 'canales seleccionados',
                 updated: updates.size,
                 noTmdbId,
                 notFound,
@@ -1068,9 +1292,9 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         }
     };
 
-    const getTmdbTargetChannels = () => channels.filter((ch) => ch.groupTitle === filterGroup);
+    const getTmdbTargetChannels = () => channels.filter((ch) => ch.groupTitle === filterGroup && selectedChannels.includes(ch.id));
 
-    const getChannelsForGroup = (groupName: string) => channels.filter((ch) => ch.groupTitle === groupName);
+    const getChannelsForGroup = (groupName: string) => channels.filter((ch) => ch.groupTitle === groupName && selectedChannels.includes(ch.id));
 
     const buildTmdbPlanForAllGroups = (classification: Record<string, TmdbGroupClassification>): PendingTmdbPlan | null => {
         const allRealGroups = uniqueGroups.filter((group) => group !== 'Todos los canales');
@@ -1117,12 +1341,16 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         setIsAssigningTmdbIds(true);
         setTmdbProgress({ processed: 0, total: plan.totalChannels });
 
-        const updates = new Map<string, string>();
+        const updates = new Map<string, { tvgId: string; rating?: string }>();
+        const pendingLogoRetry: { channel: Channel; mediaType: TmdbMediaType }[] = [];
         let processed = 0;
         let noQueryCount = 0;
         let notFoundCount = 0;
         let errorCount = 0;
+        let recoveredFromLogoCount = 0;
+        let propagatedEpisodes = 0;
         const concurrency = 3;
+        const processedSeriesBlocks = new Set<string>();
 
         try {
             for (const executionGroup of plan.groups) {
@@ -1133,7 +1361,23 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
 
                     await Promise.all(
                         batch.map(async (channel) => {
-                            const query = (channel.tvgName || channel.name || '').trim();
+                            const sourceTitle = (channel.tvgName || channel.name || '').trim();
+                            const seriesEpisode = executionGroup.mediaType === 'tv'
+                                ? getSeriesEpisodeTitle(sourceTitle)
+                                : null;
+                            const seriesTargets = seriesEpisode?.isEpisode
+                                ? getConsecutiveSeriesEpisodes(channel)
+                                : [channel];
+                            const blockKey = seriesTargets[0].id;
+
+                            if (seriesEpisode?.isEpisode && processedSeriesBlocks.has(blockKey)) {
+                                processed += 1;
+                                setTmdbProgress({ processed, total: plan.totalChannels });
+                                return;
+                            }
+                            if (seriesEpisode?.isEpisode) processedSeriesBlocks.add(blockKey);
+
+                            const query = seriesEpisode?.isEpisode ? seriesEpisode.title : sourceTitle;
 
                             if (!query) {
                                 noQueryCount += 1;
@@ -1147,9 +1391,19 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                 const bestResult = getBestTmdbResult(normalizedResults, query);
 
                                 if (bestResult?.id) {
-                                    updates.set(channel.id, String(bestResult.id));
+                                    const tmdbRating = await fetchTmdbDetail(bestResult.id, executionGroup.mediaType, tmdbApiKey);
+                                    seriesTargets.forEach((target) => {
+                                        updates.set(target.id, {
+                                            tvgId: String(bestResult.id),
+                                            rating: tmdbRating?.rating || undefined,
+                                        });
+                                    });
+                                    propagatedEpisodes += Math.max(0, seriesTargets.length - 1);
                                 } else {
                                     notFoundCount += 1;
+                                    if (channel.tvgLogo?.trim()) {
+                                        pendingLogoRetry.push({ channel, mediaType: executionGroup.mediaType });
+                                    }
                                 }
                             } catch {
                                 errorCount += 1;
@@ -1162,13 +1416,41 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                 }
             }
 
+            // Segunda pasada: para los no encontrados, intenta recuperar el ID desde la URL del logo (suele ser de TMDB)
+            for (const { channel, mediaType } of pendingLogoRetry) {
+                const candidateId = extractTmdbIdFromLogoUrl(channel.tvgLogo || '');
+                if (!candidateId) continue;
+
+                try {
+                    const secondaryType: TmdbMediaType = mediaType === 'movie' ? 'tv' : 'movie';
+                    const detail = (await fetchTmdbDetail(candidateId, mediaType, tmdbApiKey))
+                        || (await fetchTmdbDetail(candidateId, secondaryType, tmdbApiKey));
+
+                    const query = (channel.tvgName || channel.name || '').trim();
+                    if (detail?.localizedName && isLikelyTmdbTitleMatch(detail.localizedName, query)) {
+                        updates.set(channel.id, {
+                            tvgId: String(candidateId),
+                            rating: detail.rating || undefined,
+                        });
+                        notFoundCount -= 1;
+                        recoveredFromLogoCount += 1;
+                    }
+                } catch {
+                    // Si falla la verificación por logo, el canal se mantiene como "sin coincidencia"
+                }
+            }
+
             if (updates.size > 0) {
                 channelsHook.setChannels((prev) =>
-                    prev.map((ch) =>
-                        updates.has(ch.id)
-                            ? { ...ch, tvgId: updates.get(ch.id) || ch.tvgId }
-                            : ch
-                    )
+                    prev.map((ch) => {
+                        if (!updates.has(ch.id)) return ch;
+                        const update = updates.get(ch.id)!;
+                        return {
+                            ...ch,
+                            tvgId: update.tvgId || ch.tvgId,
+                            ...(update.rating ? { rating: update.rating } : {}),
+                        };
+                    })
                 );
                 channelsHook.saveStateToHistory();
             }
@@ -1179,9 +1461,138 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                     ? (plan.groups[0].mediaType === 'movie' ? 'Películas' : 'Series')
                     : 'Series y Películas',
                 updated: updates.size,
+                propagatedEpisodes,
                 noQuery: noQueryCount,
                 notFound: notFoundCount,
                 errors: errorCount,
+                recoveredFromLogo: recoveredFromLogoCount,
+            });
+            setShowTmdbResultModal(true);
+        } finally {
+            setIsAssigningTmdbIds(false);
+            setTmdbProgress(null);
+        }
+    };
+
+    const handleQuickAssignTmdbIdAndRating = async () => {
+        if (isAssigningTmdbIds) return;
+
+        const tmdbApiKey = settingsHook.tmdbApiKey.trim();
+        if (!tmdbApiKey) {
+            alert('Configura primero la API key de TMDB en Ajustes > Verificación.');
+            return;
+        }
+
+        const selectedChannelSet = new Set(selectedChannels);
+        const selected = channels.filter((channel) => selectedChannelSet.has(channel.id));
+        if (selected.length === 0) {
+            setShowTmdbNoSelectionModal(true);
+            return;
+        }
+
+        const processedSeriesBlocks = new Set<string>();
+        const tasks: Array<{ query: string; mediaType: TmdbMediaType; targets: Channel[] }> = [];
+        let noQueryCount = 0;
+
+        selected.forEach((channel) => {
+            const classification = detectGroupClassification(channel.groupTitle || '');
+            if (classification === 'live') return;
+
+            const mediaType: TmdbMediaType = classification === 'tv' ? 'tv' : 'movie';
+            const sourceTitle = (channel.tvgName || channel.name || '').trim();
+            const seriesEpisode = mediaType === 'tv' ? getSeriesEpisodeTitle(sourceTitle) : null;
+            const targets = seriesEpisode?.isEpisode ? getConsecutiveSeriesEpisodes(channel) : [channel];
+            const blockKey = targets[0].id;
+
+            if (seriesEpisode?.isEpisode && processedSeriesBlocks.has(blockKey)) return;
+            if (seriesEpisode?.isEpisode) processedSeriesBlocks.add(blockKey);
+
+            const query = seriesEpisode?.isEpisode ? seriesEpisode.title : sourceTitle;
+            if (!query) {
+                noQueryCount += 1;
+                return;
+            }
+
+            tasks.push({ query, mediaType, targets });
+        });
+
+        if (tasks.length === 0) {
+            setTmdbRunSummary({
+                groupName: 'canales seleccionados',
+                mediaTypeLabel: 'detección automática',
+                updated: 0,
+                noQuery: noQueryCount,
+                notFound: 0,
+                errors: 0,
+                recoveredFromLogo: 0,
+            });
+            setShowTmdbResultModal(true);
+            return;
+        }
+
+        const updates = new Map<string, { tvgId: string; rating?: string }>();
+        let processed = 0;
+        let notFoundCount = 0;
+        let errorCount = 0;
+        let propagatedEpisodes = 0;
+        const concurrency = 3;
+
+        setIsAssigningTmdbIds(true);
+        setTmdbProgress({ processed: 0, total: tasks.length });
+
+        try {
+            for (let index = 0; index < tasks.length; index += concurrency) {
+                const batch = tasks.slice(index, index + concurrency);
+
+                await Promise.all(batch.map(async ({ query, mediaType, targets }) => {
+                    try {
+                        const results = await searchTmdbWithFallbacks(query, mediaType, tmdbApiKey);
+                        const bestResult = getBestTmdbResult(results, query);
+
+                        if (!bestResult?.id) {
+                            notFoundCount += 1;
+                            return;
+                        }
+
+                        targets.forEach((target) => {
+                            updates.set(target.id, {
+                                tvgId: String(bestResult.id),
+                                rating: bestResult.rating,
+                            });
+                        });
+                        propagatedEpisodes += Math.max(0, targets.length - 1);
+                    } catch {
+                        errorCount += 1;
+                    } finally {
+                        processed += 1;
+                        setTmdbProgress({ processed, total: tasks.length });
+                    }
+                }));
+            }
+
+            if (updates.size > 0) {
+                channelsHook.setChannels((previous) => previous.map((channel) => {
+                    const update = updates.get(channel.id);
+                    if (!update) return channel;
+
+                    return {
+                        ...channel,
+                        tvgId: update.tvgId,
+                        ...(update.rating ? { rating: update.rating } : {}),
+                    };
+                }));
+                channelsHook.saveStateToHistory();
+            }
+
+            setTmdbRunSummary({
+                groupName: 'canales seleccionados',
+                mediaTypeLabel: 'detección automática',
+                updated: updates.size,
+                propagatedEpisodes,
+                noQuery: noQueryCount,
+                notFound: notFoundCount,
+                errors: errorCount,
+                recoveredFromLogo: 0,
             });
             setShowTmdbResultModal(true);
         } finally {
@@ -1214,6 +1625,11 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             return;
         }
 
+        if (selectedChannels.length === 0) {
+            setShowTmdbNoSelectionModal(true);
+            return;
+        }
+
         if (filterGroup === 'Todos los canales') {
             const initialClassification = uniqueGroups
                 .filter((group) => group !== 'Todos los canales')
@@ -1229,7 +1645,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
 
         const targetChannels = getTmdbTargetChannels();
         if (targetChannels.length === 0) {
-            alert('No hay canales en el grupo seleccionado.');
+            alert('No hay canales seleccionados en el grupo filtrado.');
             return;
         }
 
@@ -1287,6 +1703,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         if (isColumnVisible('tvgId')) cols.push(`${columnWidths.tvgId}px`);
         if (isColumnVisible('tvgName')) cols.push(`${columnWidths.tvgName}px`);
         if (isColumnVisible('tvgLogo')) cols.push(`${columnWidths.tvgLogo}px`);
+        if (isColumnVisible('rating')) cols.push(`${columnWidths.rating}px`);
         if (isColumnVisible('saveLogo')) cols.push(`${columnWidths.saveLogo}px`);
         if (isColumnVisible('groupTitle')) cols.push(`${columnWidths.groupTitle}px`);
         if (isColumnVisible('name')) cols.push(`${columnWidths.name}px`);
@@ -1348,7 +1765,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                             <div className="bg-gray-700/50 p-3 rounded-lg border border-gray-600">
                                 <div className="flex items-center justify-between gap-2 mb-2">
                                     <span className="text-xs text-gray-400 font-semibold block uppercase tracking-wider">
-                                        Modificar {nameModifierTarget === 'name' ? 'Nombres' : 'Grupos'}
+                                        Modificar {nameModifierTarget === 'name' ? 'Nombres' : nameModifierTarget === 'groupTitle' ? 'Grupos' : 'TVG-Name'}
                                     </span>
                                     <div className="inline-flex rounded-md border border-gray-600 bg-gray-800 p-0.5 text-[11px] font-semibold">
                                         <button
@@ -1365,6 +1782,13 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                         >
                                             Grupo
                                         </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setNameModifierTarget('tvgName')}
+                                            className={`px-2.5 py-1 rounded ${nameModifierTarget === 'tvgName' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                                        >
+                                            TVG-Name
+                                        </button>
                                     </div>
                                 </div>
                                 <div className="space-y-2">
@@ -1374,7 +1798,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                             type="text"
                                             value={prefixInput}
                                             onChange={(e) => setPrefixInput(e.target.value)}
-                                            placeholder={nameModifierTarget === 'name' ? 'Prefijo (ej: HD )' : 'Prefijo para grupo (ej: NETFLIX )'}
+                                            placeholder={nameModifierTarget === 'name' ? 'Prefijo (ej: HD )' : nameModifierTarget === 'groupTitle' ? 'Prefijo para grupo (ej: NETFLIX )' : 'Prefijo para TVG-Name (ej: HD )'}
                                             className="bg-gray-800 border border-gray-600 rounded px-2 py-1 text-white text-xs flex-grow focus:ring-blue-500 focus:border-blue-500 h-7"
                                         />
                                         <div className="flex gap-1">
@@ -1400,7 +1824,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                             type="text"
                                             value={suffixInput}
                                             onChange={(e) => setSuffixInput(e.target.value)}
-                                            placeholder={nameModifierTarget === 'name' ? 'Sufijo (ej: 4K)' : 'Sufijo para grupo (ej: SERIES)'}
+                                            placeholder={nameModifierTarget === 'name' ? 'Sufijo (ej: 4K)' : nameModifierTarget === 'groupTitle' ? 'Sufijo para grupo (ej: SERIES)' : 'Sufijo para TVG-Name (ej: 4K)'}
                                             className="bg-gray-800 border border-gray-600 rounded px-2 py-1 text-white text-xs flex-grow focus:ring-blue-500 focus:border-blue-500 h-7"
                                         />
                                          <div className="flex gap-1">
@@ -1589,10 +2013,10 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                 {!isSencillo && (
                                     <div className="flex flex-col items-end gap-1">
                                         <button
-                                            onClick={handleAssignTmdbIdsByGroup}
-                                            disabled={isAssigningTmdbIds || channels.length === 0}
+                                            onClick={() => void handleQuickAssignTmdbIdAndRating()}
+                                            disabled={isAssigningTmdbIds || selectedChannels.length === 0}
                                             className="relative flex h-10 w-[198px] items-center overflow-hidden rounded-full border border-cyan-500/40 bg-gray-900 p-1.5 shadow-lg shadow-cyan-900/20 transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40"
-                                            title="Pregunta tipo (películas/series) y asigna tvg-id con TMDB a todo el grupo filtrado"
+                                            title="Busca y asigna tvg-id y rating TMDB a los canales seleccionados"
                                         >
                                             <img
                                                 src="/icons8-the-movie-database.svg"
@@ -1616,16 +2040,16 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                 {!isSencillo && (
                                     <div className="flex flex-col items-end gap-1">
                                         <button
-                                            onClick={() => void handleSyncFilteredChannelsWithTmdb()}
-                                            disabled={isSyncingTmdbMetadata || displayChannels.length === 0}
+                                            onClick={() => void handleDeepTmdbReview()}
+                                            disabled={isSyncingTmdbMetadata || selectedChannels.length === 0}
                                             className="flex h-10 items-center rounded-full border border-emerald-500/40 bg-gray-900 px-4 text-[12px] font-semibold text-emerald-200 shadow-lg shadow-emerald-900/20 transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40"
-                                            title="Usa tvg-id como ID TMDB y actualiza nombre (es-ES) + cover/logo en los canales filtrados"
+                                            title="Revisa a fondo canales seleccionados sin tvg-id, normaliza el título y valida el logo TMDB cuando esté disponible"
                                         >
-                                            {isSyncingTmdbMetadata ? 'TMDB sincronizando...' : 'TMDB nombre+cover (filtrados)'}
+                                            {isSyncingTmdbMetadata ? 'TMDB revisando...' : 'TMDB revisión profunda'}
                                         </button>
                                         {tmdbMetadataProgress && (
                                             <p className="text-[11px] text-emerald-300">
-                                                TMDB meta: {tmdbMetadataProgress.processed} / {tmdbMetadataProgress.total}
+                                                TMDB revisión: {tmdbMetadataProgress.processed} / {tmdbMetadataProgress.total}
                                             </p>
                                         )}
                                     </div>
@@ -1757,6 +2181,13 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                 </button>
                             </ResizableHeader>
                         )}
+                        {isColumnVisible('rating') && (
+                            <ResizableHeader width={columnWidths.rating} onResize={(w) => handleResize('rating', w)} align="center">
+                                <div className="w-full h-full cursor-default select-none text-center text-xs font-semibold uppercase tracking-wider text-gray-400">
+                                    Rating
+                                </div>
+                            </ResizableHeader>
+                        )}
                         {isColumnVisible('saveLogo') && (
                             <div
                                 className="px-1 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider"
@@ -1830,7 +2261,9 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                         onOrderChange={handleOrderChange}
                                         onUpdate={handleUpdateChannel}
                                         selectedChannels={selectedChannels}
-                                        toggleChannelSelection={toggleChannelSelection}
+                                        toggleChannelSelection={(id, isShiftClick) =>
+                                            toggleChannelSelection(id, isShiftClick, displayChannels.map((c) => c.id))
+                                        }
                                         statusIndicator={
                                             <StatusIndicator status={channel.status} />
                                         }
@@ -1921,6 +2354,31 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                 </div>
             )}
 
+            {showTmdbNoSelectionModal && (
+                <div
+                    className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
+                    onClick={() => setShowTmdbNoSelectionModal(false)}
+                >
+                    <div
+                        className="bg-gray-800 border border-yellow-700 rounded-lg p-5 w-full max-w-md"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h3 className="text-lg font-bold text-white mb-2">Selecciona canales</h3>
+                        <p className="text-sm text-gray-300 mb-5">
+                            Marca en la casilla de la izquierda los canales para los que quieres buscar el código TMDB antes de pulsar este botón.
+                        </p>
+                        <div className="flex justify-end">
+                            <button
+                                onClick={() => setShowTmdbNoSelectionModal(false)}
+                                className="bg-yellow-700 hover:bg-yellow-600 text-white px-4 py-2 rounded-md border border-yellow-500"
+                            >
+                                Entendido
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {showTmdbTypeModal && (
                 <div
                     className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
@@ -1932,7 +2390,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                     >
                         <h3 className="text-lg font-bold text-white mb-2">Tipo de contenido</h3>
                         <p className="text-sm text-gray-300 mb-5">
-                            Elige si el grupo "{filterGroup}" corresponde a películas o series.
+                            Elige si los {getTmdbTargetChannels().length} canales seleccionados del grupo "{filterGroup}" corresponden a películas o series.
                         </p>
                         <div className="flex flex-wrap gap-2 justify-end">
                             <button
@@ -2108,6 +2566,12 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
 
                         <div className="space-y-2 text-sm mb-5">
                             <p className="text-green-300">Actualizados: {tmdbRunSummary.updated}</p>
+                            {tmdbRunSummary.propagatedEpisodes && tmdbRunSummary.propagatedEpisodes > 0 && (
+                                <p className="text-sky-300">Episodios actualizados por serie: {tmdbRunSummary.propagatedEpisodes}</p>
+                            )}
+                            {tmdbRunSummary.recoveredFromLogo > 0 && (
+                                <p className="text-cyan-300">↳ Recuperados por logo: {tmdbRunSummary.recoveredFromLogo}</p>
+                            )}
                             <p className="text-gray-300">Sin búsqueda (sin nombre): {tmdbRunSummary.noQuery}</p>
                             <p className="text-yellow-300">Sin coincidencia: {tmdbRunSummary.notFound}</p>
                             <p className="text-red-300">Con error: {tmdbRunSummary.errors}</p>

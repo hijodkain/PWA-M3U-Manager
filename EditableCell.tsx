@@ -5,23 +5,30 @@ interface EditableCellProps {
     onSave: (value: string) => void;
     className?: string;
     suggestions?: string[];
+    onEditingChange?: (isEditing: boolean) => void;
 }
 
-const EditableCell: React.FC<EditableCellProps> = ({ value, onSave, className = "truncate", suggestions }) => {
+const EditableCell: React.FC<EditableCellProps> = ({ value, onSave, className = "truncate", suggestions, onEditingChange }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [text, setText] = useState(value);
   const listId = React.useId();
 
+  const stopEditing = () => {
+    setIsEditing(false);
+    onEditingChange?.(false);
+  };
+
   const handleDoubleClick = () => {
     setText(value);
     setIsEditing(true);
+    onEditingChange?.(true);
   };
 
   const handleBlur = () => {
     if (text !== value) {
       onSave(text);
     }
-    setIsEditing(false);
+    stopEditing();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -29,7 +36,7 @@ const EditableCell: React.FC<EditableCellProps> = ({ value, onSave, className = 
       handleBlur();
     } else if (e.key === 'Escape') {
       setText(value);
-      setIsEditing(false);
+      stopEditing();
     }
   };
 

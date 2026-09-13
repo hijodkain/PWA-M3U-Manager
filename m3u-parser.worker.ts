@@ -5,6 +5,7 @@ export interface Channel {
     tvgId: string;
     tvgName: string;
     tvgLogo: string;
+    rating?: string;
     groupTitle: string;
     name: string;
     url: string;
@@ -42,6 +43,7 @@ const parseM3U = (content: string): Channel[] => {
             const tvgId = info.match(/tvg-id="([^"]*)"/)?.["1"] || '';
             const tvgName = info.match(/tvg-name="([^"]*)"/)?.["1"] || '';
             const tvgLogo = info.match(/tvg-logo="([^"]*)"/)?.["1"] || '';
+            const rating = info.match(/rating="([^"]*)"/)?.["1"] || '';
             const groupTitle = info.match(/group-title="([^"]*)"/)?.["1"] || '';
             const name = info.split(',').pop()?.trim() || '';
             
@@ -52,6 +54,7 @@ const parseM3U = (content: string): Channel[] => {
                     tvgId,
                     tvgName,
                     tvgLogo,
+                    rating: rating || undefined,
                     groupTitle,
                     name,
                     url,
