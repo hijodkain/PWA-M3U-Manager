@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Upload, Download, AlertCircle, Share2, Trash2, Link as LinkIcon, FileText, Settings, RefreshCw, Plus, Cloud, Database, FilePlus, List, Filter, Check, X, CheckSquare, Square, Search, Github } from 'lucide-react';
 import { useChannels } from './useChannels';
 import { useSettings } from './useSettings';
+import { useSmartSearch } from './useSmartSearch';
 import { getStorageItem, setStorageItem, removeStorageItem } from './utils/storage';
 
 interface InicioTabProps {
@@ -17,6 +18,30 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 type SubTab = 'load' | 'add-repair' | 'dropbox-lists' | 'repair-lists' | 'github-repos';
+
+interface SavedMedicinaList {
+    id: string;
+    name: string;
+    url: string;
+    content?: string;
+    sourceUrl?: string;
+    dropboxPath?: string;
+}
+
+interface PreviewContent {
+    content: string;
+    name: string;
+    groups: string[];
+    sourceUrl?: string;
+}
+
+interface M3UChannelBlock {
+    name: string;
+    group: string;
+    block: string;
+}
+
+const SOURCE_URL_COMMENT = '#PWA-M3U-MANAGER-SOURCE-URL:';
 
 const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNavigateToEditor, onNavigateToSettings }) => {
     const {
@@ -45,14 +70,14 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
     const [isGithubLoading, setIsGithubLoading] = useState(false);
     const [githubError, setGithubError] = useState('');
     const [githubFiles, setGithubFiles] = useState<Array<{ name: string; url: string; path: string }>>([]);
-    const [savedMedicinaLists, setSavedMedicinaLists] = useState<Array<{ id: string; name: string; url: string; content?: string }>>([]);
+    const [savedMedicinaLists, setSavedMedicinaLists] = useState<SavedMedicinaList[]>([]);
     const [savedDropboxLists, setSavedDropboxLists] = useState<Array<{ id: string; name: string; url: string; addedAt: string }>>([]);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [triggerLoad, setTriggerLoad] = useState(false);
     const [shouldNavigateAfterLoad, setShouldNavigateAfterLoad] = useState(false);
 
     // Estados para Preview y Upload (Nueva funcionalidad)
-    const [previewContent, setPreviewContent] = useState<{content: string, name: string, groups: string[]} | null>(null);
+    const [previewContent, setPreviewContent] = useState<PreviewContent | null>(null);
     const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
     const [isUploading, setIsUploading] = useState(false);
     const [uploadStatus, setUploadStatus] = useState('');
@@ -63,6 +88,11 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
     const [showDropboxSearchModal, setShowDropboxSearchModal] = useState(false);
     const [selectedDropboxFiles, setSelectedDropboxFiles] = useState<Set<string>>(new Set());
     const [dropboxSearchScope, setDropboxSearchScope] = useState<'all' | 'principales' | 'reparadoras'>('all');
+    const [refreshingMedicinaListId, setRefreshingMedicinaListId] = useState<string | null>(null);
+    const { normalizeChannelName } = useSmartSearch({
+        channelPrefixes: settingsHook.channelPrefixes,
+        channelSuffixes: settingsHook.channelSuffixes,
+    });
 
     // --- Effects ---
     useEffect(() => {
@@ -375,7 +405,11 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                 }
                 contentToUpload = newContent.join('\n');
                 baseName = `${baseName}_filtrada`;
-            } 
+            }
+
+            if (activeSubTab === 'add-repair' && previewContent.sourceUrl) {
+                contentToUpload = addSourceUrlComment(contentToUpload, previewContent.sourceUrl);
+            }
             
             // Construir nombre final con sufijo de fecha
             const filename = `${baseName}_${dateSuffix}.m3u`;
@@ -441,7 +475,10 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                     id: Date.now().toString(),
                     name: filename,
                     url: sharedUrl,
-                    addedAt: new Date().toISOString()
+                    addedAt: new Date().toISOString(),
+                    ...(activeSubTab === 'add-repair' && previewContent.sourceUrl
+                        ? { sourceUrl: previewContent.sourceUrl, dropboxPath: data.path_display }
+                        : {}),
                 };
 
                 if (activeSubTab === 'add-repair') {
@@ -635,6 +672,149 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
         return Array.from(groupSet).sort();
     };
 
+    const addSourceUrlComment = (content: string, sourceUrl: string) => {
+        const lines = content
+            .split('\n')
+            .filter(line => !line.trimStart().startsWith(SOURCE_URL_COMMENT));
+        const sourceComment = `${SOURCE_URL_COMMENT} ${sourceUrl}`;
+
+        if (lines[0]?.trim() === '#EXTM3U') {
+            return ['#EXTM3U', sourceComment, ...lines.slice(1)].join('\n');
+        }
+
+        return ['#EXTM3U', sourceComment, ...lines].join('\n');
+    };
+
+    const getSourceUrlFromContent = (content: string) => {
+        const sourceLine = content
+            .split('\n')
+            .find(line => line.trimStart().startsWith(SOURCE_URL_COMMENT));
+        return sourceLine?.slice(sourceLine.indexOf(SOURCE_URL_COMMENT) + SOURCE_URL_COMMENT.length).trim();
+    };
+
+    const parseM3UChannels = (content: string): M3UChannelBlock[] => {
+        const channels: M3UChannelBlock[] = [];
+        let currentBlock: string[] = [];
+
+        const saveCurrentChannel = () => {
+            const infoLine = currentBlock[0];
+            const url = currentBlock.find(line => line.trim() && !line.trimStart().startsWith('#'));
+            if (!infoLine || !url) return;
+
+            const groupMatch = infoLine.match(/group-title="([^"]*)"/);
+            const name = infoLine.slice(infoLine.lastIndexOf(',') + 1).trim();
+            if (!name) return;
+
+            channels.push({
+                name,
+                group: groupMatch?.[1] || 'Sin Grupo',
+                block: currentBlock.join('\n'),
+            });
+        };
+
+        for (const rawLine of content.split(/\r?\n/)) {
+            const line = rawLine.trim();
+            if (line.startsWith('#EXTINF')) {
+                saveCurrentChannel();
+                currentBlock = [line];
+            } else if (currentBlock.length > 0) {
+                currentBlock.push(line);
+            }
+        }
+        saveCurrentChannel();
+
+        return channels;
+    };
+
+    const handleRefreshMedicinaList = async (list: SavedMedicinaList) => {
+        if (list.url === 'local') {
+            alert('Las listas locales no tienen una URL de origen para actualizar.');
+            return;
+        }
+        if (!settingsHook.dropboxRefreshToken || !settingsHook.dropboxAppKey) {
+            alert('Debes configurar Dropbox en Ajustes para actualizar la lista reparadora.');
+            return;
+        }
+
+        setRefreshingMedicinaListId(list.id);
+        try {
+            const currentResponse = await fetch(`/api/proxy?url=${encodeURIComponent(list.url)}`);
+            if (!currentResponse.ok) {
+                throw new Error(`No se pudo descargar la lista de Dropbox (${currentResponse.status}).`);
+            }
+            const currentContent = await currentResponse.text();
+            const sourceUrl = list.sourceUrl || getSourceUrlFromContent(currentContent);
+            if (!sourceUrl) {
+                throw new Error('Esta lista no incluye la URL de origen. Vuelve a crearla desde una URL para poder actualizarla.');
+            }
+
+            const sourceResponse = await fetch(`/api/proxy?url=${encodeURIComponent(sourceUrl)}`);
+            if (!sourceResponse.ok) {
+                throw new Error(`No se pudo descargar la lista de origen (${sourceResponse.status}).`);
+            }
+            const sourceContent = await sourceResponse.text();
+            if (!sourceContent.trimStart().startsWith('#EXTM3U') && !sourceContent.trimStart().startsWith('#EXT')) {
+                throw new Error('La URL de origen no ha devuelto una lista M3U válida.');
+            }
+
+            const currentChannels = parseM3UChannels(currentContent);
+            const groupsToRefresh = new Set(currentChannels.map(channel => channel.group));
+            const existingChannelKeys = new Set(
+                currentChannels.map(channel => `${channel.group}:${normalizeChannelName(channel.name).toLowerCase()}`)
+            );
+            const newChannels = parseM3UChannels(sourceContent).filter(channel => {
+                const key = `${channel.group}:${normalizeChannelName(channel.name).toLowerCase()}`;
+                if (!groupsToRefresh.has(channel.group) || existingChannelKeys.has(key)) return false;
+                existingChannelKeys.add(key);
+                return true;
+            });
+
+            if (newChannels.length === 0) {
+                alert('No hay novedades en el servidor.');
+                return;
+            }
+
+            const accessToken = await getDropboxAccessToken();
+            const dropboxPath = list.dropboxPath || `/Listas Reparadoras/${list.name}`;
+            const updatedContent = `${addSourceUrlComment(currentContent, sourceUrl).trimEnd()}\n${newChannels
+                .map(channel => channel.block)
+                .join('\n')}\n`;
+            const uploadResponse = await fetch('https://content.dropboxapi.com/2/files/upload', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Dropbox-API-Arg': JSON.stringify({
+                        path: dropboxPath,
+                        mode: 'overwrite',
+                        autorename: false,
+                        mute: false,
+                        strict_conflict: false,
+                    }),
+                    'Content-Type': 'application/octet-stream',
+                },
+                body: updatedContent,
+            });
+            if (!uploadResponse.ok) {
+                throw new Error(`No se pudo actualizar la lista en Dropbox (${uploadResponse.status}).`);
+            }
+
+            const uploaded = await uploadResponse.json();
+            const updatedLists = savedMedicinaLists.map(savedList =>
+                savedList.id === list.id
+                    ? { ...savedList, sourceUrl, dropboxPath: uploaded.path_display }
+                    : savedList
+            );
+            setSavedMedicinaLists(updatedLists);
+            setStorageItem('medicinaLists', JSON.stringify(updatedLists));
+            alert(`Se han añadido ${newChannels.length} canal${newChannels.length === 1 ? '' : 'es'} nuevo${newChannels.length === 1 ? '' : 's'} a la lista de Dropbox.`);
+        } catch (error) {
+            console.error('Error actualizando lista reparadora', error);
+            alert(`No se pudo actualizar la lista reparadora: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+        } finally {
+            setRefreshingMedicinaListId(null);
+        }
+    };
+
     // --- Handlers ---
 
     const loadList = async (item: { url: string; content?: string; name: string }) => {
@@ -821,7 +1001,7 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
             const name = rawName.replace(/\s+/g, '-');
             const groups = parseGroups(content);
 
-            setPreviewContent({ content, name, groups });
+            setPreviewContent({ content, name, groups, sourceUrl: fetchUrl });
             setMedicinaUrl('');
         } catch (e) {
             setMedicinaError(e instanceof Error ? e.message : 'Error al cargar lista. Verifica la URL.');
@@ -1461,6 +1641,17 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                                                                 <Share2 size={14} className="sm:w-4 sm:h-4" />
                                                             </button>
                                                         )}
+                                                        <button
+                                                            onClick={() => handleRefreshMedicinaList(list)}
+                                                            disabled={refreshingMedicinaListId !== null || list.url === 'local'}
+                                                            className="p-1.5 sm:p-2 hover:bg-purple-900/30 rounded-md text-gray-400 hover:text-purple-400 disabled:cursor-not-allowed disabled:opacity-40"
+                                                            title={list.url === 'local' ? 'Las listas locales no se pueden actualizar desde un servidor' : 'Actualizar desde la URL de origen'}
+                                                        >
+                                                            <RefreshCw
+                                                                size={14}
+                                                                className={`sm:w-4 sm:h-4 ${refreshingMedicinaListId === list.id ? 'animate-spin' : ''}`}
+                                                            />
+                                                        </button>
                                                         <button 
                                                             onClick={() => handleDeleteList('medicina', list.id, list.name)} 
                                                             className="p-1.5 sm:p-2 hover:bg-red-900/30 rounded-md text-gray-400 hover:text-red-400"

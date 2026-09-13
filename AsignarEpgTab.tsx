@@ -739,6 +739,28 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                 >
                                     Añadir prefijo
                                 </button>
+                                <button
+                                    onClick={() => {
+                                        const selectedText = epgSearchTerm.slice(-selectedLettersCount);
+                                        if (selectedText.trim()) {
+                                            const newSuffix = selectedText;
+                                            const currentSuffixes = settingsHook.channelSuffixes || [];
+
+                                            if (!currentSuffixes.includes(newSuffix)) {
+                                                settingsHook.updateChannelSuffixes([newSuffix, ...currentSuffixes]);
+                                                alert(`Sufijo "${newSuffix}" añadido a la búsqueda inteligente`);
+                                                setSelectedLettersCount(0);
+                                            } else {
+                                                alert(`El sufijo "${newSuffix}" ya existe`);
+                                            }
+                                        }
+                                    }}
+                                    disabled={selectedLettersCount === 0}
+                                    className="text-xs font-bold px-3 py-1 rounded bg-purple-900/40 border border-purple-600/60 text-purple-400 hover:bg-purple-900/60 hover:text-purple-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all whitespace-nowrap"
+                                    title="Añadir las últimas letras seleccionadas como sufijo"
+                                >
+                                    Añadir sufijo
+                                </button>
                                 {selectedEpgChannels.size > 0 && !destinationChannelId && (
                                     <button
                                         onClick={addSelectedEpgChannels}
