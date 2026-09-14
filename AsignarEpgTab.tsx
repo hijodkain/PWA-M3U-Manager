@@ -178,6 +178,29 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
         overscan: 10,
     });
 
+    const handleEpgSourceAssignment = (
+        sourceEpg: Parameters<typeof handleEpgSourceClick>[0],
+        options: Parameters<typeof handleEpgSourceClick>[1]
+    ) => {
+        const currentDestinationId = destinationChannelId;
+        if (!currentDestinationId) return;
+
+        handleEpgSourceClick(sourceEpg, options);
+
+        const currentIndex = filteredMainChannelsForEpg.findIndex(channel => channel.id === currentDestinationId);
+        const nextChannel = currentIndex >= 0 ? filteredMainChannelsForEpg[currentIndex + 1] : undefined;
+
+        if (nextChannel) {
+            setDestinationChannelId(nextChannel.id);
+            setEpgSearchTerm(epgNormalizeChannelName(nextChannel.name));
+            epgListParentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+            if (!isSmartSearchEnabled) toggleSmartSearch();
+        } else {
+            setDestinationChannelId(null);
+            setEpgSearchTerm('');
+        }
+    };
+
     // Helper: Logic for Auto Assign
     const handleAutoAssign = () => {
         if (!confirm('¿Asignar automáticamente EPG a los canales visibles?')) return;
@@ -837,7 +860,7 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
                                             <div
                                                 onClick={() => {
                                                     if (destinationChannelId) {
-                                                        handleEpgSourceClick(epg, {
+                                                        handleEpgSourceAssignment(epg, {
                                                             ottMode: tvgNameActive,
                                                             tivimateMode: tvgIdActive,
                                                             transferLogo: transferLogoActive,

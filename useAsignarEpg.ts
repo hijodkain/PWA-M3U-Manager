@@ -207,6 +207,18 @@ export const useAsignarEpg = (
 
     // Filtrar canales EPG con búsqueda inteligente
     const filteredEpgChannels = useMemo(() => {
+        const targetChannel = destinationChannelId
+            ? channels.find(channel => channel.id === destinationChannelId)
+            : undefined;
+        const targetName = targetChannel
+            ? normalizeChannelName(targetChannel.name).toLowerCase()
+            : '';
+        const getTargetMatchScore = (channel: EpgChannel) => {
+            if (!targetName) return 0;
+            const epgName = normalizeChannelName(channel.name).toLowerCase();
+            return targetName === epgName ? 1 : smartSearch.calculateSimilarity(targetName, epgName);
+        };
+
         if (!epgSearchTerm.trim()) {
             setSmartSearchResults([]);
             return epgChannels;
@@ -216,7 +228,9 @@ export const useAsignarEpg = (
             // Usar búsqueda inteligente
             const searchResults = searchChannels(epgChannels, epgSearchTerm, 0.4);
             setSmartSearchResults(searchResults);
-            return searchResults.map(result => result.item);
+            return searchResults
+                .map(result => result.item)
+                .sort((a, b) => getTargetMatchScore(b) - getTargetMatchScore(a));
         } else {
             // Búsqueda tradicional exacta con ordenación por grado de coincidencia
             setSmartSearchResults([]);
@@ -233,9 +247,14 @@ export const useAsignarEpg = (
                 if (name.startsWith(term) || id.startsWith(term)) return 1;
                 return 2;
             };
-            return matched.sort((a, b) => rank(a) - rank(b));
+            return matched.sort((a, b) => {
+                if (targetName) {
+                    return getTargetMatchScore(b) - getTargetMatchScore(a);
+                }
+                return rank(a) - rank(b);
+            });
         }
-    }, [epgChannels, epgSearchTerm, isSmartSearchEnabled, searchChannels]);
+    }, [channels, destinationChannelId, epgChannels, epgSearchTerm, isSmartSearchEnabled, normalizeChannelName, searchChannels, smartSearch]);
 
     const handleEpgSourceClick = (sourceEpg: EpgChannel, options?: {
         ottMode?: boolean;
