@@ -58,7 +58,7 @@ export const useAsignarEpg = (
     });
     
     // Extraer funciones - se actualizarán automáticamente cuando smartSearch cambie
-    const { searchChannels, normalizeChannelName } = smartSearch;
+    const { searchChannels, normalizeChannelName, calculateSimilarity } = smartSearch;
 
     // Carga inicial del diccionario desde localStorage; se reconstruye si cambian prefijos/sufijos
     useEffect(() => {
@@ -216,7 +216,7 @@ export const useAsignarEpg = (
         const getTargetMatchScore = (channel: EpgChannel) => {
             if (!targetName) return 0;
             const epgName = normalizeChannelName(channel.name).toLowerCase();
-            return targetName === epgName ? 1 : smartSearch.calculateSimilarity(targetName, epgName);
+            return targetName === epgName ? 1 : calculateSimilarity(targetName, epgName);
         };
 
         if (!epgSearchTerm.trim()) {
@@ -254,7 +254,7 @@ export const useAsignarEpg = (
                 return rank(a) - rank(b);
             });
         }
-    }, [channels, destinationChannelId, epgChannels, epgSearchTerm, isSmartSearchEnabled, normalizeChannelName, searchChannels, smartSearch]);
+    }, [channels, destinationChannelId, epgChannels, epgSearchTerm, isSmartSearchEnabled, normalizeChannelName, searchChannels, calculateSimilarity]);
 
     const handleEpgSourceClick = (sourceEpg: EpgChannel, options?: {
         ottMode?: boolean;
