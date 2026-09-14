@@ -181,6 +181,25 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         ? filteredMainChannels.filter(ch => pendingManualReview.has(ch.id))
         : filteredMainChannels;
 
+    const handleRepairSourceChannelClick = (sourceChannel: Parameters<typeof handleSourceChannelClick>[0]) => {
+        const currentDestinationId = destinationChannelId;
+        if (!currentDestinationId || attributesToCopy.size === 0) return;
+
+        handleSourceChannelClick(sourceChannel);
+
+        const currentIndex = displayedMainChannels.findIndex(channel => channel.id === currentDestinationId);
+        const nextChannel = currentIndex >= 0 ? displayedMainChannels[currentIndex + 1] : undefined;
+
+        if (nextChannel) {
+            setDestinationChannelId(nextChannel.id);
+            setReparacionListSearch(normalizeChannelName(nextChannel.name));
+            reparacionListParentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+            setDestinationChannelId(null);
+            setReparacionListSearch('');
+        }
+    };
+
     const mainListRowVirtualizer = useVirtualizer({
         count: displayedMainChannels.length,
         getScrollElement: () => mainListParentRef.current,
@@ -1318,7 +1337,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                         if (attributesToCopy.size === 0) {
                                             alert(`Selecciona al menos un atributo para reparar en el canal "${filteredMainChannels.find(c => c.id === destinationChannelId)?.name || 'seleccionado'}"`);
                                         } else {
-                                            handleSourceChannelClick(ch);
+                                            handleRepairSourceChannelClick(ch);
                                         }
                                     } : undefined}
                                     isSencillo={isSencillo}
