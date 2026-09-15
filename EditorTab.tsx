@@ -116,7 +116,9 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
     const [showNameSearch, setShowNameSearch] = useState(false);
     const [urlSortMode, setUrlSortMode] = useState<'none' | 'alpha' | 'domain-cycle'>('none');
     const [domainCycleStep, setDomainCycleStep] = useState(0);
-    const [tableSortMode, setTableSortMode] = useState<'none' | 'tvgId' | 'tvgName' | 'status' | 'tvgLogo'>('none');
+    const [tableSortMode, setTableSortMode] = useState<
+        'none' | 'tvgId' | 'tvgName' | 'status' | 'tvgLogo' | 'rating-desc' | 'rating-asc'
+    >('none');
     const [isAssigningTmdbIds, setIsAssigningTmdbIds] = useState(false);
     const [tmdbProgress, setTmdbProgress] = useState<{ processed: number; total: number } | null>(null);
     const [showTmdbTypeModal, setShowTmdbTypeModal] = useState(false);
@@ -397,6 +399,28 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             });
         }
 
+        if (tableSortMode === 'rating-desc' || tableSortMode === 'rating-asc') {
+            const parseRating = (val?: string): number | null => {
+                if (!val) return null;
+                const normalized = val.trim().replace(',', '.');
+                if (!normalized) return null;
+                const num = parseFloat(normalized);
+                return isNaN(num) ? null : num;
+            };
+
+            return copy.sort((a, b) => {
+                const rA = parseRating(a.rating);
+                const rB = parseRating(b.rating);
+                if (rA !== null && rB !== null) {
+                    const diff = tableSortMode === 'rating-desc' ? rB - rA : rA - rB;
+                    return diff !== 0 ? diff : a.order - b.order;
+                }
+                if (rA !== null) return -1;
+                if (rB !== null) return 1;
+                return a.order - b.order;
+            });
+        }
+
         return copy.sort((a, b) => {
             const byRank = statusRank(a) - statusRank(b);
             if (byRank !== 0) return byRank;
@@ -469,6 +493,16 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         setUrlSortMode('none');
         setDomainCycleStep(0);
         setTableSortMode((prev) => (prev === mode ? 'none' : mode));
+    };
+
+    const handleRatingHeaderClick = () => {
+        setUrlSortMode('none');
+        setDomainCycleStep(0);
+        setTableSortMode((prev) => {
+            if (prev === 'rating-desc') return 'rating-asc';
+            if (prev === 'rating-asc') return 'none';
+            return 'rating-desc';
+        });
     };
 
     const rowVirtualizer = useVirtualizer({
@@ -2183,9 +2217,25 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                         )}
                         {isColumnVisible('rating') && (
                             <ResizableHeader width={columnWidths.rating} onResize={(w) => handleResize('rating', w)} align="center">
-                                <div className="w-full h-full cursor-default select-none text-center text-xs font-semibold uppercase tracking-wider text-gray-400">
+                                <button
+                                    onClick={handleRatingHeaderClick}
+                                    className="w-full h-full cursor-pointer select-none text-center hover:text-blue-300 text-xs font-semibold uppercase tracking-wider"
+                                    title={
+                                        tableSortMode === 'rating-desc'
+                                            ? 'Ordenar de menor a mayor'
+                                            : tableSortMode === 'rating-asc'
+                                                ? 'Volver al orden original'
+                                                : 'Ordenar de mayor a menor'
+                                    }
+                                >
                                     Rating
-                                </div>
+                                    {tableSortMode === 'rating-desc' && (
+                                        <span className="ml-1 text-[9px] text-blue-400 font-bold lowercase">(↓)</span>
+                                    )}
+                                    {tableSortMode === 'rating-asc' && (
+                                        <span className="ml-1 text-[9px] text-blue-400 font-bold lowercase">(↑)</span>
+                                    )}
+                                </button>
                             </ResizableHeader>
                         )}
                         {isColumnVisible('saveLogo') && (
