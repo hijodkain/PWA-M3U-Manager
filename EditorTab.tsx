@@ -134,6 +134,13 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             return false;
         }
     });
+    const [assignTmdbGroup, setAssignTmdbGroup] = useState<boolean>(() => {
+        try {
+            return typeof window !== 'undefined' && localStorage.getItem('tmdb_assign_group_format') === 'true';
+        } catch {
+            return false;
+        }
+    });
     const [tmdbRunSummary, setTmdbRunSummary] = useState<TmdbRunSummary | null>(null);
     const [showTmdbResultModal, setShowTmdbResultModal] = useState(false);
     const [isSyncingTmdbMetadata, setIsSyncingTmdbMetadata] = useState(false);
@@ -1060,10 +1067,92 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         return normalizedCandidate.includes(normalizedQuery) || normalizedQuery.includes(normalizedCandidate);
     };
 
+    const KNOWN_STREAMING_PLATFORMS: Array<{ match: RegExp; name: string }> = [
+        { match: /\b(netflix)\b/i, name: 'NETFLIX' },
+        { match: /\b(hbo|max)\b/i, name: 'HBO' },
+        { match: /\b(disney\+?|disney\s*plus)\b/i, name: 'DISNEY+' },
+        { match: /\b(prime\s*video|amazon\s*prime|amazon)\b/i, name: 'PRIME VIDEO' },
+        { match: /\b(apple\s*tv\+?|apple\s*tv)\b/i, name: 'APPLE TV+' },
+        { match: /\b(paramount\+?)\b/i, name: 'PARAMOUNT+' },
+        { match: /\b(skyshowtime)\b/i, name: 'SKYSHOWTIME' },
+        { match: /\b(movistar\+?|movistar\s*plus)\b/i, name: 'MOVISTAR+' },
+        { match: /\b(filmin)\b/i, name: 'FILMIN' },
+        { match: /\b(dazn)\b/i, name: 'DAZN' },
+        { match: /\b(atresplayer)\b/i, name: 'ATRESPLAYER' },
+        { match: /\b(rtve\s*play|rtve)\b/i, name: 'RTVE PLAY' },
+        { match: /\b(pluto\s*tv|pluto)\b/i, name: 'PLUTO TV' },
+        { match: /\b(rakuten)\b/i, name: 'RAKUTEN' },
+        { match: /\b(peacock)\b/i, name: 'PEACOCK' },
+        { match: /\b(hulu)\b/i, name: 'HULU' },
+        { match: /\b(star\+?)\b/i, name: 'STAR+' },
+        { match: /\b(crunchyroll)\b/i, name: 'CRUNCHYROLL' },
+    ];
+
+    const detectTmdbPlatform = (
+        channel: Channel,
+        detail?: { networks?: Array<{ name: string }>; watchProviders?: string[] } | null
+    ): string => {
+        // 1. Comprobar mención de plataforma en datos del canal (groupTitle, name, url)
+        const channelText = `${channel.groupTitle || ''} ${channel.name || ''} ${channel.url || ''}`;
+        for (const p of KNOWN_STREAMING_PLATFORMS) {
+            if (p.match.test(channelText)) {
+                return p.name;
+            }
+        }
+
+        // 2. Comprobar networks de TMDB (especialmente para series)
+        if (detail?.networks && detail.networks.length > 0) {
+            for (const net of detail.networks) {
+                for (const p of KNOWN_STREAMING_PLATFORMS) {
+                    if (p.match.test(net.name)) {
+                        return p.name;
+                    }
+                }
+            }
+            const firstNetwork = detail.networks[0]?.name?.trim();
+            if (firstNetwork) {
+                return firstNetwork.toUpperCase();
+            }
+        }
+
+        // 3. Comprobar watch/providers de TMDB (proveedores de suscripción flatrate)
+        if (detail?.watchProviders && detail.watchProviders.length > 0) {
+            for (const prov of detail.watchProviders) {
+                for (const p of KNOWN_STREAMING_PLATFORMS) {
+                    if (p.match.test(prov)) {
+                        return p.name;
+                    }
+                }
+            }
+            const firstProvider = detail.watchProviders[0]?.trim();
+            if (firstProvider) {
+                return firstProvider.toUpperCase();
+            }
+        }
+
+        // 4. Fallback estándar
+        return 'VOD';
+    };
+
+    const detectTmdbGenre = (detail?: { genres?: Array<{ id: number; name: string }> } | null): string => {
+        if (!detail?.genres || detail.genres.length === 0) {
+            return 'General';
+        }
+        let genre = detail.genres[0].name.trim();
+        if (/^suspense$/i.test(genre)) {
+            return 'Thriller';
+        }
+        if (/^science fiction|ciencia ficci[oó]n$/i.test(genre)) {
+            return 'Ciencia Ficción';
+        }
+        return genre.charAt(0).toUpperCase() + genre.slice(1);
+    };
+
     const fetchTmdbDetail = async (id: number, mediaType: TmdbMediaType, apiKey: string) => {
         const params = new URLSearchParams({
             api_key: apiKey,
             language: 'es-ES',
+            append_to_response: 'watch/providers',
         });
 
         const response = await fetch(`https://api.themoviedb.org/3/${mediaType}/${id}?${params.toString()}`, {
@@ -1077,22 +1166,31 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             return null;
         }
 
-        const data = (await response.json()) as {
-            title?: string;
-            name?: string;
-            poster_path?: string;
-            backdrop_path?: string;
-        };
+        const data = (await response.json()) as any;
 
         const localizedName = (data.title || data.name || '').trim();
         const imagePath = data.poster_path || data.backdrop_path || '';
         const logoUrl = imagePath ? `https://image.tmdb.org/t/p/w500${imagePath}` : '';
-        const rating = typeof (data as any).vote_average === 'number' ? (data as any).vote_average.toFixed(1) : '';
+        const rating = typeof data.vote_average === 'number' ? data.vote_average.toFixed(1) : '';
+
+        const genres: Array<{ id: number; name: string }> = Array.isArray(data.genres) ? data.genres : [];
+        const networks: Array<{ id: number; name: string }> = Array.isArray(data.networks) ? data.networks : [];
+
+        const wpResults = data['watch/providers']?.results || {};
+        const esProviders: Array<{ provider_name: string }> = wpResults.ES?.flatrate || [];
+        const usProviders: Array<{ provider_name: string }> = wpResults.US?.flatrate || [];
+        const watchProviders: string[] = [
+            ...esProviders.map((p: any) => p.provider_name),
+            ...usProviders.map((p: any) => p.provider_name),
+        ];
 
         return {
             localizedName,
             logoUrl,
             rating,
+            genres,
+            networks,
+            watchProviders,
         };
     };
 
@@ -1375,7 +1473,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         setIsAssigningTmdbIds(true);
         setTmdbProgress({ processed: 0, total: plan.totalChannels });
 
-        const updates = new Map<string, { tvgId: string; rating?: string }>();
+        const updates = new Map<string, { tvgId: string; rating?: string; groupTitle?: string }>();
         const pendingLogoRetry: { channel: Channel; mediaType: TmdbMediaType }[] = [];
         let processed = 0;
         let noQueryCount = 0;
@@ -1425,11 +1523,19 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                 const bestResult = getBestTmdbResult(normalizedResults, query);
 
                                 if (bestResult?.id) {
-                                    const tmdbRating = await fetchTmdbDetail(bestResult.id, executionGroup.mediaType, tmdbApiKey);
+                                    const tmdbDetail = await fetchTmdbDetail(bestResult.id, executionGroup.mediaType, tmdbApiKey);
+                                    let targetGroupTitle: string | undefined = undefined;
+                                    if (assignTmdbGroup) {
+                                        const detectedPlatform = detectTmdbPlatform(channel, tmdbDetail);
+                                        const detectedGenre = detectTmdbGenre(tmdbDetail);
+                                        const formattedType = executionGroup.mediaType === 'movie' ? 'Movies' : 'Series';
+                                        targetGroupTitle = `${formattedType} - ${detectedPlatform} | ${detectedGenre}`;
+                                    }
                                     seriesTargets.forEach((target) => {
                                         updates.set(target.id, {
                                             tvgId: String(bestResult.id),
-                                            rating: tmdbRating?.rating || undefined,
+                                            rating: tmdbDetail?.rating || undefined,
+                                            ...(targetGroupTitle ? { groupTitle: targetGroupTitle } : {}),
                                         });
                                     });
                                     propagatedEpisodes += Math.max(0, seriesTargets.length - 1);
@@ -1462,9 +1568,17 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
 
                     const query = (channel.tvgName || channel.name || '').trim();
                     if (detail?.localizedName && isLikelyTmdbTitleMatch(detail.localizedName, query)) {
+                        let targetGroupTitle: string | undefined = undefined;
+                        if (assignTmdbGroup) {
+                            const detectedPlatform = detectTmdbPlatform(channel, detail);
+                            const detectedGenre = detectTmdbGenre(detail);
+                            const formattedType = mediaType === 'movie' ? 'Movies' : 'Series';
+                            targetGroupTitle = `${formattedType} - ${detectedPlatform} | ${detectedGenre}`;
+                        }
                         updates.set(channel.id, {
                             tvgId: String(candidateId),
                             rating: detail.rating || undefined,
+                            ...(targetGroupTitle ? { groupTitle: targetGroupTitle } : {}),
                         });
                         notFoundCount -= 1;
                         recoveredFromLogoCount += 1;
@@ -1483,6 +1597,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                             ...ch,
                             tvgId: update.tvgId || ch.tvgId,
                             ...(update.rating ? { rating: update.rating } : {}),
+                            ...(update.groupTitle ? { groupTitle: update.groupTitle } : {}),
                         };
                     })
                 );
@@ -1564,7 +1679,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             return;
         }
 
-        const updates = new Map<string, { tvgId: string; rating?: string }>();
+        const updates = new Map<string, { tvgId: string; rating?: string; groupTitle?: string }>();
         let processed = 0;
         let notFoundCount = 0;
         let errorCount = 0;
@@ -1588,10 +1703,25 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                             return;
                         }
 
+                        let targetRating = bestResult.rating;
+                        let targetGroupTitle: string | undefined = undefined;
+
+                        if (assignTmdbGroup) {
+                            const detail = await fetchTmdbDetail(bestResult.id, mediaType, tmdbApiKey);
+                            if (detail?.rating) {
+                                targetRating = detail.rating;
+                            }
+                            const detectedPlatform = detectTmdbPlatform(targets[0], detail);
+                            const detectedGenre = detectTmdbGenre(detail);
+                            const formattedType = mediaType === 'movie' ? 'Movies' : 'Series';
+                            targetGroupTitle = `${formattedType} - ${detectedPlatform} | ${detectedGenre}`;
+                        }
+
                         targets.forEach((target) => {
                             updates.set(target.id, {
                                 tvgId: String(bestResult.id),
-                                rating: bestResult.rating,
+                                rating: targetRating,
+                                ...(targetGroupTitle ? { groupTitle: targetGroupTitle } : {}),
                             });
                         });
                         propagatedEpisodes += Math.max(0, targets.length - 1);
@@ -1613,6 +1743,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                         ...channel,
                         tvgId: update.tvgId,
                         ...(update.rating ? { rating: update.rating } : {}),
+                        ...(update.groupTitle ? { groupTitle: update.groupTitle } : {}),
                     };
                 }));
                 channelsHook.saveStateToHistory();
@@ -2063,6 +2194,24 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                                 </span>
                                             )}
                                         </button>
+                                        <label
+                                            className="flex items-center gap-1.5 text-[11px] text-gray-300 cursor-pointer select-none hover:text-white"
+                                            title="Asigna también el grupo con formato: Tipo - PLATAFORMA | Género (ej: Movies - NETFLIX | Thriller)"
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={assignTmdbGroup}
+                                                onChange={(e) => {
+                                                    const checked = e.target.checked;
+                                                    setAssignTmdbGroup(checked);
+                                                    try {
+                                                        localStorage.setItem('tmdb_assign_group_format', String(checked));
+                                                    } catch {}
+                                                }}
+                                                className="form-checkbox h-3.5 w-3.5 text-cyan-500 bg-gray-800 border-gray-600 rounded focus:ring-cyan-400"
+                                            />
+                                            <span>Asignar grupo con formato</span>
+                                        </label>
                                         {tmdbProgress && (
                                             <p className="text-[11px] text-cyan-300">
                                                 TMDB: {tmdbProgress.processed} / {tmdbProgress.total}
