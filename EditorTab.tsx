@@ -117,7 +117,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
     const [urlSortMode, setUrlSortMode] = useState<'none' | 'alpha' | 'domain-cycle'>('none');
     const [domainCycleStep, setDomainCycleStep] = useState(0);
     const [tableSortMode, setTableSortMode] = useState<
-        'none' | 'tvgId' | 'tvgName' | 'status' | 'tvgLogo' | 'rating-desc' | 'rating-asc'
+        'none' | 'tvgId' | 'tvgName' | 'status' | 'tvgLogo' | 'rating-desc' | 'rating-asc' | 'groupTitle'
     >('none');
     const [isAssigningTmdbIds, setIsAssigningTmdbIds] = useState(false);
     const [tmdbProgress, setTmdbProgress] = useState<{ processed: number; total: number } | null>(null);
@@ -418,12 +418,58 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             return copy.sort((a, b) => {
                 const rA = parseRating(a.rating);
                 const rB = parseRating(b.rating);
-                if (rA !== null && rB !== null) {
-                    const diff = tableSortMode === 'rating-desc' ? rB - rA : rA - rB;
-                    return diff !== 0 ? diff : a.order - b.order;
+
+                if (tableSortMode === 'rating-desc') {
+                    // 1ª pulsación: de mayor a menor y luego los sin rating
+                    if (rA !== null && rB !== null) {
+                        const diff = rB - rA;
+                        return diff !== 0 ? diff : a.order - b.order;
+                    }
+                    if (rA !== null) return -1;
+                    if (rB !== null) return 1;
+                    return a.order - b.order;
+                } else {
+                    // 2ª pulsación: primero los sin rating y luego 0 hasta 10 que queda al final
+                    if (rA === null && rB !== null) return -1;
+                    if (rA !== null && rB === null) return 1;
+                    if (rA !== null && rB !== null) {
+                        const diff = rA - rB;
+                        return diff !== 0 ? diff : a.order - b.order;
+                    }
+                    return a.order - b.order;
                 }
-                if (rA !== null) return -1;
-                if (rB !== null) return 1;
+            });
+        }
+
+        if (tableSortMode === 'groupTitle') {
+            const compareGroupTitles = (gA: string, gB: string): number => {
+                const trimmedA = gA.trim();
+                const trimmedB = gB.trim();
+                const aEmpty = !trimmedA;
+                const bEmpty = !trimmedB;
+                if (aEmpty !== bEmpty) return aEmpty ? -1 : 1;
+                if (aEmpty && bEmpty) return 0;
+
+                const charCategory = (ch: string) => {
+                    if (!ch) return 0;
+                    if (/[0-9]/.test(ch)) return 1;
+                    if (/[a-zA-ZáéíóúüñÁÉÍÓÚÜÑ]/.test(ch)) return 2;
+                    return 0; // símbolos y signos de puntuación primero
+                };
+
+                const catA = charCategory(trimmedA[0]);
+                const catB = charCategory(trimmedB[0]);
+
+                if (catA !== catB) {
+                    return catA - catB;
+                }
+
+                return trimmedA.localeCompare(trimmedB, 'es', { numeric: true, sensitivity: 'base' });
+            };
+
+            return copy.sort((a, b) => {
+                const byGroup = compareGroupTitles(a.groupTitle || '', b.groupTitle || '');
+                if (byGroup !== 0) return byGroup;
                 return a.order - b.order;
             });
         }
@@ -496,20 +542,63 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         }
     };
 
-    const handleHeaderSortToggle = (mode: 'tvgId' | 'tvgName' | 'status' | 'tvgLogo') => {
+    const handleHeaderSortToggle = (mode: 'tvgId' | 'tvgName' | 'status' | 'tvgLogo' | 'groupTitle') => {
         setUrlSortMode('none');
         setDomainCycleStep(0);
+        setShowRelativeOrder(false);
         setTableSortMode((prev) => (prev === mode ? 'none' : mode));
     };
 
     const handleRatingHeaderClick = () => {
         setUrlSortMode('none');
         setDomainCycleStep(0);
+        setShowRelativeOrder(false);
         setTableSortMode((prev) => {
             if (prev === 'rating-desc') return 'rating-asc';
             if (prev === 'rating-asc') return 'none';
             return 'rating-desc';
         });
+    };
+
+    const handleEditorOrderChange = (channelId: string, newOrderStr: string) => {
+        const newOrder = parseInt(newOrderStr, 10);
+        if (isNaN(newOrder) || newOrder <= 0) return;
+
+        const isSpecialSorted = tableSortMode === 'rating-desc' || tableSortMode === 'rating-asc' || tableSortMode === 'groupTitle';
+        const isGroupSelected = selectedChannels.includes(channelId) && selectedChannels.length > 1;
+
+        if (isSpecialSorted || isGroupSelected) {
+            let targetIds: Set<string>;
+            if (selectedChannels.length > 0) {
+                targetIds = new Set(selectedChannels);
+                targetIds.add(channelId);
+            } else if (isSpecialSorted) {
+                targetIds = new Set(displayChannels.map((c) => c.id));
+            } else {
+                targetIds = new Set([channelId]);
+            }
+
+            // Obtener los canales seleccionados en el orden visual exacto de displayChannels
+            const selectedInVisualOrder = displayChannels.filter((c) => targetIds.has(c.id));
+
+            if (selectedInVisualOrder.length > 1 || isSpecialSorted) {
+                channelsHook.setChannels((prev) => {
+                    const unselected = prev.filter((c) => !targetIds.has(c.id));
+                    const targetIndex = Math.max(0, Math.min(newOrder - 1, unselected.length));
+                    unselected.splice(targetIndex, 0, ...selectedInVisualOrder);
+                    return unselected.map((ch, index) => ({ ...ch, order: index + 1 }));
+                });
+
+                channelsHook.saveStateToHistory();
+                channelsHook.setSelectedChannels([]);
+                if (isSpecialSorted) {
+                    setTableSortMode('none');
+                }
+                return;
+            }
+        }
+
+        channelsHook.handleOrderChange(channelId, newOrderStr);
     };
 
     const rowVirtualizer = useVirtualizer({
@@ -2371,10 +2460,10 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                     className="w-full h-full cursor-pointer select-none text-center hover:text-blue-300 text-xs font-semibold uppercase tracking-wider"
                                     title={
                                         tableSortMode === 'rating-desc'
-                                            ? 'Ordenar de menor a mayor'
+                                            ? 'Sin rating primero y luego de 0 a 10'
                                             : tableSortMode === 'rating-asc'
                                                 ? 'Volver al orden original'
-                                                : 'Ordenar de mayor a menor'
+                                                : 'De mayor a menor y sin rating al final'
                                     }
                                 >
                                     Rating
@@ -2398,7 +2487,16 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                         )}
                         {isColumnVisible('groupTitle') && (
                             <ResizableHeader width={columnWidths.groupTitle} onResize={(w) => handleResize('groupTitle', w)} align="left">
-                                Grupo
+                                <button
+                                    onClick={() => handleHeaderSortToggle('groupTitle')}
+                                    className="w-full h-full cursor-pointer select-none text-left hover:text-blue-300"
+                                    title={tableSortMode === 'groupTitle' ? 'Volver al orden original' : 'Ordenar grupos alfabéticamente (símbolos y números primero)'}
+                                >
+                                    Grupo
+                                    {tableSortMode === 'groupTitle' && (
+                                        <span className="ml-1 text-[9px] text-blue-400 font-bold">(A-Z)</span>
+                                    )}
+                                </button>
                             </ResizableHeader>
                         )}
                         {isColumnVisible('name') && (
@@ -2457,7 +2555,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                         key={channel.id}
                                         id={channel.id}
                                         channel={channel}
-                                        onOrderChange={handleOrderChange}
+                                        onOrderChange={handleEditorOrderChange}
                                         onUpdate={handleUpdateChannel}
                                         selectedChannels={selectedChannels}
                                         toggleChannelSelection={(id, isShiftClick) =>
