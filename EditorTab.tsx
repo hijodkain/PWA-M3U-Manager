@@ -2,7 +2,7 @@ import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, TouchSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { Upload, Download, Plus, Trash2, GripVertical, ShieldCheck, ShieldX, ShieldQuestion, Undo2, Redo2, HelpCircle, SlidersHorizontal, Search, X as XIcon } from 'lucide-react';
+import { Upload, Download, Plus, Trash2, GripVertical, ShieldCheck, ShieldX, ShieldQuestion, Undo2, Redo2, HelpCircle, SlidersHorizontal, Search, X as XIcon, ChevronDown } from 'lucide-react';
 import { useChannels } from './useChannels';
 import { useSettings } from './useSettings';
 import { useAppMode } from './AppModeContext';
@@ -47,6 +47,50 @@ const DEFAULT_VISIBLE_COLUMNS: Record<ColumnKey, boolean> = {
 
 type TmdbMediaType = 'movie' | 'tv';
 type TmdbGroupClassification = TmdbMediaType | 'live';
+
+export type TmdbExtractionFieldKey =
+    | 'director'
+    | 'releaseDate'
+    | 'genre'
+    | 'streamingPlatform'
+    | 'cast'
+    | 'overview'
+    | 'duration'
+    | 'poster'
+    | 'backdrop'
+    | 'localizedName';
+
+export interface TmdbExtractionFieldOption {
+    key: TmdbExtractionFieldKey;
+    label: string;
+    description: string;
+}
+
+export const TMDB_EXTRACTION_FIELDS: TmdbExtractionFieldOption[] = [
+    { key: 'director', label: 'Director', description: 'Nombre del director o creador' },
+    { key: 'releaseDate', label: 'Fecha de estreno', description: 'Fecha de lanzamiento o primera emisión' },
+    { key: 'genre', label: 'Género (solo el primero)', description: 'Primer género principal catalogado' },
+    { key: 'streamingPlatform', label: 'Plataforma en España', description: 'Plataforma disponible en streaming en España' },
+    { key: 'cast', label: 'Reparto (cast)', description: 'Principales actores del reparto' },
+    { key: 'overview', label: 'Sinopsis (overview)', description: 'Sinopsis argumental en español' },
+    { key: 'duration', label: 'Duración', description: 'Duración estimada o por episodio' },
+    { key: 'poster', label: 'Imagen de póster', description: 'Póster oficial (actualiza logo del canal)' },
+    { key: 'backdrop', label: 'Imagen de fondo', description: 'Fondo panorámico de la película o serie' },
+    { key: 'localizedName', label: 'Nombre en España', description: 'Título en español (actualiza nombre del canal)' },
+];
+
+const DEFAULT_TMDB_EXTRACTION_FIELDS: Record<TmdbExtractionFieldKey, boolean> = {
+    director: true,
+    releaseDate: true,
+    genre: true,
+    streamingPlatform: true,
+    cast: true,
+    overview: true,
+    duration: true,
+    poster: true,
+    backdrop: true,
+    localizedName: true,
+};
 
 const TMDB_SKIP_CONFIRM_SESSION_KEY = 'tmdb_skip_confirm_session';
 
@@ -141,6 +185,48 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             return false;
         }
     });
+    const [tmdbExtractionFields, setTmdbExtractionFields] = useState<Record<TmdbExtractionFieldKey, boolean>>(() => {
+        if (typeof window === 'undefined') return DEFAULT_TMDB_EXTRACTION_FIELDS;
+        try {
+            const saved = localStorage.getItem('tmdb_extraction_fields');
+            if (saved) {
+                return { ...DEFAULT_TMDB_EXTRACTION_FIELDS, ...JSON.parse(saved) };
+            }
+        } catch {}
+        return DEFAULT_TMDB_EXTRACTION_FIELDS;
+    });
+    const [showTmdbFieldsDropdown, setShowTmdbFieldsDropdown] = useState(false);
+    const tmdbDropdownRef = useRef<HTMLDivElement>(null);
+
+    const updateTmdbExtractionField = (field: TmdbExtractionFieldKey, value: boolean) => {
+        setTmdbExtractionFields((prev) => {
+            const next = { ...prev, [field]: value };
+            try {
+                localStorage.setItem('tmdb_extraction_fields', JSON.stringify(next));
+            } catch {}
+            return next;
+        });
+    };
+
+    const setAllTmdbExtractionFields = (value: boolean) => {
+        const next: Record<TmdbExtractionFieldKey, boolean> = {
+            director: value,
+            releaseDate: value,
+            genre: value,
+            streamingPlatform: value,
+            cast: value,
+            overview: value,
+            duration: value,
+            poster: value,
+            backdrop: value,
+            localizedName: value,
+        };
+        setTmdbExtractionFields(next);
+        try {
+            localStorage.setItem('tmdb_extraction_fields', JSON.stringify(next));
+        } catch {}
+    };
+
     const [tmdbRunSummary, setTmdbRunSummary] = useState<TmdbRunSummary | null>(null);
     const [showTmdbResultModal, setShowTmdbResultModal] = useState(false);
     const [isSyncingTmdbMetadata, setIsSyncingTmdbMetadata] = useState(false);
@@ -225,6 +311,9 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         const handleClickOutside = (event: MouseEvent) => {
             if (columnsDropdownRef.current && !columnsDropdownRef.current.contains(event.target as Node)) {
                 setShowColumnsDropdown(false);
+            }
+            if (tmdbDropdownRef.current && !tmdbDropdownRef.current.contains(event.target as Node)) {
+                setShowTmdbFieldsDropdown(false);
             }
         };
 
@@ -1241,7 +1330,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         const params = new URLSearchParams({
             api_key: apiKey,
             language: 'es-ES',
-            append_to_response: 'watch/providers',
+            append_to_response: 'watch/providers,credits',
         });
 
         const response = await fetch(`https://api.themoviedb.org/3/${mediaType}/${id}?${params.toString()}`, {
@@ -1258,6 +1347,8 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         const data = (await response.json()) as any;
 
         const localizedName = (data.title || data.name || '').trim();
+        const poster = data.poster_path ? `https://image.tmdb.org/t/p/w500${data.poster_path}` : '';
+        const backdrop = data.backdrop_path ? `https://image.tmdb.org/t/p/w1280${data.backdrop_path}` : '';
         const imagePath = data.poster_path || data.backdrop_path || '';
         const logoUrl = imagePath ? `https://image.tmdb.org/t/p/w500${imagePath}` : '';
         const rating = typeof data.vote_average === 'number' ? data.vote_average.toFixed(1) : '';
@@ -1273,14 +1364,116 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             ...usProviders.map((p: any) => p.provider_name),
         ];
 
+        let director = '';
+        if (mediaType === 'movie') {
+            const directors = (data.credits?.crew || [])
+                .filter((c: any) => c.job === 'Director')
+                .map((c: any) => c.name);
+            director = directors.join(', ');
+        } else {
+            const tvDirectors = (data.credits?.crew || [])
+                .filter((c: any) => c.job === 'Director')
+                .map((c: any) => c.name);
+            const creators = (data.created_by || []).map((c: any) => c.name);
+            director = tvDirectors.length > 0 ? tvDirectors.join(', ') : creators.join(', ');
+        }
+
+        const releaseDate = (data.release_date || data.first_air_date || '').trim();
+        const genre = genres.length > 0 ? detectTmdbGenre({ genres }) : '';
+
+        let streamingPlatform = '';
+        if (esProviders.length > 0) {
+            for (const prov of esProviders) {
+                for (const p of KNOWN_STREAMING_PLATFORMS) {
+                    if (p.match.test(prov.provider_name)) {
+                        streamingPlatform = p.name;
+                        break;
+                    }
+                }
+                if (streamingPlatform) break;
+            }
+            if (!streamingPlatform) {
+                streamingPlatform = esProviders[0].provider_name;
+            }
+        }
+
+        const castMembers = (data.credits?.cast || [])
+            .slice(0, 5)
+            .map((c: any) => c.name)
+            .filter(Boolean);
+        const cast = castMembers.join(', ');
+
+        const overview = (data.overview || '').trim();
+
+        let duration = '';
+        if (data.runtime) {
+            duration = `${data.runtime} min`;
+        } else if (Array.isArray(data.episode_run_time) && data.episode_run_time.length > 0) {
+            duration = `${data.episode_run_time[0]} min`;
+        } else if (data.last_episode_to_air?.runtime) {
+            duration = `${data.last_episode_to_air.runtime} min`;
+        }
+
         return {
             localizedName,
             logoUrl,
+            poster,
+            backdrop,
             rating,
             genres,
             networks,
             watchProviders,
+            director,
+            releaseDate,
+            genre,
+            streamingPlatform,
+            cast,
+            overview,
+            duration,
         };
+    };
+
+    const buildTmdbFieldUpdates = (
+        detail: Awaited<ReturnType<typeof fetchTmdbDetail>>,
+        selectedFields: Record<TmdbExtractionFieldKey, boolean>
+    ): Partial<Channel> => {
+        if (!detail) return {};
+        const fieldUpdates: Partial<Channel> = {};
+
+        if (selectedFields.director && detail.director) {
+            fieldUpdates.director = detail.director;
+        }
+        if (selectedFields.releaseDate && detail.releaseDate) {
+            fieldUpdates.releaseDate = detail.releaseDate;
+        }
+        if (selectedFields.genre && detail.genre) {
+            fieldUpdates.genre = detail.genre;
+        }
+        if (selectedFields.streamingPlatform && detail.streamingPlatform) {
+            fieldUpdates.streamingPlatform = detail.streamingPlatform;
+        }
+        if (selectedFields.cast && detail.cast) {
+            fieldUpdates.cast = detail.cast;
+        }
+        if (selectedFields.overview && detail.overview) {
+            fieldUpdates.overview = detail.overview;
+        }
+        if (selectedFields.duration && detail.duration) {
+            fieldUpdates.duration = detail.duration;
+        }
+        if (selectedFields.poster && detail.poster) {
+            fieldUpdates.poster = detail.poster;
+            fieldUpdates.tvgLogo = detail.poster;
+        }
+        if (selectedFields.backdrop && detail.backdrop) {
+            fieldUpdates.backdrop = detail.backdrop;
+        }
+        if (selectedFields.localizedName && detail.localizedName) {
+            fieldUpdates.name = detail.localizedName;
+            fieldUpdates.tvgName = detail.localizedName;
+        }
+
+        return fieldUpdates;
     };
 
     const handleDeepTmdbReview = async () => {
@@ -1562,7 +1755,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         setIsAssigningTmdbIds(true);
         setTmdbProgress({ processed: 0, total: plan.totalChannels });
 
-        const updates = new Map<string, { tvgId: string; rating?: string; groupTitle?: string }>();
+        const updates = new Map<string, Partial<Channel> & { tvgId: string }>();
         const pendingLogoRetry: { channel: Channel; mediaType: TmdbMediaType }[] = [];
         let processed = 0;
         let noQueryCount = 0;
@@ -1620,11 +1813,13 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                         const formattedType = executionGroup.mediaType === 'movie' ? 'Movies' : 'Series';
                                         targetGroupTitle = `${formattedType} - ${detectedPlatform} | ${detectedGenre}`;
                                     }
+                                    const customFieldUpdates = buildTmdbFieldUpdates(tmdbDetail, tmdbExtractionFields);
                                     seriesTargets.forEach((target) => {
                                         updates.set(target.id, {
                                             tvgId: String(bestResult.id),
                                             rating: tmdbDetail?.rating || undefined,
                                             ...(targetGroupTitle ? { groupTitle: targetGroupTitle } : {}),
+                                            ...customFieldUpdates,
                                         });
                                     });
                                     propagatedEpisodes += Math.max(0, seriesTargets.length - 1);
@@ -1664,10 +1859,12 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                             const formattedType = mediaType === 'movie' ? 'Movies' : 'Series';
                             targetGroupTitle = `${formattedType} - ${detectedPlatform} | ${detectedGenre}`;
                         }
+                        const customFieldUpdates = buildTmdbFieldUpdates(detail, tmdbExtractionFields);
                         updates.set(channel.id, {
                             tvgId: String(candidateId),
-                            rating: detail.rating || undefined,
+                            rating: detail?.rating || undefined,
                             ...(targetGroupTitle ? { groupTitle: targetGroupTitle } : {}),
+                            ...customFieldUpdates,
                         });
                         notFoundCount -= 1;
                         recoveredFromLogoCount += 1;
@@ -1684,9 +1881,8 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                         const update = updates.get(ch.id)!;
                         return {
                             ...ch,
+                            ...update,
                             tvgId: update.tvgId || ch.tvgId,
-                            ...(update.rating ? { rating: update.rating } : {}),
-                            ...(update.groupTitle ? { groupTitle: update.groupTitle } : {}),
                         };
                     })
                 );
@@ -1768,7 +1964,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             return;
         }
 
-        const updates = new Map<string, { tvgId: string; rating?: string; groupTitle?: string }>();
+        const updates = new Map<string, Partial<Channel> & { tvgId: string }>();
         let processed = 0;
         let notFoundCount = 0;
         let errorCount = 0;
@@ -1795,22 +1991,26 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                         let targetRating = bestResult.rating;
                         let targetGroupTitle: string | undefined = undefined;
 
-                        if (assignTmdbGroup) {
-                            const detail = await fetchTmdbDetail(bestResult.id, mediaType, tmdbApiKey);
-                            if (detail?.rating) {
-                                targetRating = detail.rating;
-                            }
+                        const detail = await fetchTmdbDetail(bestResult.id, mediaType, tmdbApiKey);
+                        if (detail?.rating) {
+                            targetRating = detail.rating;
+                        }
+
+                        if (assignTmdbGroup && detail) {
                             const detectedPlatform = detectTmdbPlatform(targets[0], detail);
                             const detectedGenre = detectTmdbGenre(detail);
                             const formattedType = mediaType === 'movie' ? 'Movies' : 'Series';
                             targetGroupTitle = `${formattedType} - ${detectedPlatform} | ${detectedGenre}`;
                         }
 
+                        const customFieldUpdates = buildTmdbFieldUpdates(detail, tmdbExtractionFields);
+
                         targets.forEach((target) => {
                             updates.set(target.id, {
                                 tvgId: String(bestResult.id),
-                                rating: targetRating,
+                                ...(targetRating ? { rating: targetRating } : {}),
                                 ...(targetGroupTitle ? { groupTitle: targetGroupTitle } : {}),
+                                ...customFieldUpdates,
                             });
                         });
                         propagatedEpisodes += Math.max(0, targets.length - 1);
@@ -1830,9 +2030,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
 
                     return {
                         ...channel,
-                        tvgId: update.tvgId,
-                        ...(update.rating ? { rating: update.rating } : {}),
-                        ...(update.groupTitle ? { groupTitle: update.groupTitle } : {}),
+                        ...update,
                     };
                 }));
                 channelsHook.saveStateToHistory();
@@ -2265,24 +2463,93 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
 
                             <div className="flex items-center gap-3 flex-wrap ml-auto justify-end">
                                 {!isSencillo && (
-                                    <div className="flex flex-col items-end gap-1">
-                                        <button
-                                            onClick={() => void handleQuickAssignTmdbIdAndRating()}
-                                            disabled={isAssigningTmdbIds || selectedChannels.length === 0}
-                                            className="relative flex h-10 w-[198px] items-center overflow-hidden rounded-full border border-cyan-500/40 bg-gray-900 p-1.5 shadow-lg shadow-cyan-900/20 transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40"
-                                            title="Busca y asigna tvg-id y rating TMDB a los canales seleccionados"
-                                        >
-                                            <img
-                                                src="/icons8-the-movie-database.svg"
-                                                alt="TMDB"
-                                                className="pointer-events-none absolute inset-1.5 h-auto w-auto object-contain"
-                                            />
-                                            {isAssigningTmdbIds && (
-                                                <span className="absolute inset-0 flex items-center justify-center bg-gray-950/65 text-[11px] font-semibold text-white">
-                                                    Buscando...
-                                                </span>
-                                            )}
-                                        </button>
+                                    <div className="relative flex flex-col items-end gap-1" ref={tmdbDropdownRef}>
+                                        <div className="relative inline-flex items-center rounded-full border border-cyan-500/40 bg-gray-900 shadow-lg shadow-cyan-900/20">
+                                            <button
+                                                onClick={() => void handleQuickAssignTmdbIdAndRating()}
+                                                disabled={isAssigningTmdbIds || selectedChannels.length === 0}
+                                                className="relative flex h-10 w-[162px] items-center overflow-hidden rounded-l-full p-1.5 transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40"
+                                                title="Busca y asigna tvg-id, rating y campos seleccionados a los canales seleccionados"
+                                            >
+                                                <img
+                                                    src="/icons8-the-movie-database.svg"
+                                                    alt="TMDB"
+                                                    className="pointer-events-none absolute inset-1.5 h-auto w-auto object-contain"
+                                                />
+                                                {isAssigningTmdbIds && (
+                                                    <span className="absolute inset-0 flex items-center justify-center bg-gray-950/70 text-[11px] font-semibold text-white">
+                                                        Buscando...
+                                                    </span>
+                                                )}
+                                            </button>
+                                            <div className="h-5 w-[1px] bg-cyan-500/30" />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowTmdbFieldsDropdown((prev) => !prev)}
+                                                disabled={isAssigningTmdbIds}
+                                                className="flex h-10 w-9 items-center justify-center rounded-r-full px-1.5 text-cyan-400 hover:text-cyan-200 hover:bg-cyan-950/40 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+                                                title="Seleccionar campos a extraer de TMDB"
+                                                aria-label="Seleccionar campos a extraer de TMDB"
+                                                aria-expanded={showTmdbFieldsDropdown}
+                                            >
+                                                <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${showTmdbFieldsDropdown ? 'rotate-180 text-cyan-300' : ''}`} />
+                                            </button>
+                                        </div>
+
+                                        {showTmdbFieldsDropdown && (
+                                            <div className="absolute top-12 right-0 z-50 w-80 rounded-xl border border-cyan-500/40 bg-gray-900/95 p-3.5 shadow-2xl backdrop-blur-md">
+                                                <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-gray-700/80">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="text-xs font-semibold text-white">Campos a extraer</span>
+                                                        <span className="rounded-full bg-cyan-950/80 border border-cyan-500/30 px-1.5 py-0.2 text-[10px] font-mono text-cyan-300">
+                                                            {Object.values(tmdbExtractionFields).filter(Boolean).length}/{TMDB_EXTRACTION_FIELDS.length}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 text-[11px]">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setAllTmdbExtractionFields(true)}
+                                                            className="text-cyan-400 hover:text-cyan-300 transition-colors font-medium"
+                                                        >
+                                                            Marcar todos
+                                                        </button>
+                                                        <span className="text-gray-600">•</span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setAllTmdbExtractionFields(false)}
+                                                            className="text-gray-400 hover:text-gray-200 transition-colors font-medium"
+                                                        >
+                                                            Desmarcar
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <div className="max-h-72 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+                                                    {TMDB_EXTRACTION_FIELDS.map((field) => (
+                                                        <label
+                                                            key={field.key}
+                                                            className="flex items-start gap-2.5 p-1.5 rounded-lg hover:bg-gray-800/70 cursor-pointer select-none transition-colors"
+                                                        >
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={!!tmdbExtractionFields[field.key]}
+                                                                onChange={(e) => updateTmdbExtractionField(field.key, e.target.checked)}
+                                                                className="form-checkbox mt-0.5 h-3.5 w-3.5 rounded border-gray-600 bg-gray-800 text-cyan-500 focus:ring-cyan-400"
+                                                            />
+                                                            <div className="flex flex-col">
+                                                                <span className="text-xs font-medium text-gray-200">
+                                                                    {field.label}
+                                                                </span>
+                                                                <span className="text-[10px] text-gray-400 leading-tight">
+                                                                    {field.description}
+                                                                </span>
+                                                            </div>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
                                         <label
                                             className="flex items-center gap-1.5 text-[11px] text-gray-300 cursor-pointer select-none hover:text-white"
                                             title="Asigna también el grupo con formato: Tipo - PLATAFORMA | Género (ej: Movies - NETFLIX | Thriller)"

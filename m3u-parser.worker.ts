@@ -10,6 +10,15 @@ export interface Channel {
     name: string;
     url: string;
     status?: 'pending' | 'ok' | 'failed' | 'verifying';
+    director?: string;
+    releaseDate?: string;
+    genre?: string;
+    streamingPlatform?: string;
+    cast?: string;
+    overview?: string;
+    duration?: string;
+    poster?: string;
+    backdrop?: string;
 }
 
 const parseM3U = (content: string): Channel[] => {
@@ -45,6 +54,15 @@ const parseM3U = (content: string): Channel[] => {
             const tvgLogo = info.match(/tvg-logo="([^"]*)"/)?.["1"] || '';
             const rating = info.match(/rating="([^"]*)"/)?.["1"] || '';
             const groupTitle = info.match(/group-title="([^"]*)"/)?.["1"] || '';
+            const director = info.match(/tvg-director="([^"]*)"/)?.["1"] || '';
+            const releaseDate = info.match(/tvg-release-date="([^"]*)"/)?.["1"] || '';
+            const genre = info.match(/tvg-genre="([^"]*)"/)?.["1"] || '';
+            const streamingPlatform = info.match(/tvg-platform="([^"]*)"/)?.["1"] || '';
+            const cast = info.match(/tvg-cast="([^"]*)"/)?.["1"] || '';
+            const overview = info.match(/tvg-overview="([^"]*)"/)?.["1"] || '';
+            const duration = info.match(/tvg-duration="([^"]*)"/)?.["1"] || '';
+            const poster = info.match(/tvg-poster="([^"]*)"/)?.["1"] || '';
+            const backdrop = info.match(/tvg-backdrop="([^"]*)"/)?.["1"] || '';
             const name = info.split(',').pop()?.trim() || '';
             
             if (name) {
@@ -59,6 +77,15 @@ const parseM3U = (content: string): Channel[] => {
                     name,
                     url,
                     status: 'pending',
+                    director: director || undefined,
+                    releaseDate: releaseDate || undefined,
+                    genre: genre || undefined,
+                    streamingPlatform: streamingPlatform || undefined,
+                    cast: cast || undefined,
+                    overview: overview || undefined,
+                    duration: duration || undefined,
+                    poster: poster || undefined,
+                    backdrop: backdrop || undefined,
                 });
             }
         }

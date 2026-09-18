@@ -189,6 +189,15 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
             if (channel.tvgLogo) attributes += ` tvg-logo="${channel.tvgLogo}"`;
             if (channel.rating) attributes += ` rating="${channel.rating}"`;
             if (channel.groupTitle) attributes += ` group-title="${channel.groupTitle}"`;
+            if (channel.director) attributes += ` tvg-director="${channel.director}"`;
+            if (channel.releaseDate) attributes += ` tvg-release-date="${channel.releaseDate}"`;
+            if (channel.genre) attributes += ` tvg-genre="${channel.genre}"`;
+            if (channel.streamingPlatform) attributes += ` tvg-platform="${channel.streamingPlatform}"`;
+            if (channel.cast) attributes += ` tvg-cast="${channel.cast}"`;
+            if (channel.overview) attributes += ` tvg-overview="${channel.overview}"`;
+            if (channel.duration) attributes += ` tvg-duration="${channel.duration}"`;
+            if (channel.poster) attributes += ` tvg-poster="${channel.poster}"`;
+            if (channel.backdrop) attributes += ` tvg-backdrop="${channel.backdrop}"`;
             content += `#EXTINF:-1${attributes},${channel.name}\n${channel.url}\n`;
         });
         return content;

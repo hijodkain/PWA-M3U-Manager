@@ -16,6 +16,15 @@ export interface Channel {
   resolution?: string; // e.g., "1920x1080"
   codec?: string; // e.g., "avc1.64001f,mp4a.40.2"
   bitrate?: number; // in bps
+  director?: string;
+  releaseDate?: string;
+  genre?: string;
+  streamingPlatform?: string;
+  cast?: string;
+  overview?: string;
+  duration?: string;
+  poster?: string;
+  backdrop?: string;
 }
 
 export interface EpgChannel {
