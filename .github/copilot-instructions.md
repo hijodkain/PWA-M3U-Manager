@@ -1,6 +1,6 @@
 # PWA M3U Manager - Instrucciones para Agentes de IA
 
-## 📌 VERSIÓN ACTUAL: v1.8.4
+## 📌 VERSIÓN ACTUAL: v1.9.0
 
 ### 🔢 Política de Versionado Semántico
 La versión se muestra en el header de la app (`PWAM3UManager.tsx`) y **solo debe actualizarse al hacer merge a main**. No se actualiza en commits intermedios dentro de una rama feature.
@@ -69,6 +69,17 @@ interface Channel {
   url: string;         // URL del stream
   status?: 'ok' | 'failed' | 'verifying' | 'pending';
   quality?: 'SD' | 'HD' | 'FHD' | '4K' | 'unknown';
+  rating?: string;
+  director?: string;
+  releaseDate?: string;
+  genre?: string;
+  streamingPlatform?: string;
+  cast?: string;
+  overview?: string;
+  duration?: string;
+  poster?: string;
+  backdrop?: string;
+  trailer?: string;
 }
 ```
 
@@ -80,6 +91,8 @@ El estado persistente usa estas claves (ver [useSettings.ts](../useSettings.ts))
 - `medicinaLists`: Listas reparadoras guardadas con {id, name, url}
 - `dropboxLists`: Listas principales de Dropbox guardadas con {id, name, url, addedAt}
 - `channel_prefixes`, `channel_suffixes`: Para normalización en búsqueda inteligente
+- `tmdb_extraction_fields`: Selección de campos activos a extraer de TMDB
+- `tmdb_assign_group_format`: Checkbox de asignación de grupo con formato desde TMDB
 
 ### Sistema de Búsqueda Inteligente
 [useSmartSearch.ts](../useSmartSearch.ts) implementa distancia de Levenshtein para matching difuso:
@@ -244,7 +257,13 @@ El `.gitignore` ya está configurado correctamente. NO modificar sin razón.
 5. **Features por Modo**: Verificar `useAppMode().isPro` antes de mostrar funciones avanzadas
 6. **Gestión de Historial**: Llamar `saveStateToHistory()` después de actualizaciones masivas de canales para undo/redo
 
-## 🆕 Actualizaciones Recientes (Enero 2026)
+## 🆕 Actualizaciones Recientes
+
+### v1.9.0 - Extracción Personalizada de Metadatos TMDB
+- **Split-Button con Menú Desplegable**: El botón TMDB en `EditorTab` incluye un selector para elegir qué campos extraer.
+- **11 Campos Disponibles**: Director, fecha de estreno, género (primero), plataforma en España, reparto, sinopsis, duración, póster, fondo, nombre en España y tráiler en español (URL de YouTube).
+- **Persistencia**: Preferencias guardadas en `localStorage` (`tmdb_extraction_fields`).
+- **Soporte M3U**: Parseo y exportación de atributos `tvg-director`, `tvg-release-date`, `tvg-genre`, `tvg-platform`, `tvg-cast`, `tvg-overview`, `tvg-duration`, `tvg-poster`, `tvg-backdrop`, `tvg-trailer`.
 
 ### ReparacionTab - Mejoras UX
 - **Toggle de selección**: Canal seleccionado se deselecciona al hacer clic de nuevo (`destinationChannelId === ch.id ? null : ch.id`)
