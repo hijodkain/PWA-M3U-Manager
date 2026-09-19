@@ -25,6 +25,7 @@ export interface Channel {
   duration?: string;
   poster?: string;
   backdrop?: string;
+  trailer?: string;
 }
 
 export interface EpgChannel {

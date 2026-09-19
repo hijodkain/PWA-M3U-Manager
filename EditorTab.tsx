@@ -58,7 +58,8 @@ export type TmdbExtractionFieldKey =
     | 'duration'
     | 'poster'
     | 'backdrop'
-    | 'localizedName';
+    | 'localizedName'
+    | 'trailer';
 
 export interface TmdbExtractionFieldOption {
     key: TmdbExtractionFieldKey;
@@ -77,6 +78,7 @@ export const TMDB_EXTRACTION_FIELDS: TmdbExtractionFieldOption[] = [
     { key: 'poster', label: 'Imagen de póster', description: 'Póster oficial (actualiza logo del canal)' },
     { key: 'backdrop', label: 'Imagen de fondo', description: 'Fondo panorámico de la película o serie' },
     { key: 'localizedName', label: 'Nombre en España', description: 'Título en español (actualiza nombre del canal)' },
+    { key: 'trailer', label: 'Tráiler en español', description: 'URL de YouTube del tráiler oficial en español' },
 ];
 
 const DEFAULT_TMDB_EXTRACTION_FIELDS: Record<TmdbExtractionFieldKey, boolean> = {
@@ -90,6 +92,7 @@ const DEFAULT_TMDB_EXTRACTION_FIELDS: Record<TmdbExtractionFieldKey, boolean> = 
     poster: true,
     backdrop: true,
     localizedName: true,
+    trailer: true,
 };
 
 const TMDB_SKIP_CONFIRM_SESSION_KEY = 'tmdb_skip_confirm_session';
@@ -220,6 +223,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             poster: value,
             backdrop: value,
             localizedName: value,
+            trailer: value,
         };
         setTmdbExtractionFields(next);
         try {
@@ -1330,7 +1334,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         const params = new URLSearchParams({
             api_key: apiKey,
             language: 'es-ES',
-            append_to_response: 'watch/providers,credits',
+            append_to_response: 'watch/providers,credits,videos',
         });
 
         const response = await fetch(`https://api.themoviedb.org/3/${mediaType}/${id}?${params.toString()}`, {
@@ -1414,6 +1418,13 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             duration = `${data.last_episode_to_air.runtime} min`;
         }
 
+        const videos: Array<{ site: string; type: string; key: string; iso_639_1?: string; iso_3166_1?: string; name?: string }> =
+            Array.isArray(data.videos?.results) ? data.videos.results : [];
+        const esTrailer = videos.find((v) => v.site === 'YouTube' && v.type === 'Trailer' && (v.iso_639_1 === 'es' || v.iso_3166_1 === 'ES'))
+            || videos.find((v) => v.site === 'YouTube' && (v.iso_639_1 === 'es' || v.iso_3166_1 === 'ES'))
+            || videos.find((v) => v.site === 'YouTube' && v.type === 'Trailer');
+        const trailer = esTrailer?.key ? `https://www.youtube.com/watch?v=${esTrailer.key}` : '';
+
         return {
             localizedName,
             logoUrl,
@@ -1430,6 +1441,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             cast,
             overview,
             duration,
+            trailer,
         };
     };
 
@@ -1471,6 +1483,9 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         if (selectedFields.localizedName && detail.localizedName) {
             fieldUpdates.name = detail.localizedName;
             fieldUpdates.tvgName = detail.localizedName;
+        }
+        if (selectedFields.trailer && detail.trailer) {
+            fieldUpdates.trailer = detail.trailer;
         }
 
         return fieldUpdates;

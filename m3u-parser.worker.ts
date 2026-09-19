@@ -19,6 +19,7 @@ export interface Channel {
     duration?: string;
     poster?: string;
     backdrop?: string;
+    trailer?: string;
 }
 
 const parseM3U = (content: string): Channel[] => {
@@ -63,6 +64,7 @@ const parseM3U = (content: string): Channel[] => {
             const duration = info.match(/tvg-duration="([^"]*)"/)?.["1"] || '';
             const poster = info.match(/tvg-poster="([^"]*)"/)?.["1"] || '';
             const backdrop = info.match(/tvg-backdrop="([^"]*)"/)?.["1"] || '';
+            const trailer = info.match(/tvg-trailer="([^"]*)"/)?.["1"] || info.match(/trailer="([^"]*)"/)?.["1"] || '';
             const name = info.split(',').pop()?.trim() || '';
             
             if (name) {
@@ -86,6 +88,7 @@ const parseM3U = (content: string): Channel[] => {
                     duration: duration || undefined,
                     poster: poster || undefined,
                     backdrop: backdrop || undefined,
+                    trailer: trailer || undefined,
                 });
             }
         }

@@ -198,6 +198,7 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
             if (channel.duration) attributes += ` tvg-duration="${channel.duration}"`;
             if (channel.poster) attributes += ` tvg-poster="${channel.poster}"`;
             if (channel.backdrop) attributes += ` tvg-backdrop="${channel.backdrop}"`;
+            if (channel.trailer) attributes += ` tvg-trailer="${channel.trailer}"`;
             content += `#EXTINF:-1${attributes},${channel.name}\n${channel.url}\n`;
         });
         return content;
