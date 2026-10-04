@@ -75,7 +75,7 @@ export const TMDB_EXTRACTION_FIELDS: TmdbExtractionFieldOption[] = [
     { key: 'cast', label: 'Reparto (cast)', description: 'Principales actores del reparto' },
     { key: 'overview', label: 'Sinopsis (overview)', description: 'Sinopsis argumental en español' },
     { key: 'duration', label: 'Duración', description: 'Duración estimada o por episodio' },
-    { key: 'poster', label: 'Imagen de póster', description: 'Póster oficial (actualiza logo del canal)' },
+    { key: 'poster', label: 'Imagen de póster', description: 'Póster vertical de cartelera en español (actualiza tvg-logo)' },
     { key: 'backdrop', label: 'Imagen de fondo', description: 'Fondo panorámico de la película o serie' },
     { key: 'localizedName', label: 'Nombre en España', description: 'Título en español (actualiza nombre del canal)' },
     { key: 'trailer', label: 'Tráiler en español', description: 'URL de YouTube del tráiler oficial en español' },
@@ -1249,70 +1249,49 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         return normalizedCandidate.includes(normalizedQuery) || normalizedQuery.includes(normalizedCandidate);
     };
 
-    const KNOWN_STREAMING_PLATFORMS: Array<{ match: RegExp; name: string }> = [
-        { match: /\b(netflix)\b/i, name: 'NETFLIX' },
+    const ALLOWED_STREAMING_PLATFORMS: Array<{ match: RegExp; name: string }> = [
+        { match: /\b(netflix)\b/i, name: 'Netflix' },
         { match: /\b(hbo|max)\b/i, name: 'HBO' },
-        { match: /\b(disney\+?|disney\s*plus)\b/i, name: 'DISNEY+' },
-        { match: /\b(prime\s*video|amazon\s*prime|amazon)\b/i, name: 'PRIME VIDEO' },
-        { match: /\b(apple\s*tv\+?|apple\s*tv)\b/i, name: 'APPLE TV+' },
-        { match: /\b(paramount\+?)\b/i, name: 'PARAMOUNT+' },
-        { match: /\b(skyshowtime)\b/i, name: 'SKYSHOWTIME' },
-        { match: /\b(movistar\+?|movistar\s*plus)\b/i, name: 'MOVISTAR+' },
-        { match: /\b(filmin)\b/i, name: 'FILMIN' },
-        { match: /\b(dazn)\b/i, name: 'DAZN' },
-        { match: /\b(atresplayer)\b/i, name: 'ATRESPLAYER' },
-        { match: /\b(rtve\s*play|rtve)\b/i, name: 'RTVE PLAY' },
-        { match: /\b(pluto\s*tv|pluto)\b/i, name: 'PLUTO TV' },
-        { match: /\b(rakuten)\b/i, name: 'RAKUTEN' },
-        { match: /\b(peacock)\b/i, name: 'PEACOCK' },
-        { match: /\b(hulu)\b/i, name: 'HULU' },
-        { match: /\b(star\+?)\b/i, name: 'STAR+' },
-        { match: /\b(crunchyroll)\b/i, name: 'CRUNCHYROLL' },
+        { match: /\b(disney\+?|disney\s*plus)\b/i, name: 'Disney+' },
+        { match: /\bmovistar\b|\bm\+(?!\w)/i, name: 'M+' },
+        { match: /\b(prime\s*video|amazon\s*prime|prime|amazon)\b/i, name: 'PRIME' },
     ];
 
     const detectTmdbPlatform = (
         channel: Channel,
         detail?: { networks?: Array<{ name: string }>; watchProviders?: string[] } | null
     ): string => {
-        // 1. Comprobar mención de plataforma en datos del canal (groupTitle, name, url)
-        const channelText = `${channel.groupTitle || ''} ${channel.name || ''} ${channel.url || ''}`;
-        for (const p of KNOWN_STREAMING_PLATFORMS) {
-            if (p.match.test(channelText)) {
-                return p.name;
+        // 1. Comprobar watch/providers de TMDB (proveedores de suscripción flatrate)
+        if (detail?.watchProviders && detail.watchProviders.length > 0) {
+            for (const prov of detail.watchProviders) {
+                for (const p of ALLOWED_STREAMING_PLATFORMS) {
+                    if (p.match.test(prov)) {
+                        return p.name;
+                    }
+                }
             }
         }
 
         // 2. Comprobar networks de TMDB (especialmente para series)
         if (detail?.networks && detail.networks.length > 0) {
             for (const net of detail.networks) {
-                for (const p of KNOWN_STREAMING_PLATFORMS) {
+                for (const p of ALLOWED_STREAMING_PLATFORMS) {
                     if (p.match.test(net.name)) {
                         return p.name;
                     }
                 }
             }
-            const firstNetwork = detail.networks[0]?.name?.trim();
-            if (firstNetwork) {
-                return firstNetwork.toUpperCase();
+        }
+
+        // 3. Comprobar mención de plataforma en datos del canal (groupTitle, name, url)
+        const channelText = `${channel.groupTitle || ''} ${channel.name || ''} ${channel.url || ''}`;
+        for (const p of ALLOWED_STREAMING_PLATFORMS) {
+            if (p.match.test(channelText)) {
+                return p.name;
             }
         }
 
-        // 3. Comprobar watch/providers de TMDB (proveedores de suscripción flatrate)
-        if (detail?.watchProviders && detail.watchProviders.length > 0) {
-            for (const prov of detail.watchProviders) {
-                for (const p of KNOWN_STREAMING_PLATFORMS) {
-                    if (p.match.test(prov)) {
-                        return p.name;
-                    }
-                }
-            }
-            const firstProvider = detail.watchProviders[0]?.trim();
-            if (firstProvider) {
-                return firstProvider.toUpperCase();
-            }
-        }
-
-        // 4. Fallback estándar
+        // 4. Fallback estándar para todas las demás plataformas (Tivify, Atresplayer, etc.) o sin plataforma
         return 'VOD';
     };
 
@@ -1334,7 +1313,8 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         const params = new URLSearchParams({
             api_key: apiKey,
             language: 'es-ES',
-            append_to_response: 'watch/providers,credits,videos',
+            append_to_response: 'watch/providers,credits,videos,images',
+            include_image_language: 'es,null,en',
         });
 
         const response = await fetch(`https://api.themoviedb.org/3/${mediaType}/${id}?${params.toString()}`, {
@@ -1351,9 +1331,15 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         const data = (await response.json()) as any;
 
         const localizedName = (data.title || data.name || '').trim();
-        const poster = data.poster_path ? `https://image.tmdb.org/t/p/w500${data.poster_path}` : '';
+        const posters: Array<{ file_path: string; iso_639_1?: string | null }> = Array.isArray(data.images?.posters)
+            ? data.images.posters
+            : [];
+        // Prioridad: póster vertical con texto en español (cartelera de cines)
+        const esPoster = posters.find((p) => p.iso_639_1 === 'es');
+        const selectedPosterPath = esPoster?.file_path || data.poster_path || posters[0]?.file_path || '';
+        const poster = selectedPosterPath ? `https://image.tmdb.org/t/p/w500${selectedPosterPath}` : '';
         const backdrop = data.backdrop_path ? `https://image.tmdb.org/t/p/w1280${data.backdrop_path}` : '';
-        const imagePath = data.poster_path || data.backdrop_path || '';
+        const imagePath = selectedPosterPath || data.backdrop_path || '';
         const logoUrl = imagePath ? `https://image.tmdb.org/t/p/w500${imagePath}` : '';
         const rating = typeof data.vote_average === 'number' ? data.vote_average.toFixed(1) : '';
 
@@ -1388,7 +1374,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         let streamingPlatform = '';
         if (esProviders.length > 0) {
             for (const prov of esProviders) {
-                for (const p of KNOWN_STREAMING_PLATFORMS) {
+                for (const p of ALLOWED_STREAMING_PLATFORMS) {
                     if (p.match.test(prov.provider_name)) {
                         streamingPlatform = p.name;
                         break;
@@ -1397,7 +1383,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                 if (streamingPlatform) break;
             }
             if (!streamingPlatform) {
-                streamingPlatform = esProviders[0].provider_name;
+                streamingPlatform = 'VOD';
             }
         }
 

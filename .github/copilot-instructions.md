@@ -1,6 +1,6 @@
 # PWA M3U Manager - Instrucciones para Agentes de IA
 
-## 📌 VERSIÓN ACTUAL: v1.9.0
+## 📌 VERSIÓN ACTUAL: v1.9.1
 
 ### 🔢 Política de Versionado Semántico
 La versión se muestra en el header de la app (`PWAM3UManager.tsx`) y **solo debe actualizarse al hacer merge a main**. No se actualiza en commits intermedios dentro de una rama feature.
@@ -258,6 +258,10 @@ El `.gitignore` ya está configurado correctamente. NO modificar sin razón.
 6. **Gestión de Historial**: Llamar `saveStateToHistory()` después de actualizaciones masivas de canales para undo/redo
 
 ## 🆕 Actualizaciones Recientes
+
+### v1.9.1 - Refinamiento en Extracción TMDB y Grupos
+- **Filtro de plataformas en plantilla de grupo**: En "Movies/Series - PLATAFORMA | Género", solo se asignan "Netflix", "HBO", "Disney+", "M+" y "PRIME". Todas las demás (Tivify, Atresplayer, Filmin, etc.) se agrupan bajo "VOD".
+- **Póster vertical de cartelera en español**: Al marcar "Imagen poster", `tvg-logo` se actualiza con el póster vertical oficial de cines en español (`data.images.posters` con `iso_639_1: 'es'`).
 
 ### v1.9.0 - Extracción Personalizada de Metadatos TMDB
 - **Split-Button con Menú Desplegable**: El botón TMDB en `EditorTab` incluye un selector para elegir qué campos extraer.
