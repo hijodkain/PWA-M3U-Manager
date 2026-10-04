@@ -77,7 +77,7 @@ export const TMDB_EXTRACTION_FIELDS: TmdbExtractionFieldOption[] = [
     { key: 'duration', label: 'Duración', description: 'Duración estimada o por episodio' },
     { key: 'poster', label: 'Imagen de póster', description: 'Póster vertical de cartelera en español (actualiza tvg-logo)' },
     { key: 'backdrop', label: 'Imagen de fondo', description: 'Fondo panorámico de la película o serie' },
-    { key: 'localizedName', label: 'Nombre en España', description: 'Título en español (actualiza nombre del canal)' },
+    { key: 'localizedName', label: 'Nombre en España', description: 'Título en español con año (ej: Nombre (2008))' },
     { key: 'trailer', label: 'Tráiler en español', description: 'URL de YouTube del tráiler oficial en español' },
 ];
 
@@ -819,6 +819,28 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         channelsHook.saveStateToHistory();
     };
 
+    const handleCopyChannelNameToTvgName = () => {
+        channelsHook.setChannels(prev =>
+            prev.map(ch =>
+                selectedChannels.includes(ch.id)
+                    ? { ...ch, tvgName: ch.name }
+                    : ch
+            )
+        );
+        channelsHook.saveStateToHistory();
+    };
+
+    const handleCopyTvgNameToChannelName = () => {
+        channelsHook.setChannels(prev =>
+            prev.map(ch =>
+                selectedChannels.includes(ch.id)
+                    ? { ...ch, name: ch.tvgName }
+                    : ch
+            )
+        );
+        channelsHook.saveStateToHistory();
+    };
+
     const handleClearId = () => {
         channelsHook.setChannels(prev =>
             prev.map(ch =>
@@ -1467,8 +1489,18 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             fieldUpdates.backdrop = detail.backdrop;
         }
         if (selectedFields.localizedName && detail.localizedName) {
-            fieldUpdates.name = detail.localizedName;
-            fieldUpdates.tvgName = detail.localizedName;
+            let formattedName = detail.localizedName;
+            const yearMatch = detail.releaseDate?.match(/\b(\d{4})\b/);
+            const releaseYear = yearMatch ? yearMatch[1] : '';
+            if (releaseYear) {
+                if (/\(\d{4}\)$/.test(formattedName)) {
+                    formattedName = formattedName.replace(/\(\d{4}\)$/, `(${releaseYear})`);
+                } else if (!formattedName.includes(`(${releaseYear})`)) {
+                    formattedName = `${formattedName} (${releaseYear})`;
+                }
+            }
+            fieldUpdates.name = formattedName;
+            fieldUpdates.tvgName = formattedName;
         }
         if (selectedFields.trailer && detail.trailer) {
             fieldUpdates.trailer = detail.trailer;
@@ -1651,7 +1683,18 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                 return;
                             }
 
-                            const nextName = result.localizedName?.trim();
+                            let nextName = result.localizedName?.trim();
+                            if (nextName) {
+                                const yearMatch = result.releaseDate?.match(/\b(\d{4})\b/);
+                                const releaseYear = yearMatch ? yearMatch[1] : '';
+                                if (releaseYear) {
+                                    if (/\(\d{4}\)$/.test(nextName)) {
+                                        nextName = nextName.replace(/\(\d{4}\)$/, `(${releaseYear})`);
+                                    } else if (!nextName.includes(`(${releaseYear})`)) {
+                                        nextName = `${nextName} (${releaseYear})`;
+                                    }
+                                }
+                            }
                             const nextLogo = result.logoUrl?.trim();
 
                             const nextRating = result.rating?.trim();
@@ -2196,6 +2239,20 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                         title="Copia tvg-name en tvg-id"
                                     >
                                         Copiar Name → ID
+                                    </button>
+                                    <button
+                                        onClick={handleCopyChannelNameToTvgName}
+                                        className="bg-gray-600 hover:bg-gray-500 text-white font-medium py-1 px-3 rounded text-xs border border-gray-500"
+                                        title="Copia Nombre del canal en tvg-name"
+                                    >
+                                        Copiar Nombre → tvg-name
+                                    </button>
+                                    <button
+                                        onClick={handleCopyTvgNameToChannelName}
+                                        className="bg-gray-600 hover:bg-gray-500 text-white font-medium py-1 px-3 rounded text-xs border border-gray-500"
+                                        title="Copia tvg-name en Nombre del canal"
+                                    >
+                                        Copiar tvg-name → Nombre
                                     </button>
                                     <button
                                         onClick={handleClearId}
