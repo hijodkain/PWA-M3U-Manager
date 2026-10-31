@@ -1,6 +1,6 @@
 # PWA M3U Manager - Instrucciones para Agentes de IA
 
-## 📌 VERSIÓN ACTUAL: v1.10.1
+## 📌 VERSIÓN ACTUAL: v1.10.2
 
 ### 🔢 Política de Versionado Semántico
 La versión se muestra en el header de la app (`PWAM3UManager.tsx`) y **solo debe actualizarse al hacer merge a main**. No se actualiza en commits intermedios dentro de una rama feature.
@@ -258,6 +258,10 @@ El `.gitignore` ya está configurado correctamente. NO modificar sin razón.
 6. **Gestión de Historial**: Llamar `saveStateToHistory()` después de actualizaciones masivas de canales para undo/redo
 
 ## 🆕 Actualizaciones Recientes
+
+### v1.10.2 - Formato de Episodios de Series y Póster TMDB
+- **Formato y ordenación de series**: Al procesar series con TMDB, se asigna el póster vertical con texto en español a `tvg-logo` (manteniendo intactos los logos que no correspondan), se conservan los episodios en formato `Nombre de la serie S01E01` (recuperando el sufijo desde `tvg-name` si no estuviera en el nombre) y se ordenan ascendentemente según temporada y episodio.
+- **Plataformas unificadas**: Tanto para series como para películas, se usan exactamente `Movistar+`, `Netflix`, `Amazon`, `HBO`, `Disney+` y `Apple TV+` (y `VOD` como fallback).
 
 ### v1.10.1 - Normalización de Plataformas para Grupos TMDB
 - **Nombres de plataforma unificados**: Los grupos generados por TMDB usan exactamente `Netflix`, `Amazon` (reemplazando a PRIME), `Apple TV+`, `Movistar+` (reemplazando a M+) y `HBO`. Todas las demás o sin coincidencia se asignan a `VOD`.

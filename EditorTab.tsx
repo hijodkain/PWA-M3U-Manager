@@ -1060,29 +1060,102 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         }
     };
 
-    const getSeriesEpisodeTitle = (value: string) => {
-        const normalized = normalizeTmdbTitle(value);
-        const match = normalized.match(/^(.*?)(?:\s*[-|:]\s*)?\bS\d{1,2}\s*E\d{1,3}\b\s*$/i);
-        const title = match?.[1]?.trim() || normalized;
+    interface EpisodeInfo {
+        season: number;
+        episode: number;
+        formattedSuffix: string; // "S01E01"
+        cleanSeriesTitle: string;
+    }
 
+    const parseEpisodeInfo = (name?: string, tvgName?: string): EpisodeInfo | null => {
+        const texts = [name, tvgName].filter((t): t is string => Boolean(t && t.trim()));
+
+        for (const raw of texts) {
+            const clean = normalizeTmdbTitle(raw);
+
+            // 1. S01E01 / S1E1 / S01 E01 / S01.E01 / S01-E01 / S01_E01
+            let match = clean.match(/^(.*?)(?:[\s._\-|:]+)?\bS(\d{1,2})\s*[-._ ]?\s*E(\d{1,3})\b(.*)$/i);
+            if (match) {
+                const season = parseInt(match[2], 10);
+                const episode = parseInt(match[3], 10);
+                const seriesTitle = (match[1] || '').trim();
+                const formattedSuffix = `S${String(season).padStart(2, '0')}E${String(episode).padStart(2, '0')}`;
+                return { season, episode, formattedSuffix, cleanSeriesTitle: seriesTitle };
+            }
+
+            // 2. 1x01 / 01x01 / 1X01
+            match = clean.match(/^(.*?)(?:[\s._\-|:]+)?\b(\d{1,2})x(\d{1,3})\b(.*)$/i);
+            if (match) {
+                const season = parseInt(match[2], 10);
+                const episode = parseInt(match[3], 10);
+                const seriesTitle = (match[1] || '').trim();
+                const formattedSuffix = `S${String(season).padStart(2, '0')}E${String(episode).padStart(2, '0')}`;
+                return { season, episode, formattedSuffix, cleanSeriesTitle: seriesTitle };
+            }
+
+            // 3. T01E01 / T1E1 / T1 E1 / T1x01
+            match = clean.match(/^(.*?)(?:[\s._\-|:]+)?\bT(\d{1,2})\s*[-._ ]?\s*(?:E|EP|x)?\s*(\d{1,3})\b(.*)$/i);
+            if (match) {
+                const season = parseInt(match[2], 10);
+                const episode = parseInt(match[3], 10);
+                const seriesTitle = (match[1] || '').trim();
+                const formattedSuffix = `S${String(season).padStart(2, '0')}E${String(episode).padStart(2, '0')}`;
+                return { season, episode, formattedSuffix, cleanSeriesTitle: seriesTitle };
+            }
+
+            // 4. Temporada 1 Episodio 1 / Temp 1 Ep 1 / Cap 1
+            match = clean.match(/^(.*?)(?:[\s._\-|:]+)?(?:temporada|temp\.?)\s*(\d{1,2})\s*(?:episodio|ep\.?|cap\.?|capitulo)\s*(\d{1,3})\b(.*)$/i);
+            if (match) {
+                const season = parseInt(match[2], 10);
+                const episode = parseInt(match[3], 10);
+                const seriesTitle = (match[1] || '').trim();
+                const formattedSuffix = `S${String(season).padStart(2, '0')}E${String(episode).padStart(2, '0')}`;
+                return { season, episode, formattedSuffix, cleanSeriesTitle: seriesTitle };
+            }
+
+            // 5. E01 / EP01 / Cap. 01 (asumiendo temporada 1)
+            match = clean.match(/^(.*?)(?:[\s._\-|:]+)?\b(?:E|EP|CAP\.?|EPISODIO|CAPITULO)\s*(\d{1,3})\b(.*)$/i);
+            if (match) {
+                const season = 1;
+                const episode = parseInt(match[2], 10);
+                const seriesTitle = (match[1] || '').trim();
+                const formattedSuffix = `S${String(season).padStart(2, '0')}E${String(episode).padStart(2, '0')}`;
+                return { season, episode, formattedSuffix, cleanSeriesTitle: seriesTitle };
+            }
+        }
+
+        return null;
+    };
+
+    const getSeriesEpisodeTitle = (value: string, fallbackTvgName?: string) => {
+        const epInfo = parseEpisodeInfo(value, fallbackTvgName);
+        if (epInfo) {
+            return {
+                title: epInfo.cleanSeriesTitle || normalizeTmdbTitle(value),
+                isEpisode: true,
+                epInfo,
+            };
+        }
+
+        const normalized = normalizeTmdbTitle(value);
         return {
-            title,
-            isEpisode: Boolean(match && title),
+            title: normalized,
+            isEpisode: false,
+            epInfo: null,
         };
     };
 
     const getConsecutiveSeriesEpisodes = (channel: Channel): Channel[] => {
         const channelIndex = channels.findIndex((item) => item.id === channel.id);
-        const sourceTitle = channel.tvgName || channel.name || '';
-        const { title: seriesTitle, isEpisode } = getSeriesEpisodeTitle(sourceTitle);
+        const { title: seriesTitle, isEpisode } = getSeriesEpisodeTitle(channel.name, channel.tvgName);
 
         if (channelIndex === -1 || !isEpisode) return [channel];
 
         const belongsToSeries = (item: Channel) => {
-            const itemTitle = getSeriesEpisodeTitle(item.tvgName || item.name || '');
+            const itemInfo = getSeriesEpisodeTitle(item.name, item.tvgName);
             return item.groupTitle === channel.groupTitle
-                && itemTitle.isEpisode
-                && itemTitle.title.toLocaleLowerCase() === seriesTitle.toLocaleLowerCase();
+                && itemInfo.isEpisode
+                && itemInfo.title.toLocaleLowerCase() === seriesTitle.toLocaleLowerCase();
         };
 
         let firstIndex = channelIndex;
@@ -1092,6 +1165,12 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         while (lastIndex < channels.length - 1 && belongsToSeries(channels[lastIndex + 1])) lastIndex += 1;
 
         return channels.slice(firstIndex, lastIndex + 1);
+    };
+
+    const getEpisodeSortKey = (ch: Channel): number => {
+        const ep = parseEpisodeInfo(ch.name, ch.tvgName);
+        if (!ep) return 999999;
+        return ep.season * 10000 + ep.episode;
     };
 
     const extractYearFromTitle = (value: string): { title: string; year: number | null } => {
@@ -1272,11 +1351,12 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
     };
 
     const ALLOWED_STREAMING_PLATFORMS: Array<{ match: RegExp; name: string }> = [
+        { match: /\b(movistar\+?|movistar\s*plus|\bm\+(?!\w))\b/i, name: 'Movistar+' },
         { match: /\b(netflix)\b/i, name: 'Netflix' },
         { match: /\b(prime\s*video|amazon\s*prime|prime|amazon)\b/i, name: 'Amazon' },
-        { match: /\b(apple\s*tv\+?|apple\s*tv)\b/i, name: 'Apple TV+' },
-        { match: /\b(movistar\+?|movistar\s*plus|\bm\+(?!\w))\b/i, name: 'Movistar+' },
         { match: /\b(hbo|max)\b/i, name: 'HBO' },
+        { match: /\b(disney\+?|disney\s*plus)\b/i, name: 'Disney+' },
+        { match: /\b(apple\s*tv\+?|apple\s*tv)\b/i, name: 'Apple TV+' },
     ];
 
     const detectTmdbPlatform = (
@@ -1800,6 +1880,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         setTmdbProgress({ processed: 0, total: plan.totalChannels });
 
         const updates = new Map<string, Partial<Channel> & { tvgId: string }>();
+        const seriesReorderMap = new Map<number, string>();
         const pendingLogoRetry: { channel: Channel; mediaType: TmdbMediaType }[] = [];
         let processed = 0;
         let noQueryCount = 0;
@@ -1858,13 +1939,50 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                         targetGroupTitle = `${formattedType} - ${detectedPlatform} | ${detectedGenre}`;
                                     }
                                     const customFieldUpdates = buildTmdbFieldUpdates(tmdbDetail, tmdbExtractionFields);
+
+                                    if (executionGroup.mediaType === 'tv' && seriesTargets.length > 1) {
+                                        const targetIndices = seriesTargets
+                                            .map((t) => channels.findIndex((c) => c.id === t.id))
+                                            .filter((idx) => idx !== -1)
+                                            .sort((a, b) => a - b);
+
+                                        const sortedTargets = [...seriesTargets].sort((a, b) => getEpisodeSortKey(a) - getEpisodeSortKey(b));
+
+                                        targetIndices.forEach((pos, idx) => {
+                                            seriesReorderMap.set(pos, sortedTargets[idx].id);
+                                        });
+                                    }
+
                                     seriesTargets.forEach((target) => {
-                                        updates.set(target.id, {
+                                        const targetUpdates: Partial<Channel> & { tvgId: string } = {
                                             tvgId: String(bestResult.id),
                                             rating: tmdbDetail?.rating || undefined,
                                             ...(targetGroupTitle ? { groupTitle: targetGroupTitle } : {}),
                                             ...customFieldUpdates,
-                                        });
+                                        };
+
+                                        if (executionGroup.mediaType === 'tv') {
+                                            if (tmdbDetail?.poster) {
+                                                targetUpdates.tvgLogo = tmdbDetail.poster;
+                                                targetUpdates.poster = tmdbDetail.poster;
+                                            } else {
+                                                delete targetUpdates.tvgLogo;
+                                            }
+
+                                            const epInfo = parseEpisodeInfo(target.name, target.tvgName);
+                                            if (epInfo) {
+                                                const seriesName = tmdbDetail?.localizedName?.trim() || epInfo.cleanSeriesTitle || query;
+                                                const formattedEpName = `${seriesName} ${epInfo.formattedSuffix}`;
+                                                targetUpdates.name = formattedEpName;
+                                                targetUpdates.tvgName = formattedEpName;
+                                            }
+                                        } else {
+                                            if (!tmdbDetail?.poster) {
+                                                delete targetUpdates.tvgLogo;
+                                            }
+                                        }
+
+                                        updates.set(target.id, targetUpdates);
                                     });
                                     propagatedEpisodes += Math.max(0, seriesTargets.length - 1);
                                 } else {
@@ -1918,9 +2036,9 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                 }
             }
 
-            if (updates.size > 0) {
-                channelsHook.setChannels((prev) =>
-                    prev.map((ch) => {
+            if (updates.size > 0 || seriesReorderMap.size > 0) {
+                channelsHook.setChannels((prev) => {
+                    const updatedList = prev.map((ch) => {
                         if (!updates.has(ch.id)) return ch;
                         const update = updates.get(ch.id)!;
                         return {
@@ -1928,8 +2046,27 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                             ...update,
                             tvgId: update.tvgId || ch.tvgId,
                         };
-                    })
-                );
+                    });
+
+                    if (seriesReorderMap.size > 0) {
+                        const channelMap = new Map(updatedList.map((c) => [c.id, c]));
+                        const reordered = [...updatedList];
+
+                        for (const [pos, targetId] of seriesReorderMap.entries()) {
+                            const targetChannel = channelMap.get(targetId);
+                            if (targetChannel && pos < reordered.length) {
+                                reordered[pos] = targetChannel;
+                            }
+                        }
+
+                        return reordered.map((c, idx) => ({
+                            ...c,
+                            order: idx + 1,
+                        }));
+                    }
+
+                    return updatedList;
+                });
                 channelsHook.saveStateToHistory();
             }
 
@@ -2009,6 +2146,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         }
 
         const updates = new Map<string, Partial<Channel> & { tvgId: string }>();
+        const seriesReorderMap = new Map<number, string>();
         let processed = 0;
         let notFoundCount = 0;
         let errorCount = 0;
@@ -2049,13 +2187,49 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
 
                         const customFieldUpdates = buildTmdbFieldUpdates(detail, tmdbExtractionFields);
 
+                        if (mediaType === 'tv' && targets.length > 1) {
+                            const targetIndices = targets
+                                .map((t) => channels.findIndex((c) => c.id === t.id))
+                                .filter((idx) => idx !== -1)
+                                .sort((a, b) => a - b);
+
+                            const sortedTargets = [...targets].sort((a, b) => getEpisodeSortKey(a) - getEpisodeSortKey(b));
+
+                            targetIndices.forEach((pos, idx) => {
+                                seriesReorderMap.set(pos, sortedTargets[idx].id);
+                            });
+                        }
+
                         targets.forEach((target) => {
-                            updates.set(target.id, {
+                            const targetUpdates: Partial<Channel> & { tvgId: string } = {
                                 tvgId: String(bestResult.id),
                                 ...(targetRating ? { rating: targetRating } : {}),
                                 ...(targetGroupTitle ? { groupTitle: targetGroupTitle } : {}),
                                 ...customFieldUpdates,
-                            });
+                            };
+
+                            if (mediaType === 'tv') {
+                                if (detail?.poster) {
+                                    targetUpdates.tvgLogo = detail.poster;
+                                    targetUpdates.poster = detail.poster;
+                                } else {
+                                    delete targetUpdates.tvgLogo;
+                                }
+
+                                const epInfo = parseEpisodeInfo(target.name, target.tvgName);
+                                if (epInfo) {
+                                    const seriesName = detail?.localizedName?.trim() || epInfo.cleanSeriesTitle || query;
+                                    const formattedEpName = `${seriesName} ${epInfo.formattedSuffix}`;
+                                    targetUpdates.name = formattedEpName;
+                                    targetUpdates.tvgName = formattedEpName;
+                                }
+                            } else {
+                                if (!detail?.poster) {
+                                    delete targetUpdates.tvgLogo;
+                                }
+                            }
+
+                            updates.set(target.id, targetUpdates);
                         });
                         propagatedEpisodes += Math.max(0, targets.length - 1);
                     } catch {
@@ -2067,16 +2241,37 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                 }));
             }
 
-            if (updates.size > 0) {
-                channelsHook.setChannels((previous) => previous.map((channel) => {
-                    const update = updates.get(channel.id);
-                    if (!update) return channel;
+            if (updates.size > 0 || seriesReorderMap.size > 0) {
+                channelsHook.setChannels((previous) => {
+                    const updatedList = previous.map((channel) => {
+                        const update = updates.get(channel.id);
+                        if (!update) return channel;
 
-                    return {
-                        ...channel,
-                        ...update,
-                    };
-                }));
+                        return {
+                            ...channel,
+                            ...update,
+                        };
+                    });
+
+                    if (seriesReorderMap.size > 0) {
+                        const channelMap = new Map(updatedList.map((c) => [c.id, c]));
+                        const reordered = [...updatedList];
+
+                        for (const [pos, targetId] of seriesReorderMap.entries()) {
+                            const targetChannel = channelMap.get(targetId);
+                            if (targetChannel && pos < reordered.length) {
+                                reordered[pos] = targetChannel;
+                            }
+                        }
+
+                        return reordered.map((c, idx) => ({
+                            ...c,
+                            order: idx + 1,
+                        }));
+                    }
+
+                    return updatedList;
+                });
                 channelsHook.saveStateToHistory();
             }
 
