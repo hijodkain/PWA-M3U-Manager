@@ -2052,12 +2052,12 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                         const channelMap = new Map(updatedList.map((c) => [c.id, c]));
                         const reordered = [...updatedList];
 
-                        for (const [pos, targetId] of seriesReorderMap.entries()) {
+                        seriesReorderMap.forEach((targetId, pos) => {
                             const targetChannel = channelMap.get(targetId);
                             if (targetChannel && pos < reordered.length) {
                                 reordered[pos] = targetChannel;
                             }
-                        }
+                        });
 
                         return reordered.map((c, idx) => ({
                             ...c,
@@ -2257,12 +2257,12 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                         const channelMap = new Map(updatedList.map((c) => [c.id, c]));
                         const reordered = [...updatedList];
 
-                        for (const [pos, targetId] of seriesReorderMap.entries()) {
+                        seriesReorderMap.forEach((targetId, pos) => {
                             const targetChannel = channelMap.get(targetId);
                             if (targetChannel && pos < reordered.length) {
                                 reordered[pos] = targetChannel;
                             }
-                        }
+                        });
 
                         return reordered.map((c, idx) => ({
                             ...c,
