@@ -1,6 +1,6 @@
 # PWA M3U Manager - Instrucciones para Agentes de IA
 
-## 📌 VERSIÓN ACTUAL: v1.10.0
+## 📌 VERSIÓN ACTUAL: v1.10.1
 
 ### 🔢 Política de Versionado Semántico
 La versión se muestra en el header de la app (`PWAM3UManager.tsx`) y **solo debe actualizarse al hacer merge a main**. No se actualiza en commits intermedios dentro de una rama feature.
@@ -258,6 +258,9 @@ El `.gitignore` ya está configurado correctamente. NO modificar sin razón.
 6. **Gestión de Historial**: Llamar `saveStateToHistory()` después de actualizaciones masivas de canales para undo/redo
 
 ## 🆕 Actualizaciones Recientes
+
+### v1.10.1 - Normalización de Plataformas para Grupos TMDB
+- **Nombres de plataforma unificados**: Los grupos generados por TMDB usan exactamente `Netflix`, `Amazon` (reemplazando a PRIME), `Apple TV+`, `Movistar+` (reemplazando a M+) y `HBO`. Todas las demás o sin coincidencia se asignan a `VOD`.
 
 ### v1.10.0 - Año en Nombre TMDB y Copia Nombre ↔ tvg-name
 - **Año de estreno en Nombre TMDB**: Al marcar "Nombre en España", se concatena el año entre paréntesis (ej: `Nombre (2008)`), obtenido de la fecha de estreno en TMDB y sin duplicar si ya estaba presente.

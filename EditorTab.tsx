@@ -1273,10 +1273,10 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
 
     const ALLOWED_STREAMING_PLATFORMS: Array<{ match: RegExp; name: string }> = [
         { match: /\b(netflix)\b/i, name: 'Netflix' },
+        { match: /\b(prime\s*video|amazon\s*prime|prime|amazon)\b/i, name: 'Amazon' },
+        { match: /\b(apple\s*tv\+?|apple\s*tv)\b/i, name: 'Apple TV+' },
+        { match: /\b(movistar\+?|movistar\s*plus|\bm\+(?!\w))\b/i, name: 'Movistar+' },
         { match: /\b(hbo|max)\b/i, name: 'HBO' },
-        { match: /\b(disney\+?|disney\s*plus)\b/i, name: 'Disney+' },
-        { match: /\bmovistar\b|\bm\+(?!\w)/i, name: 'M+' },
-        { match: /\b(prime\s*video|amazon\s*prime|prime|amazon)\b/i, name: 'PRIME' },
     ];
 
     const detectTmdbPlatform = (
