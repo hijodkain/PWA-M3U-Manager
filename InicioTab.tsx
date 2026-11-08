@@ -123,9 +123,12 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
     // Auto-load Logic
     useEffect(() => {
         if (triggerLoad && url) {
-            handleFetchUrl();
             setTriggerLoad(false);
-            setShouldNavigateAfterLoad(true);
+            const runLoad = async () => {
+                await handleFetchUrl();
+                setShouldNavigateAfterLoad(true);
+            };
+            runLoad();
         }
     }, [triggerLoad, url, handleFetchUrl]);
 
@@ -831,13 +834,14 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                 alert("Error cargando lista local");
             }
         } else {
-            selectAndLoad(item.url);
+            await selectAndLoad(item.url);
         }
     };
 
-    const selectAndLoad = (u: string) => {
+    const selectAndLoad = async (u: string) => {
         setUrl(u);
-        setTriggerLoad(true);
+        await handleFetchUrl(u);
+        setShouldNavigateAfterLoad(true);
     };
 
     const normalizeIptvUrl = (rawUrl: string): { fetchUrl: string; suggestedName: string } => {
@@ -1274,9 +1278,9 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                                     />
                                 </div>
                                 <button 
-                                    onClick={() => {
+                                    onClick={async () => {
+                                        await handleFetchUrl();
                                         setShouldNavigateAfterLoad(true);
-                                        handleFetchUrl();
                                     }}
                                     disabled={isLoading || !url}
                                     className="bg-blue-600 hover:bg-blue-700 text-white px-4 rounded-lg font-medium flex items-center gap-2 disabled:opacity-50 text-sm"

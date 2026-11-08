@@ -267,6 +267,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
 
     useEffect(() => {
         if (!medicinaSearchInputRef.current) return;
+        if (selectedMedicinaLettersCount === 0 && document.activeElement !== medicinaSearchInputRef.current) return;
         medicinaSearchInputRef.current.focus();
         medicinaSearchInputRef.current.setSelectionRange(0, selectedMedicinaLettersCount);
     }, [selectedMedicinaLettersCount]);
@@ -683,6 +684,8 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         setReparacionListName('');
         setReparacionUrl('');
         setReparacionChannels([]);
+        setReparacionListFilter('Todos los canales');
+        setReparacionListSearch('');
         setHasPendingReparacionChanges(false);
     };
 
@@ -1154,13 +1157,13 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     )}
                                 </div>
                             )}
-                            {!reparacionListName && savedMedicinaLists.length > 0 && (
+                            {savedMedicinaLists.length > 0 && (
                                 <select
                                     onChange={(e) => loadRepairList(e.target.value)}
                                     value=""
                                     className="w-48 bg-gray-900 border border-gray-600 text-xs rounded-lg px-2 py-1.5 text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                                 >
-                                    <option value="">Cargar guardada...</option>
+                                    <option value="">{reparacionListName ? 'Cambiar lista...' : 'Cargar guardada...'}</option>
                                     {savedMedicinaLists.map(l => (
                                         <option key={l.id} value={l.id}>{l.name}</option>
                                     ))}

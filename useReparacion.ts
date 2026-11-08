@@ -465,6 +465,9 @@ export const useReparacion = (
             const { type, channels, message } = event.data;
             if (type === 'success') {
                 setReparacionChannels(channels);
+                setReparacionListFilter('Todos los canales');
+                setSelectedReparacionChannels(new Set());
+                setLastSelectedIndex(null);
             } else {
                 setCurationError(message);
             }
@@ -655,6 +658,25 @@ export const useReparacion = (
         () => ['Todos los canales', ...Array.from(new Set(reparacionChannels.map((c) => c.groupTitle).filter(Boolean)))],
         [reparacionChannels]
     );
+
+    // Resetear filtros de lista principal si dejan de existir al cargar una nueva lista
+    useEffect(() => {
+        if (mainListFilter !== 'Todos los canales' && !mainListUniqueGroups.includes(mainListFilter)) {
+            setMainListFilter('Todos los canales');
+        }
+    }, [mainListUniqueGroups, mainListFilter]);
+
+    useEffect(() => {
+        if (mainDomainFilter !== 'Todos los dominios' && !mainListUniqueDomains.includes(mainDomainFilter)) {
+            setMainDomainFilter('Todos los dominios');
+        }
+    }, [mainListUniqueDomains, mainDomainFilter]);
+
+    useEffect(() => {
+        if (reparacionListFilter !== 'Todos los canales' && !reparacionListUniqueGroups.includes(reparacionListFilter)) {
+            setReparacionListFilter('Todos los canales');
+        }
+    }, [reparacionListUniqueGroups, reparacionListFilter]);
 
     const filteredMainChannels = useMemo(() => {
         let channels = mainChannels;

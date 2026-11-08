@@ -69,6 +69,13 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
             if (type === 'success') {
                 setChannels(channels);
                 setSelectedChannels([]);
+                setFilterGroup('Todos los canales');
+                setMainDomainFilter('Todos los dominios');
+                setStatusFilter('Todos');
+                setLastSelectedId(null);
+                setHistory([]);
+                setRedoHistory([]);
+                setFailedChannels([]);
             } else {
                 setError(message);
             }
@@ -85,8 +92,9 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
         worker.postMessage(content);
     };
 
-    const handleFetchUrl = async () => {
-        if (!url) {
+    const handleFetchUrl = async (urlOverride?: string) => {
+        const targetUrl = urlOverride ?? url;
+        if (!targetUrl) {
             setError('Por favor, introduce una URL.');
             return;
         }
@@ -94,7 +102,7 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
         setError(null);
         try {
             // Detectar si es una URL blob (generada por YouTube Live)
-            if (url.startsWith('blob:')) {
+            if (targetUrl.startsWith('blob:')) {
                 // Para URLs blob, usar el contenido guardado en localStorage
                 const youtubeContent = localStorage.getItem('youtube_m3u_content');
                 if (youtubeContent) {
@@ -103,7 +111,7 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
                     return;
                 } else {
                     // Si no hay contenido guardado, intentar fetch directo de la URL blob
-                    const response = await fetch(url);
+                    const response = await fetch(targetUrl);
                     if (!response.ok) {
                         throw new Error(`Error al cargar la lista: ${response.statusText}`);
                     }
@@ -115,14 +123,14 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
             }
             
             // Para URLs normales, usar el proxy como antes
-            const proxyUrl = `/api/proxy?url=${encodeURIComponent(url)}`;
+            const proxyUrl = `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
             const response = await fetch(proxyUrl);
             if (!response.ok) {
                 throw new Error(`Error al descargar la lista: ${response.statusText}`);
             }
             const text = await response.text();
             processM3UContent(text);
-            const extractedFname = extractDropboxFileName(url);
+            const extractedFname = extractDropboxFileName(targetUrl);
             if (extractedFname) {
                 setFileName(extractedFname);
                 setOriginalFileName(extractedFname);
