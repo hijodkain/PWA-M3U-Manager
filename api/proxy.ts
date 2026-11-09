@@ -41,10 +41,11 @@ function detectarManifiestoPorContenido(buffer) {
         .trimStart();
 
     const esHls = preview.startsWith('#EXTM3U') && esManifiestoHLS(preview);
+    const esM3uPlaylist = preview.startsWith('#EXTM3U') || preview.startsWith('#EXTINF');
     const esDash = preview.startsWith('<MPD') || preview.startsWith('<?xml') && preview.includes('<MPD');
 
     return {
-        esTexto: esHls || esDash,
+        esTexto: esHls || esM3uPlaylist || esDash,
         esHls,
         esDash,
         preview,
@@ -110,10 +111,12 @@ const handler = async (req, res) => {
 
     try {
         let fetchUrl = url;
-        if (url.includes('dropbox.com')) {
+        const isDropboxUrl = url.includes('dropbox.com') || url.includes('dropboxusercontent.com');
+        if (isDropboxUrl) {
             // Consistently transform to a direct download link
             const urlObject = new URL(url.replace('www.dropbox.com', 'dl.dropboxusercontent.com'));
             urlObject.searchParams.set('dl', '1');
+            urlObject.searchParams.set('raw', '1');
             fetchUrl = urlObject.toString();
             console.log(`Transformed Dropbox URL to: ${fetchUrl}`);
         }
@@ -125,9 +128,13 @@ const handler = async (req, res) => {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Accept': '*/*',
             'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
-            'Origin': upstreamUrl.origin,
-            'Referer': upstreamUrl.origin + '/',
         };
+
+        // No enviar Origin/Referer artificiales a Dropbox para evitar bloqueos o redirecciones HTML
+        if (!isDropboxUrl) {
+            upstreamHeaders.Origin = upstreamUrl.origin;
+            upstreamHeaders.Referer = upstreamUrl.origin + '/';
+        }
 
         if (typeof req.headers.range === 'string') {
             upstreamHeaders.Range = req.headers.range;
@@ -136,14 +143,16 @@ const handler = async (req, res) => {
         const response = await fetch(fetchUrl, {
             headers: upstreamHeaders,
             signal: controller.signal,
+            redirect: 'follow',
         });
         clearTimeout(timeoutId);
 
         console.log(`Fetched URL: ${fetchUrl}, Status: ${response.status}`);
         if (!response.ok) {
-            console.error(`Failed to fetch: ${response.statusText}`);
-            // Forward the status code from the external server
-            return res.status(response.status).send(response.statusText);
+            const upstreamErrorBody = await response.text().catch(() => '');
+            const statusDetail = response.statusText || `HTTP ${response.status}`;
+            console.error(`Failed to fetch (${response.status}): ${statusDetail}`);
+            return res.status(response.status).send(upstreamErrorBody ? `${statusDetail}: ${upstreamErrorBody.slice(0, 200)}` : statusDetail);
         }
 
         const contentType = response.headers.get('content-type') || 'application/octet-stream';

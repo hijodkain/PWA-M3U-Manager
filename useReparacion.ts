@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { Channel, AttributeKey, QualityLevel, ChannelStatus } from './index';
 import { useSmartSearch, SearchMatch } from './useSmartSearch';
 import { trackVercelCall } from './utils/usageTracking';
+import { fetchM3UContentFromUrl } from './utils/m3uFetch';
 
 interface ChannelVerificationInfo {
     status: ChannelStatus;
@@ -517,13 +518,8 @@ export const useReparacion = (
                 }
             }
             
-            // Para URLs normales, usar el proxy como antes
-            const proxyUrl = `/api/proxy?url=${encodeURIComponent(urlToLoad)}`;
-            const response = await fetch(proxyUrl);
-            if (!response.ok) {
-                throw new Error(`Error al descargar la lista: ${response.statusText}`);
-            }
-            const text = await response.text();
+            // Para URLs normales o de Dropbox, usar el descargador con soporte de API Dropbox y fallback de proxy
+            const text = await fetchM3UContentFromUrl(urlToLoad);
             return await processCurationM3U(text);
         } catch (error) {
             console.error('Failed to load from URL', error);

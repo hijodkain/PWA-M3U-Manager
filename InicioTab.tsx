@@ -4,6 +4,7 @@ import { useChannels } from './useChannels';
 import { useSettings } from './useSettings';
 import { useSmartSearch } from './useSmartSearch';
 import { getStorageItem, setStorageItem, removeStorageItem } from './utils/storage';
+import { fetchM3UContentFromUrl } from './utils/m3uFetch';
 
 interface InicioTabProps {
     channelsHook: ReturnType<typeof useChannels>;
@@ -717,21 +718,13 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
 
         setRefreshingMedicinaListId(list.id);
         try {
-            const currentResponse = await fetch(`/api/proxy?url=${encodeURIComponent(list.url)}`);
-            if (!currentResponse.ok) {
-                throw new Error(`No se pudo descargar la lista de Dropbox (${currentResponse.status}).`);
-            }
-            const currentContent = await currentResponse.text();
+            const currentContent = await fetchM3UContentFromUrl(list.url);
             const sourceUrl = list.sourceUrl || getSourceUrlFromContent(currentContent);
             if (!sourceUrl) {
                 throw new Error('Esta lista no incluye la URL de origen. Vuelve a crearla desde una URL para poder actualizarla.');
             }
 
-            const sourceResponse = await fetch(`/api/proxy?url=${encodeURIComponent(sourceUrl)}`);
-            if (!sourceResponse.ok) {
-                throw new Error(`No se pudo descargar la lista de origen (${sourceResponse.status}).`);
-            }
-            const sourceContent = await sourceResponse.text();
+            const sourceContent = await fetchM3UContentFromUrl(sourceUrl);
             if (!sourceContent.trimStart().startsWith('#EXTM3U') && !sourceContent.trimStart().startsWith('#EXT')) {
                 throw new Error('La URL de origen no ha devuelto una lista M3U válida.');
             }
@@ -967,11 +960,7 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
         setMedicinaError('');
         try {
             const { fetchUrl, suggestedName } = normalizeIptvUrl(medicinaUrl);
-
-            const proxyUrl = `/api/proxy?url=${encodeURIComponent(fetchUrl)}`;
-            const response = await fetch(proxyUrl);
-            if (!response.ok) throw new Error(`Error ${response.status}: ${response.statusText}`);
-            const content = await response.text();
+            const content = await fetchM3UContentFromUrl(fetchUrl);
 
             // Validate it's actually an M3U playlist
             const trimmed = content.trimStart();

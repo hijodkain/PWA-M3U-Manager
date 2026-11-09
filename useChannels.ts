@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { arrayMove } from '@dnd-kit/sortable';
 import { Channel, ChannelStatus } from './index';
+import { fetchM3UContentFromUrl } from './utils/m3uFetch';
 
 function extractDropboxFileName(url: string): string | null {
     if (!url) {
@@ -132,13 +133,8 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
                 }
             }
             
-            // Para URLs normales, usar el proxy como antes
-            const proxyUrl = `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
-            const response = await fetch(proxyUrl);
-            if (!response.ok) {
-                throw new Error(`Error al descargar la lista: ${response.statusText}`);
-            }
-            const text = await response.text();
+            // Para URLs normales o de Dropbox, usar el descargador con soporte de API Dropbox y fallback de proxy
+            const text = await fetchM3UContentFromUrl(targetUrl);
             const extractedFname = extractDropboxFileName(targetUrl);
             if (extractedFname) {
                 setFileName(extractedFname);
