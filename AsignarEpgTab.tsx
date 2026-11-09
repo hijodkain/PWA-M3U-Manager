@@ -118,12 +118,6 @@ const AsignarEpgTab: React.FC<AsignarEpgTabProps> = ({ epgHook, channelsHook, se
         return ['all', ...Array.from(groups)];
     }, [channels]);
 
-    useEffect(() => {
-        if (selectedGroup !== 'all' && !channelGroups.includes(selectedGroup)) {
-            setSelectedGroup('all');
-        }
-    }, [channelGroups, selectedGroup]);
-
     const getChannelAssignmentValue = useCallback((channel: Channel) => {
         const value = assignmentMode === 'tvg-id' ? channel.tvgId : channel.tvgName;
         return value?.trim() || '';
