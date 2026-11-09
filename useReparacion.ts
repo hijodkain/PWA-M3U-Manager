@@ -453,37 +453,50 @@ export const useReparacion = (
         verifyChannelsWithLimit(channelsToVerify);
     };
 
-    const processCurationM3U = useCallback((content: string) => {
+    const processCurationM3U = useCallback((content: string): Promise<boolean> => {
         setIsCurationLoading(true);
         setCurationError(null);
 
-        const worker = new Worker(new URL('./m3u-parser.worker.ts', import.meta.url), {
-            type: 'module',
+        return new Promise((resolve) => {
+            const worker = new Worker(new URL('./m3u-parser.worker.ts', import.meta.url), {
+                type: 'module',
+            });
+
+            worker.onmessage = (event) => {
+                const { type, channels, message } = event.data;
+                if (type === 'success') {
+                    setReparacionChannels(channels);
+                    setReparacionListFilter('Todos los canales');
+                    setReparacionListSearch('');
+                    setDebouncedReparacionSearch('');
+                    setSelectedReparacionChannels(new Set());
+                    setLastSelectedIndex(null);
+                    setSmartSearchResults([]);
+                    setIsCurationLoading(false);
+                    worker.terminate();
+                    resolve(true);
+                } else {
+                    setCurationError(message);
+                    setIsCurationLoading(false);
+                    worker.terminate();
+                    resolve(false);
+                }
+            };
+
+            worker.onerror = (error) => {
+                setCurationError(`Worker error: ${error.message}`);
+                setIsCurationLoading(false);
+                worker.terminate();
+                resolve(false);
+            };
+
+            worker.postMessage(content);
         });
-
-        worker.onmessage = (event) => {
-            const { type, channels, message } = event.data;
-            if (type === 'success') {
-                setReparacionChannels(channels);
-            } else {
-                setCurationError(message);
-            }
-            setIsCurationLoading(false);
-            worker.terminate();
-        };
-
-        worker.onerror = (error) => {
-            setCurationError(`Worker error: ${error.message}`);
-            setIsCurationLoading(false);
-            worker.terminate();
-        };
-
-        worker.postMessage(content);
     }, []);
 
-    const handleReparacionUrlLoad = async (urlOverride?: string) => {
-        const urlToLoad = urlOverride || reparacionUrl;
-        if (!urlToLoad) return;
+    const handleReparacionUrlLoad = useCallback(async (urlOverride?: string): Promise<boolean> => {
+        const urlToLoad = (urlOverride || reparacionUrl).trim();
+        if (!urlToLoad) return false;
         setIsCurationLoading(true);
         setCurationError(null);
         try {
@@ -492,8 +505,7 @@ export const useReparacion = (
                 // Para URLs blob, usar el contenido guardado en localStorage
                 const youtubeContent = localStorage.getItem('youtube_m3u_content');
                 if (youtubeContent) {
-                    processCurationM3U(youtubeContent);
-                    return;
+                    return await processCurationM3U(youtubeContent);
                 } else {
                     // Si no hay contenido guardado, intentar fetch directo de la URL blob
                     const response = await fetch(urlToLoad);
@@ -501,8 +513,7 @@ export const useReparacion = (
                         throw new Error(`Error al cargar la lista: ${response.statusText}`);
                     }
                     const text = await response.text();
-                    processCurationM3U(text);
-                    return;
+                    return await processCurationM3U(text);
                 }
             }
             
@@ -513,13 +524,14 @@ export const useReparacion = (
                 throw new Error(`Error al descargar la lista: ${response.statusText}`);
             }
             const text = await response.text();
-            processCurationM3U(text);
+            return await processCurationM3U(text);
         } catch (error) {
             console.error('Failed to load from URL', error);
             setCurationError(error instanceof Error ? error.message : 'Ocurrió un error desconocido.');
             setIsCurationLoading(false);
+            return false;
         }
-    };
+    }, [reparacionUrl, processCurationM3U]);
 
     const executeBulkAction = (actionType: string, filteredChannels: Channel[]) => {
         saveStateToHistory();
@@ -575,24 +587,47 @@ export const useReparacion = (
     }, [mainChannels, verificationInfo]);
 
 
-    const handleReparacionFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleReparacionFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>): Promise<boolean> => {
         const file = event.target.files?.[0];
-        if (!file) return;
+        if (!file) return Promise.resolve(false);
         setIsCurationLoading(true);
         setCurationError(null);
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const content = e.target?.result as string;
-            if (content) {
-                processCurationM3U(content);
-            } else {
-                setCurationError('No se pudo leer el contenido del archivo.');
+
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const content = e.target?.result as string;
+                if (content) {
+                    const ok = await processCurationM3U(content);
+                    resolve(ok);
+                } else {
+                    setCurationError('No se pudo leer el contenido del archivo.');
+                    setIsCurationLoading(false);
+                    resolve(false);
+                }
+            };
+            reader.onerror = () => {
+                setCurationError('No se pudo leer el archivo.');
                 setIsCurationLoading(false);
-            }
-        };
-        reader.readAsText(file);
-        event.target.value = '';
-    };
+                resolve(false);
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        });
+    }, [processCurationM3U]);
+
+    const clearReparacionList = useCallback(() => {
+        setReparacionListName('');
+        setReparacionUrl('');
+        setReparacionChannels([]);
+        setReparacionListFilter('Todos los canales');
+        setReparacionListSearch('');
+        setDebouncedReparacionSearch('');
+        setSelectedReparacionChannels(new Set());
+        setLastSelectedIndex(null);
+        setSmartSearchResults([]);
+        setCurationError(null);
+    }, []);
 
     const toggleAttributeToCopy = (attribute: AttributeKey) => {
         setAttributesToCopy(prev => {
@@ -655,6 +690,25 @@ export const useReparacion = (
         () => ['Todos los canales', ...Array.from(new Set(reparacionChannels.map((c) => c.groupTitle).filter(Boolean)))],
         [reparacionChannels]
     );
+
+    // Salvaguarda: restablecer filtros si el grupo o dominio ya no existen en la lista actual
+    useEffect(() => {
+        if (mainListFilter !== 'Todos los canales' && !mainListUniqueGroups.includes(mainListFilter)) {
+            setMainListFilter('Todos los canales');
+        }
+    }, [mainListUniqueGroups, mainListFilter]);
+
+    useEffect(() => {
+        if (mainDomainFilter !== 'Todos los dominios' && !mainListUniqueDomains.includes(mainDomainFilter)) {
+            setMainDomainFilter('Todos los dominios');
+        }
+    }, [mainListUniqueDomains, mainDomainFilter]);
+
+    useEffect(() => {
+        if (reparacionListFilter !== 'Todos los canales' && !reparacionListUniqueGroups.includes(reparacionListFilter)) {
+            setReparacionListFilter('Todos los canales');
+        }
+    }, [reparacionListUniqueGroups, reparacionListFilter]);
 
     const filteredMainChannels = useMemo(() => {
         let channels = mainChannels;
@@ -940,6 +994,7 @@ export const useReparacion = (
         reparacionListFilter,
         setReparacionListFilter,
         deleteChannelsBySelectedGroups,
+        clearReparacionList,
         handleReparacionFileUpload,
         processCurationM3U,
         toggleAttributeToCopy,

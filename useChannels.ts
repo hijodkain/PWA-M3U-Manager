@@ -56,107 +56,132 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
     const [isVerifying, setIsVerifying] = useState(false);
     const [verificationProgress, setVerificationProgress] = useState(0);
 
-    const processM3UContent = (content: string) => {
+    const processM3UContent = useCallback((content: string): Promise<boolean> => {
         setIsLoading(true);
         setError(null);
 
-        const worker = new Worker(new URL('./m3u-parser.worker.ts', import.meta.url), {
-            type: 'module',
+        return new Promise((resolve) => {
+            const worker = new Worker(new URL('./m3u-parser.worker.ts', import.meta.url), {
+                type: 'module',
+            });
+
+            worker.onmessage = (event) => {
+                const { type, channels: parsedChannels, message } = event.data;
+                if (type === 'success') {
+                    setChannels(parsedChannels);
+                    setSelectedChannels([]);
+                    setLastSelectedId(null);
+                    setFilterGroup('Todos los canales');
+                    setMainDomainFilter('Todos los dominios');
+                    setStatusFilter('Todos');
+                    setHistory([]);
+                    setRedoHistory([]);
+                    setFailedChannels([]);
+                    setIsLoading(false);
+                    worker.terminate();
+                    resolve(true);
+                } else {
+                    setError(message);
+                    setIsLoading(false);
+                    worker.terminate();
+                    resolve(false);
+                }
+            };
+
+            worker.onerror = (workerError) => {
+                setError(`Worker error: ${workerError.message}`);
+                setIsLoading(false);
+                worker.terminate();
+                resolve(false);
+            };
+
+            worker.postMessage(content);
         });
+    }, [setFailedChannels]);
 
-        worker.onmessage = (event) => {
-            const { type, channels, message } = event.data;
-            if (type === 'success') {
-                setChannels(channels);
-                setSelectedChannels([]);
-            } else {
-                setError(message);
-            }
-            setIsLoading(false);
-            worker.terminate();
-        };
-
-        worker.onerror = (error) => {
-            setError(`Worker error: ${error.message}`);
-            setIsLoading(false);
-            worker.terminate();
-        };
-
-        worker.postMessage(content);
-    };
-
-    const handleFetchUrl = async () => {
-        if (!url) {
+    const handleFetchUrl = useCallback(async (urlOverride?: string): Promise<boolean> => {
+        const targetUrl = (urlOverride ?? url).trim();
+        if (!targetUrl) {
             setError('Por favor, introduce una URL.');
-            return;
+            return false;
+        }
+        if (urlOverride !== undefined) {
+            setUrl(targetUrl);
         }
         setIsLoading(true);
         setError(null);
         try {
             // Detectar si es una URL blob (generada por YouTube Live)
-            if (url.startsWith('blob:')) {
+            if (targetUrl.startsWith('blob:')) {
                 // Para URLs blob, usar el contenido guardado en localStorage
                 const youtubeContent = localStorage.getItem('youtube_m3u_content');
                 if (youtubeContent) {
-                    processM3UContent(youtubeContent);
                     setFileName('YouTube Live');
-                    return;
+                    setOriginalFileName('YouTube Live');
+                    return await processM3UContent(youtubeContent);
                 } else {
                     // Si no hay contenido guardado, intentar fetch directo de la URL blob
-                    const response = await fetch(url);
+                    const response = await fetch(targetUrl);
                     if (!response.ok) {
                         throw new Error(`Error al cargar la lista: ${response.statusText}`);
                     }
                     const text = await response.text();
-                    processM3UContent(text);
                     setFileName('YouTube Live');
-                    return;
+                    setOriginalFileName('YouTube Live');
+                    return await processM3UContent(text);
                 }
             }
             
             // Para URLs normales, usar el proxy como antes
-            const proxyUrl = `/api/proxy?url=${encodeURIComponent(url)}`;
+            const proxyUrl = `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
             const response = await fetch(proxyUrl);
             if (!response.ok) {
                 throw new Error(`Error al descargar la lista: ${response.statusText}`);
             }
             const text = await response.text();
-            processM3UContent(text);
-            const extractedFname = extractDropboxFileName(url);
+            const extractedFname = extractDropboxFileName(targetUrl);
             if (extractedFname) {
                 setFileName(extractedFname);
                 setOriginalFileName(extractedFname);
             }
+            return await processM3UContent(text);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Ocurrió un error desconocido.');
-            setIsLoading(false); // Also set loading to false on fetch error
+            setIsLoading(false);
+            return false;
         }
-    };
+    }, [url, processM3UContent]);
 
-    const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>): Promise<boolean> => {
         const file = event.target.files?.[0];
-        if (!file) return;
+        if (!file) return Promise.resolve(false);
         setIsLoading(true);
         setError(null);
         setFileName(file.name);
         setOriginalFileName(file.name);
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const content = e.target?.result as string;
-            if (content) {
-                processM3UContent(content);
-            } else {
-                setError('No se pudo leer el contenido del archivo.');
+
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const content = e.target?.result as string;
+                if (content) {
+                    const ok = await processM3UContent(content);
+                    resolve(ok);
+                } else {
+                    setError('No se pudo leer el contenido del archivo.');
+                    setIsLoading(false);
+                    resolve(false);
+                }
+            };
+            reader.onerror = () => {
+                setError('No se pudo leer el archivo.');
                 setIsLoading(false);
-            }
-        };
-        reader.onerror = () => {
-            setError('No se pudo leer el archivo.');
-            setIsLoading(false);
-        };
-        reader.readAsText(file);
-        event.target.value = '';
-    };
+                resolve(false);
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        });
+    }, [processM3UContent]);
 
     const handleAddNewChannel = () => {
         const newChannel: Channel = {
@@ -383,6 +408,19 @@ export const useChannels = (setFailedChannels: React.Dispatch<React.SetStateActi
 
         return ['Todos los dominios', ...Array.from(new Set(domains)).sort((a, b) => a.localeCompare(b))];
     }, [channels]);
+
+    // Salvaguarda: si el grupo o dominio filtrado ya no existe en la lista actual, restablecer al valor por defecto
+    useEffect(() => {
+        if (filterGroup !== 'Todos los canales' && !uniqueGroups.includes(filterGroup)) {
+            setFilterGroup('Todos los canales');
+        }
+    }, [uniqueGroups, filterGroup]);
+
+    useEffect(() => {
+        if (mainDomainFilter !== 'Todos los dominios' && !uniqueDomains.includes(mainDomainFilter)) {
+            setMainDomainFilter('Todos los dominios');
+        }
+    }, [uniqueDomains, mainDomainFilter]);
 
     const filteredChannels = useMemo(
         () => channels.filter((channel) => {

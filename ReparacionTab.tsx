@@ -81,6 +81,7 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
         reparacionListFilter,
         setReparacionListFilter,
         deleteChannelsBySelectedGroups,
+        clearReparacionList,
         handleReparacionFileUpload,
         processCurationM3U,
         toggleAttributeToCopy,
@@ -312,21 +313,20 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
 
     // Actualizar nombre de lista cuando se carga por URL
     const onUrlLoad = async () => {
-        const urlToLoad = reparacionUrl;
-        await handleReparacionUrlLoad();
+        const urlToLoad = reparacionUrl.trim();
+        if (!urlToLoad) return;
+        const ok = await handleReparacionUrlLoad(urlToLoad);
+        if (!ok) return;
         setHasPendingReparacionChanges(false);
-        if (urlToLoad) {
-            try {
-                const urlObj = new URL(urlToLoad);
-                let name = urlObj.pathname.split('/').pop() || 'Lista Medicina';
-                // Si es un enlace de dropbox, intentar sacar el nombre del dl=
-                if (urlToLoad.includes('dropbox') && name === 'file') {
-                    name = 'Lista de Dropbox';
-                }
-                setReparacionListName(name);
-            } catch (e) {
-                setReparacionListName('Lista Medicina URL');
+        try {
+            const urlObj = new URL(urlToLoad);
+            let name = urlObj.pathname.split('/').pop() || 'Lista Medicina';
+            if (urlToLoad.includes('dropbox') && name === 'file') {
+                name = 'Lista de Dropbox';
             }
+            setReparacionListName(name);
+        } catch (e) {
+            setReparacionListName('Lista Medicina URL');
         }
     };
 
@@ -334,9 +334,12 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
     const onFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            setReparacionListName(file.name);
-            await handleReparacionFileUpload(e);
-            setHasPendingReparacionChanges(false);
+            const fileNameToSet = file.name;
+            const ok = await handleReparacionFileUpload(e);
+            if (ok) {
+                setReparacionListName(fileNameToSet);
+                setHasPendingReparacionChanges(false);
+            }
         }
     };
 
@@ -663,26 +666,27 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
     // Load Repair List Logic
     const loadRepairList = async (listId: string) => {
         const list = savedMedicinaLists.find(l => l.id === listId);
-        if(!list) return;
+        if (!list) return;
 
-        setReparacionListName(list.name);
         setHasPendingReparacionChanges(false);
         
         if (list.url === 'local' && list.content) {
-            // Emulate file upload
-            const file = new File([list.content], `${list.name}.m3u`, { type: 'text/plain' });
-             // @ts-ignore
-            await handleReparacionFileUpload({ target: { files: [file] } } as any);
+            const ok = await processCurationM3U(list.content);
+            if (ok) {
+                setReparacionListName(list.name);
+            }
         } else {
             setReparacionUrl(list.url);
-            handleReparacionUrlLoad(list.url);
+            const ok = await handleReparacionUrlLoad(list.url);
+            if (ok) {
+                setReparacionListName(list.name);
+            }
         }
     };
 
     const clearReparacion = () => {
-        setReparacionListName('');
-        setReparacionUrl('');
-        setReparacionChannels([]);
+        clearReparacionList();
+        setSelectedMedicinaLettersCount(0);
         setHasPendingReparacionChanges(false);
     };
 
@@ -1154,13 +1158,15 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                     )}
                                 </div>
                             )}
-                            {!reparacionListName && savedMedicinaLists.length > 0 && (
+                            {savedMedicinaLists.length > 0 && (
                                 <select
-                                    onChange={(e) => loadRepairList(e.target.value)}
+                                    onChange={(e) => {
+                                        if (e.target.value) loadRepairList(e.target.value);
+                                    }}
                                     value=""
-                                    className="w-48 bg-gray-900 border border-gray-600 text-xs rounded-lg px-2 py-1.5 text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                    className="w-40 sm:w-48 bg-gray-900 border border-gray-600 text-xs rounded-lg px-2 py-1.5 text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                                 >
-                                    <option value="">Cargar guardada...</option>
+                                    <option value="">{reparacionListName ? 'Cambiar lista...' : 'Cargar guardada...'}</option>
                                     {savedMedicinaLists.map(l => (
                                         <option key={l.id} value={l.id}>{l.name}</option>
                                     ))}
@@ -1178,7 +1184,12 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                                 onChange={(e) => setReparacionUrl(e.target.value)}
                                 className="flex-1 min-w-[150px] bg-gray-900 border border-gray-600 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
                             />
-                            <button onClick={() => onUrlLoad()} className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm font-medium">
+                            <button
+                                onClick={() => onUrlLoad()}
+                                disabled={isCurationLoading || !reparacionUrl.trim()}
+                                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-3 py-1.5 rounded text-sm font-medium flex items-center gap-1"
+                            >
+                                {isCurationLoading && <RefreshCw size={13} className="animate-spin" />}
                                 Cargar
                             </button>
                             <div className="w-px h-6 bg-gray-600 mx-1"></div>
@@ -1188,6 +1199,11 @@ const ReparacionTab: React.FC<ReparacionTabProps> = ({ reparacionHook, channelsH
                             </label>
                         </div>
                     ) : null}
+                    {curationError && (
+                        <div className="mt-2 p-2 bg-red-900/30 border border-red-800/60 rounded text-red-300 text-xs">
+                            {curationError}
+                        </div>
+                    )}
                 </div>
 
                 {/* Filtros e Inputs de la lista reparadora */}

@@ -73,8 +73,6 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
     const [savedMedicinaLists, setSavedMedicinaLists] = useState<SavedMedicinaList[]>([]);
     const [savedDropboxLists, setSavedDropboxLists] = useState<Array<{ id: string; name: string; url: string; addedAt: string }>>([]);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
-    const [triggerLoad, setTriggerLoad] = useState(false);
-    const [shouldNavigateAfterLoad, setShouldNavigateAfterLoad] = useState(false);
 
     // Estados para Preview y Upload (Nueva funcionalidad)
     const [previewContent, setPreviewContent] = useState<PreviewContent | null>(null);
@@ -119,25 +117,6 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
             removeStorageItem('navigate_to_dropbox_lists');
         }
     }, []);
-
-    // Auto-load Logic
-    useEffect(() => {
-        if (triggerLoad && url) {
-            handleFetchUrl();
-            setTriggerLoad(false);
-            setShouldNavigateAfterLoad(true);
-        }
-    }, [triggerLoad, url, handleFetchUrl]);
-
-    useEffect(() => {
-        if (!shouldNavigateAfterLoad || isLoading) return;
-
-        if (!error) {
-            onNavigateToEditor();
-        }
-
-        setShouldNavigateAfterLoad(false);
-    }, [shouldNavigateAfterLoad, isLoading, error, onNavigateToEditor]);
 
     // --- Dropbox Helpers ---
     const getDropboxAccessToken = async () => {
@@ -817,6 +796,14 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
 
     // --- Handlers ---
 
+    const selectAndLoad = async (u: string) => {
+        if (isLoading) return;
+        const ok = await handleFetchUrl(u);
+        if (ok) {
+            onNavigateToEditor();
+        }
+    };
+
     const loadList = async (item: { url: string; content?: string; name: string }) => {
         if (isLoading) return;
 
@@ -824,20 +811,17 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
             try {
                 const file = new File([item.content], `${item.name}.m3u`, { type: 'text/plain' });
                 // @ts-ignore
-                await handleFileUpload({ target: { files: [file] } } as any);
-                setShowSuccessModal(true);
+                const ok = await handleFileUpload({ target: { files: [file] } } as any);
+                if (ok) {
+                    setShowSuccessModal(true);
+                }
             } catch (e) {
                 console.error("Error cargando lista local", e);
                 alert("Error cargando lista local");
             }
         } else {
-            selectAndLoad(item.url);
+            await selectAndLoad(item.url);
         }
-    };
-
-    const selectAndLoad = (u: string) => {
-        setUrl(u);
-        setTriggerLoad(true);
     };
 
     const normalizeIptvUrl = (rawUrl: string): { fetchUrl: string; suggestedName: string } => {
@@ -1274,9 +1258,11 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                                     />
                                 </div>
                                 <button 
-                                    onClick={() => {
-                                        setShouldNavigateAfterLoad(true);
-                                        handleFetchUrl();
+                                    onClick={async () => {
+                                        const ok = await handleFetchUrl();
+                                        if (ok) {
+                                            onNavigateToEditor();
+                                        }
                                     }}
                                     disabled={isLoading || !url}
                                     className="bg-blue-600 hover:bg-blue-700 text-white px-4 rounded-lg font-medium flex items-center gap-2 disabled:opacity-50 text-sm"
@@ -1286,6 +1272,13 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                                 </button>
                             </div>
                             
+                            {error && (
+                                <div className="mb-4 p-3 bg-red-900/30 border border-red-900/50 rounded-lg text-red-300 text-xs sm:text-sm flex items-center gap-2">
+                                    <AlertCircle size={16} className="text-red-400 shrink-0" />
+                                    <span>{error}</span>
+                                </div>
+                            )}
+
                             <div className="relative flex py-3 items-center">
                                 <div className="flex-grow border-t border-gray-700"></div>
                                 <span className="flex-shrink-0 mx-2 text-gray-500 text-[10px] uppercase tracking-widest">O archivo local</span>
@@ -1293,7 +1286,18 @@ const InicioTab: React.FC<InicioTabProps> = ({ channelsHook, settingsHook, onNav
                             </div>
 
                             <div className="flex justify-center">
-                                <input id="file-upload-main" type="file" className="hidden" onChange={async (e) => { await handleFileUpload(e); setShowSuccessModal(true); }} accept=".m3u,.m3u8" />
+                                <input
+                                    id="file-upload-main"
+                                    type="file"
+                                    className="hidden"
+                                    onChange={async (e) => {
+                                        const ok = await handleFileUpload(e);
+                                        if (ok) {
+                                            setShowSuccessModal(true);
+                                        }
+                                    }}
+                                    accept=".m3u,.m3u8"
+                                />
                                 <label htmlFor="file-upload-main" className="cursor-pointer group flex flex-col items-center gap-1 sm:gap-2 p-4 sm:p-6 border-2 border-dashed border-gray-700 rounded-xl hover:border-blue-500/50 hover:bg-blue-900/10 transition-all w-full">
                                     <div className="p-3 rounded-full bg-gray-800 group-hover:bg-blue-600 transition-colors">
                                         <Upload size={20} className="text-gray-400 group-hover:text-white" />
