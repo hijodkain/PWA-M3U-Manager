@@ -1597,6 +1597,53 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         return null;
     };
 
+    const fetchTmdbSeasonDetail = async (tvId: number, seasonNumber: number, apiKey: string) => {
+        const params = new URLSearchParams({
+            api_key: apiKey,
+            language: 'es-ES',
+            append_to_response: 'images',
+            include_image_language: 'es,null,en',
+        });
+
+        try {
+            const response = await fetch(`https://api.themoviedb.org/3/tv/${tvId}/season/${seasonNumber}?${params.toString()}`, {
+                method: 'GET',
+                headers: {
+                    Accept: 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                return null;
+            }
+
+            const data = (await response.json()) as any;
+            const posters: Array<{ file_path: string; iso_639_1?: string | null }> = Array.isArray(data.images?.posters)
+                ? data.images.posters
+                : [];
+            const esPoster = posters.find((p) => p.iso_639_1 === 'es');
+            const selectedSeasonPosterPath = esPoster?.file_path || data.poster_path || posters[0]?.file_path || '';
+            const seasonPoster = selectedSeasonPosterPath ? `https://image.tmdb.org/t/p/w500${selectedSeasonPosterPath}` : '';
+
+            const episodeStills = new Map<number, string>();
+            const episodes: Array<{ episode_number?: number; still_path?: string | null }> = Array.isArray(data.episodes)
+                ? data.episodes
+                : [];
+            episodes.forEach((ep) => {
+                if (typeof ep.episode_number === 'number' && ep.still_path) {
+                    episodeStills.set(ep.episode_number, `https://image.tmdb.org/t/p/w500${ep.still_path}`);
+                }
+            });
+
+            return {
+                seasonPoster,
+                episodeStills,
+            };
+        } catch {
+            return null;
+        }
+    };
+
     const buildTmdbFieldUpdates = (
         detail: Awaited<ReturnType<typeof fetchTmdbDetail>>,
         selectedFields: Record<TmdbExtractionFieldKey, boolean>
@@ -2286,6 +2333,29 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                             });
                         }
 
+                        const seasonDetailsMap = new Map<number, Awaited<ReturnType<typeof fetchTmdbSeasonDetail>>>();
+                        if (resolvedMediaType === 'tv') {
+                            const uniqueSeasons: number[] = [];
+                            targets.forEach((target) => {
+                                const epInfo = parseEpisodeInfo(target.name, target.tvgName);
+                                if (epInfo && !uniqueSeasons.includes(epInfo.season)) {
+                                    uniqueSeasons.push(epInfo.season);
+                                }
+                            });
+
+                            if (uniqueSeasons.length > 0) {
+                                const seasonResults = await Promise.all(
+                                    uniqueSeasons.map(async (seasonNum) => ({
+                                        seasonNum,
+                                        seasonData: await fetchTmdbSeasonDetail(resolvedId, seasonNum, tmdbApiKey),
+                                    }))
+                                );
+                                seasonResults.forEach(({ seasonNum, seasonData }) => {
+                                    seasonDetailsMap.set(seasonNum, seasonData);
+                                });
+                            }
+                        }
+
                         targets.forEach((target) => {
                             const targetUpdates: Partial<Channel> & { tvgId: string } = {
                                 tvgId: String(resolvedId),
@@ -2295,12 +2365,8 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                             };
 
                             if (resolvedMediaType === 'tv') {
-                                if (detail?.poster) {
-                                    targetUpdates.tvgLogo = detail.poster;
-                                    targetUpdates.poster = detail.poster;
-                                } else {
-                                    delete targetUpdates.tvgLogo;
-                                }
+                                delete targetUpdates.tvgLogo;
+                                delete targetUpdates.poster;
 
                                 const epInfo = parseEpisodeInfo(target.name, target.tvgName);
                                 if (epInfo) {
@@ -2308,6 +2374,21 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
                                     const formattedEpName = `${seriesName} ${epInfo.formattedSuffix}`;
                                     targetUpdates.name = formattedEpName;
                                     targetUpdates.tvgName = formattedEpName;
+
+                                    const seasonData = seasonDetailsMap.get(epInfo.season);
+                                    if (epInfo.episode === 1) {
+                                        const ep1Poster = seasonData?.seasonPoster || detail?.poster || '';
+                                        if (ep1Poster) {
+                                            targetUpdates.tvgLogo = ep1Poster;
+                                            targetUpdates.poster = ep1Poster;
+                                        }
+                                    } else {
+                                        const episodeImage = seasonData?.episodeStills.get(epInfo.episode);
+                                        if (episodeImage) {
+                                            targetUpdates.tvgLogo = episodeImage;
+                                            targetUpdates.poster = episodeImage;
+                                        }
+                                    }
                                 }
                             } else {
                                 if (!detail?.poster) {
