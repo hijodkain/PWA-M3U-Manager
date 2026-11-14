@@ -1048,16 +1048,27 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         return title.replace(/\s+/g, ' ').trim();
     };
 
+    const extractImageFileName = (imageUrl: string): string | null => {
+        const value = (imageUrl || '').trim();
+        if (!value) return null;
+
+        try {
+            const fileName = new URL(value).pathname.split('/').filter(Boolean).pop() || '';
+            if (!fileName || !/\.[a-z0-9]{2,5}$/i.test(fileName)) {
+                return null;
+            }
+            return fileName.toLowerCase();
+        } catch {
+            return null;
+        }
+    };
+
     const hasMatchingTmdbLogo = (channelLogo: string, tmdbLogo: string) => {
         if (!channelLogo || !tmdbLogo) return false;
 
-        try {
-            const sourceFile = new URL(channelLogo).pathname.split('/').pop();
-            const tmdbFile = new URL(tmdbLogo).pathname.split('/').pop();
-            return Boolean(sourceFile && tmdbFile && sourceFile === tmdbFile);
-        } catch {
-            return false;
-        }
+        const sourceFile = extractImageFileName(channelLogo);
+        const tmdbFile = extractImageFileName(tmdbLogo);
+        return Boolean(sourceFile && tmdbFile && sourceFile === tmdbFile);
     };
 
     interface EpisodeInfo {
@@ -1416,7 +1427,6 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             api_key: apiKey,
             language: 'es-ES',
             append_to_response: 'watch/providers,credits,videos,images',
-            include_image_language: 'es,null,en',
         });
 
         const response = await fetch(`https://api.themoviedb.org/3/${mediaType}/${id}?${params.toString()}`, {
@@ -1436,6 +1446,26 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
         const posters: Array<{ file_path: string; iso_639_1?: string | null }> = Array.isArray(data.images?.posters)
             ? data.images.posters
             : [];
+        const backdrops: Array<{ file_path: string }> = Array.isArray(data.images?.backdrops)
+            ? data.images.backdrops
+            : [];
+        const logos: Array<{ file_path: string }> = Array.isArray(data.images?.logos)
+            ? data.images.logos
+            : [];
+        const allImageFileNames = new Set<string>();
+        [
+            data.poster_path,
+            data.backdrop_path,
+            ...posters.map((p) => p.file_path),
+            ...backdrops.map((b) => b.file_path),
+            ...logos.map((l) => l.file_path),
+        ].forEach((filePath) => {
+            if (typeof filePath !== 'string') return;
+            const fileName = filePath.split('/').filter(Boolean).pop();
+            if (fileName) {
+                allImageFileNames.add(fileName.toLowerCase());
+            }
+        });
         // Prioridad: póster vertical con texto en español (cartelera de cines)
         const esPoster = posters.find((p) => p.iso_639_1 === 'es');
         const selectedPosterPath = esPoster?.file_path || data.poster_path || posters[0]?.file_path || '';
@@ -1518,6 +1548,7 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             logoUrl,
             poster,
             backdrop,
+            allImageFileNames,
             rating,
             genres,
             networks,
@@ -1531,6 +1562,39 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             duration,
             trailer,
         };
+    };
+
+    const findVerifiedTmdbByExistingIdAndLogo = async (
+        targets: Channel[],
+        primaryType: TmdbMediaType,
+        apiKey: string
+    ) => {
+        const candidate = targets.find((ch) => (
+            Boolean(extractTmdbIdFromTvgId(ch.tvgId || '')) && Boolean(extractImageFileName(ch.tvgLogo || ''))
+        ));
+        if (!candidate) return null;
+
+        const existingTmdbId = extractTmdbIdFromTvgId(candidate.tvgId || '');
+        const logoFileName = extractImageFileName(candidate.tvgLogo || '');
+        if (!existingTmdbId || !logoFileName) return null;
+
+        const secondaryType: TmdbMediaType = primaryType === 'movie' ? 'tv' : 'movie';
+        for (const candidateType of [primaryType, secondaryType] as const) {
+            try {
+                const detail = await fetchTmdbDetail(existingTmdbId, candidateType, apiKey);
+                if (detail?.allImageFileNames.has(logoFileName)) {
+                    return {
+                        tmdbId: existingTmdbId,
+                        mediaType: candidateType,
+                        detail,
+                    };
+                }
+            } catch {
+                // Si falla la consulta del ID existente, se continúa con la búsqueda normal
+            }
+        }
+
+        return null;
     };
 
     const buildTmdbFieldUpdates = (
@@ -2123,7 +2187,10 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
             if (seriesEpisode?.isEpisode) processedSeriesBlocks.add(blockKey);
 
             const query = seriesEpisode?.isEpisode ? seriesEpisode.title : sourceTitle;
-            if (!query) {
+            const hasExistingIdAndLogo = targets.some((t) => (
+                Boolean(extractTmdbIdFromTvgId(t.tvgId || '')) && Boolean(extractImageFileName(t.tvgLogo || ''))
+            ));
+            if (!query && !hasExistingIdAndLogo) {
                 noQueryCount += 1;
                 return;
             }
@@ -2162,32 +2229,51 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
 
                 await Promise.all(batch.map(async ({ query, mediaType, targets }) => {
                     try {
-                        const results = await searchTmdbWithFallbacks(query, mediaType, tmdbApiKey);
-                        const bestResult = getBestTmdbResult(results, query);
+                        const verifiedByLogo = await findVerifiedTmdbByExistingIdAndLogo(targets, mediaType, tmdbApiKey);
 
-                        if (!bestResult?.id) {
-                            notFoundCount += 1;
-                            return;
+                        let resolvedId: number;
+                        let resolvedMediaType: TmdbMediaType = mediaType;
+                        let detail: Awaited<ReturnType<typeof fetchTmdbDetail>> = null;
+                        let targetRating: string | undefined = undefined;
+
+                        if (verifiedByLogo) {
+                            resolvedId = verifiedByLogo.tmdbId;
+                            resolvedMediaType = verifiedByLogo.mediaType;
+                            detail = verifiedByLogo.detail;
+                            targetRating = detail?.rating;
+                        } else {
+                            if (!query) {
+                                noQueryCount += 1;
+                                return;
+                            }
+
+                            const results = await searchTmdbWithFallbacks(query, mediaType, tmdbApiKey);
+                            const bestResult = getBestTmdbResult(results, query);
+
+                            if (!bestResult?.id) {
+                                notFoundCount += 1;
+                                return;
+                            }
+
+                            resolvedId = bestResult.id;
+                            targetRating = bestResult.rating;
+                            detail = await fetchTmdbDetail(resolvedId, resolvedMediaType, tmdbApiKey);
+                            if (detail?.rating) {
+                                targetRating = detail.rating;
+                            }
                         }
 
-                        let targetRating = bestResult.rating;
                         let targetGroupTitle: string | undefined = undefined;
-
-                        const detail = await fetchTmdbDetail(bestResult.id, mediaType, tmdbApiKey);
-                        if (detail?.rating) {
-                            targetRating = detail.rating;
-                        }
-
                         if (assignTmdbGroup && detail) {
                             const detectedPlatform = detectTmdbPlatform(targets[0], detail);
                             const detectedGenre = detectTmdbGenre(detail);
-                            const formattedType = mediaType === 'movie' ? 'Movies' : 'Series';
+                            const formattedType = resolvedMediaType === 'movie' ? 'Movies' : 'Series';
                             targetGroupTitle = `${formattedType} - ${detectedPlatform} | ${detectedGenre}`;
                         }
 
                         const customFieldUpdates = buildTmdbFieldUpdates(detail, tmdbExtractionFields);
 
-                        if (mediaType === 'tv' && targets.length > 1) {
+                        if (resolvedMediaType === 'tv' && targets.length > 1) {
                             const targetIndices = targets
                                 .map((t) => channels.findIndex((c) => c.id === t.id))
                                 .filter((idx) => idx !== -1)
@@ -2202,13 +2288,13 @@ const EditorTab: React.FC<EditorTabProps> = ({ channelsHook, settingsHook }) => 
 
                         targets.forEach((target) => {
                             const targetUpdates: Partial<Channel> & { tvgId: string } = {
-                                tvgId: String(bestResult.id),
+                                tvgId: String(resolvedId),
                                 ...(targetRating ? { rating: targetRating } : {}),
                                 ...(targetGroupTitle ? { groupTitle: targetGroupTitle } : {}),
                                 ...customFieldUpdates,
                             };
 
-                            if (mediaType === 'tv') {
+                            if (resolvedMediaType === 'tv') {
                                 if (detail?.poster) {
                                     targetUpdates.tvgLogo = detail.poster;
                                     targetUpdates.poster = detail.poster;
